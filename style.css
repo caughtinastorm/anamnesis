@@ -1231,393 +1231,269 @@ textarea {
 }
 
 /* ==========================================================================
-   Desktop Responsive & Premium Layout Overrides (Viewport Width > 768px)
+   Desktop Layout (min-width: 769px)
    ========================================================================== */
 @media (min-width: 769px) {
-  /* Main Container Layout Grid */
+
+  /* ── Root container: CSS Grid shell ── */
   .app-container {
-    border-left: none;
-    border-right: none;
     max-width: 100%;
-    height: 100%;
+    border: none;
     box-shadow: none;
     display: grid;
-    grid-template-columns: 280px 1fr;
+    grid-template-columns: 260px 1fr;
     grid-template-rows: 64px 1fr;
     grid-template-areas:
       "sidebar header"
       "sidebar content";
   }
 
-  /* App Navigation: Replaced bottom bar with permanent Left Sidebar */
+  /* ── Sidebar ── */
   .app-nav {
     grid-area: sidebar;
     position: static;
+    width: 260px;
     height: 100%;
     flex-direction: column;
     justify-content: flex-start;
     align-items: stretch;
-    padding: 28px 20px;
-    gap: 10px;
+    padding: 24px 16px;
+    gap: 4px;
     border-top: none;
     border-right: 1px solid var(--panel-border);
     background: var(--panel-bg);
     z-index: 100;
+    overflow-y: auto;
   }
 
-  /* Desktop Logo Brand Header */
   .sidebar-brand {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 0 8px 28px;
+    gap: 10px;
+    padding: 8px 12px 24px;
+    margin-bottom: 8px;
     border-bottom: 1px solid var(--panel-border);
-    margin-bottom: 20px;
     cursor: pointer;
-    transition: opacity 0.15s ease;
+    transition: opacity 0.15s;
   }
+  .sidebar-brand:hover { opacity: 0.75; }
+  .sidebar-brand .logo-svg { width: 22px; height: 22px; stroke-width: 2.5; }
+  .sidebar-brand .logo-text { font-size: 1.15rem; font-weight: 800; letter-spacing: -0.04em; }
 
-  .sidebar-brand:hover {
-    opacity: 0.85;
-  }
-
-  .sidebar-brand .logo-svg {
-    width: 24px;
-    height: 24px;
-    stroke: var(--text-primary);
-    stroke-width: 2.5;
-  }
-
-  .sidebar-brand .logo-text {
-    font-size: 1.3rem;
-    font-weight: 800;
-    letter-spacing: -0.04em;
-    color: var(--text-primary);
-  }
-
-  /* Sidebar Navigation Items */
   .nav-item {
     flex: none;
     width: 100%;
     height: auto;
     flex-direction: row;
     justify-content: flex-start;
-    gap: 14px;
-    padding: 12px 18px;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 14px;
     border-radius: var(--radius-md);
-    font-size: 0.95rem;
+    font-size: 0.9rem;
+    font-weight: 600;
     color: var(--text-secondary);
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: background 0.15s, color 0.15s;
+    border: 1px solid transparent;
   }
-
   .nav-item:hover {
     background: var(--btn-secondary-hover);
     color: var(--text-primary);
   }
-
   .nav-item.active {
     background: var(--btn-secondary-bg);
     color: var(--text-primary);
-    border: 1px solid var(--panel-border);
-    box-shadow: var(--shadow-sm);
+    border-color: var(--panel-border);
   }
-
-  .nav-item.active .nav-icon-svg {
-    stroke: var(--text-primary);
-  }
-
-  .nav-icon-svg {
-    width: 20px;
-    height: 20px;
-  }
+  .nav-item.active .nav-icon-svg { stroke: var(--text-primary); }
+  .nav-icon-svg { width: 18px; height: 18px; }
 
   .nav-badge {
     position: static;
     margin-left: auto;
-    transform: none;
-    border-color: var(--panel-border);
+    top: auto; right: auto;
   }
 
-  /* Header Navigation Header */
+  /* ── Top header bar ── */
   .app-header {
     grid-area: header;
     height: 64px;
     padding: 0 32px;
-    display: flex;
-    justify-content: flex-end; /* Align sync status pill to right */
-    align-items: center;
+    justify-content: flex-end;
     border-bottom: 1px solid var(--panel-border);
     background: var(--bg-color);
     z-index: 90;
     box-sizing: border-box;
   }
+  .app-header .header-logo { display: none; }
 
-  .app-header .header-logo {
-    display: none; /* Already displayed inside sidebar navigation */
-  }
-
-  /* Main View Frame */
+  /* ── Main content area ── */
   .app-content {
     grid-area: content;
     height: 100%;
     overflow: hidden;
     position: relative;
-    background-color: var(--bg-color);
+    background: var(--bg-color);
   }
 
+  /* All views: absolutely fill the content area */
   .app-view {
     position: absolute;
-    top: 0; left: 0;
-    width: 100%;
-    height: 100%;
+    inset: 0;
     padding: 40px;
     overflow-y: auto;
     display: none;
     flex-direction: column;
-    gap: 32px;
+    gap: 28px;
     opacity: 0;
+    transition: opacity 0.15s;
   }
-
   .app-view.active {
     display: flex;
     opacity: 1;
     padding-bottom: 40px;
   }
 
-  /* Import and Settings use grid — override the flex from .app-view.active */
-  #view-import.active {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 32px;
-    align-items: start;
-    align-content: start;
-  }
-
-  #view-settings.active {
-    display: grid;
-    grid-template-columns: 1.2fr 0.8fr;
-    gap: 32px;
-    align-items: start;
-    align-content: start;
-  }
-
-  /* Review view has subviews that manage scroll themselves */
+  /* ── Review view: no padding, subviews own scroll ── */
   #view-review.active {
-    overflow: hidden;
     padding: 0;
     gap: 0;
-  }
-
-  /* Dashboard View Elements Grid Layout */
-  #subview-dashboard {
-    gap: 32px;
-    overflow-y: auto;
-    flex: 1;
-    min-height: 0;
-    padding: 40px;
-  }
-
-  .dashboard-hero {
-    margin: 0;
-    padding: 40px;
-    background: linear-gradient(135deg, rgba(39, 39, 42, 0.15) 0%, rgba(24, 24, 27, 0.05) 100%);
-    border: 1px solid var(--panel-border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm);
-    position: relative;
     overflow: hidden;
   }
+  .subview {
+    flex: 1;
+    min-height: 0;
+  }
+  #subview-dashboard {
+    padding: 40px;
+    overflow-y: auto;
+    gap: 28px;
+  }
+  #subview-study {
+    padding: 32px 40px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
 
+  /* ── Dashboard hero banner ── */
+  .dashboard-hero {
+    margin: 0;
+    padding: 36px 40px;
+    background: linear-gradient(135deg, var(--panel-bg) 0%, var(--bg-color) 100%);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius-lg);
+  }
   .dashboard-hero h2 {
-    font-size: 2.2rem;
-    margin-bottom: 8px;
-    background: linear-gradient(to right, var(--text-primary) 30%, var(--text-secondary));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    font-size: 2rem;
+    margin-bottom: 6px;
+    letter-spacing: -0.04em;
   }
+  .dashboard-hero p { font-size: 1rem; }
 
-  .dashboard-hero p {
-    font-size: 1.05rem;
-  }
-
-  /* Two-column Dashboard Split */
+  /* ── Dashboard two-column split ── */
   .dashboard-layout-container {
     display: grid;
-    grid-template-columns: 1.7fr 1.3fr;
-    grid-gap: 32px;
+    grid-template-columns: 1fr 320px;
+    gap: 24px;
     align-items: start;
   }
 
   .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
     margin-bottom: 0;
-    grid-gap: 16px;
   }
-
   .stat-card {
-    padding: 28px 20px;
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    background: var(--panel-bg);
+    padding: 24px 16px;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
   }
-
   .stat-card:hover {
-    transform: translateY(-3px);
+    transform: translateY(-2px);
     box-shadow: var(--shadow-md);
     border-color: var(--text-secondary);
   }
+  .stat-val { font-size: 2.2rem; }
 
-  .stat-val {
-    font-size: 2.4rem;
+  .dashboard-controls-card { gap: 16px; }
+  .deck-selector-wrapper { margin-bottom: 0; }
+
+  /* ── Import: two-column grid ── */
+  #view-import.active {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto;
+    gap: 28px;
+    align-content: start;
   }
+  #view-import .view-header           { grid-column: span 2; }
+  #view-import .import-preview-section { grid-column: span 2; max-height: none; }
+  .table-container                     { max-height: 380px; }
 
-  .dashboard-controls-card {
-    padding: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+  /* ── Settings: two-column grid ── */
+  #view-settings.active {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    grid-template-rows: auto;
+    gap: 28px;
+    align-content: start;
   }
+  #view-settings .view-header        { grid-column: span 2; }
+  #view-settings .app-version-footer { grid-column: span 2; }
 
-  .deck-selector-wrapper {
-    margin-bottom: 0;
-    padding: 12px 16px;
-  }
-
-  /* Study View Immersive Layout */
-  #subview-study {
-    max-width: 800px;
-    width: 100%;
-    margin: 0 auto;
-    padding: 40px 40px 32px;
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    overflow-y: auto;
-  }
-
-  .study-header {
-    margin-bottom: 24px;
-  }
-
+  /* ── Study session ── */
+  .study-header { margin-bottom: 20px; width: 100%; max-width: 680px; }
   .card-container {
-    min-height: 400px;
-    padding: 20px 0;
+    width: 100%;
+    max-width: 680px;
+    min-height: 360px;
+    padding: 0;
   }
-
   .flashcard {
     max-width: 680px;
-    min-height: 400px;
-    max-height: 460px;
+    min-height: 360px;
+    max-height: 420px;
   }
+  .card-face { padding: 36px; }
+  .card-content { font-size: 1.8rem; }
+  .card-description { font-size: 0.95rem; max-width: 85%; }
+  .study-controls { margin-top: 20px; width: 100%; max-width: 680px; }
+  .grading-buttons { gap: 8px; }
+  .btn-grade { padding: 12px 4px; }
+  .grade-num { font-size: 1.1rem; }
 
-  .card-face {
-    padding: 40px;
-    border-radius: var(--radius-lg);
-  }
-
-  .card-tag {
-    font-size: 0.8rem;
-    padding: 4px 12px;
-    border-radius: 6px;
-  }
-
-  .card-content {
-    font-size: 2rem;
-    letter-spacing: -0.01em;
-  }
-
-  .card-description {
-    font-size: 1rem;
-    max-width: 85%;
-  }
-
-  .study-controls {
-    margin-top: 24px;
-  }
-
-  .study-grading-bar {
-    gap: 16px;
-  }
-
-  .grading-buttons {
-    gap: 8px;
-    max-width: 680px;
-  }
-
-  .btn-grade {
-    padding: 14px 6px;
-    border-radius: var(--radius-md);
-  }
-
-  .grade-num {
-    font-size: 1.2rem;
-  }
-
-  .grade-label {
-    font-size: 0.65rem;
-  }
-
+  /* ── Keyboard shortcut guide ── */
   .study-shortcuts-guide {
     display: flex;
     justify-content: center;
-    align-items: center;
-    gap: 24px;
-    margin-top: 28px;
-    padding-top: 20px;
+    gap: 20px;
+    margin-top: 20px;
+    padding-top: 16px;
     border-top: 1px solid var(--panel-border);
+    width: 100%;
+    max-width: 680px;
   }
-
   .shortcut-badge {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    font-size: 0.85rem;
+    gap: 6px;
+    font-size: 0.8rem;
     color: var(--text-secondary);
-    font-weight: 500;
   }
-
   .shortcut-badge kbd {
     background: var(--panel-bg);
     border: 1px solid var(--panel-border);
-    border-radius: 5px;
-    padding: 3px 8px;
+    border-radius: 4px;
+    padding: 2px 7px;
     font-family: monospace;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: var(--text-primary);
-    box-shadow: 0 1.5px 0.5px rgba(0, 0, 0, 0.15);
-  }
-
-  /* Import View Grid — handled via #view-import.active override above */
-  #view-import .view-header {
-    grid-column: span 2;
-  }
-
-  #view-import .import-preview-section {
-    grid-column: span 2;
-    max-height: 500px;
-  }
-
-  .table-container {
-    max-height: 380px;
-  }
-
-  /* Settings View Grid — handled via #view-settings.active override above */
-  #view-settings .view-header {
-    grid-column: span 2;
-  }
-
-  #view-settings .app-version-footer {
-    grid-column: span 2;
-    margin-top: 32px;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.15);
   }
 }
 
-/* Sidebar Brand Layout Defaults (hidden on mobile) */
-.sidebar-brand {
-  display: none;
-}
-
-/* Shortcuts Panel Defaults (hidden on mobile) */
-.study-shortcuts-guide {
-  display: none;
-}
+/* ── Hidden by default on mobile ── */
+.sidebar-brand       { display: none; }
+.study-shortcuts-guide { display: none; }
