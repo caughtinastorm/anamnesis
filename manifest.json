@@ -1,0 +1,26 @@
+{
+  "name": "anamnesis - Spaced Repetition Flashcards",
+  "short_name": "anamnesis",
+  "description": "Progressive Web Application for spaced repetition study with IndexedDB local storage and GitHub Gist sync.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0b0c10",
+  "theme_color": "#0b0c10",
+  "orientation": "portrait-primary",
+  "categories": [
+    "education",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}

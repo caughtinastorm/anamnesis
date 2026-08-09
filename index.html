@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>anamnesis - Spaced Repetition Flashcards</title>
+  
+  <!-- Cybersecurity Hardening: Strict Content Security Policy -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://api.github.com; img-src 'self' data: https:;">
+
+  <!-- PWA Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#121214">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Styling -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Single Centered Mobile Shell Wrapper -->
+  <div class="app-container">
+
+    <!-- App Header -->
+    <header class="app-header">
+      <div class="header-logo" id="header-logo-home">
+        <svg class="logo-svg" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor"/>
+          <line x1="9" y1="3" x2="9" y2="21" stroke="currentColor"/>
+        </svg>
+        <h1 class="logo-text">anamnesis</h1>
+      </div>
+      <div class="header-sync" id="header-sync-status" title="Sync Status">
+        <svg class="sync-icon-svg" viewBox="0 0 24 24">
+          <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l.56-.56" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="sync-label" id="sync-label-text">Offline</span>
+      </div>
+    </header>
+
+    <!-- Main View Container -->
+    <main class="app-content">
+
+      <!-- VIEW 1: REVIEW & DASHBOARD -->
+      <section id="view-review" class="app-view active">
+        
+        <!-- Dashboard Sub-view -->
+        <div id="subview-dashboard" class="subview active">
+          <div class="dashboard-hero">
+            <h2>Welcome back</h2>
+            <p class="dashboard-subtitle">Your spacing repetition card schedule is ready.</p>
+          </div>
+
+          <!-- Responsive Dashboard Layout Container -->
+          <div class="dashboard-layout-container">
+            
+            <!-- Statistics Panel -->
+            <div class="stats-grid">
+              <div class="stat-card due">
+                <svg class="stat-icon-svg" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" fill="none"/>
+                  <polyline points="12 6 12 12 16 14" stroke="currentColor"/>
+                </svg>
+                <div class="stat-info">
+                  <span class="stat-val" id="stat-due-count">0</span>
+                  <span class="stat-label">Due</span>
+                </div>
+              </div>
+              
+              <div class="stat-card new">
+                <svg class="stat-icon-svg" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" fill="none"/>
+                  <line x1="12" y1="8" x2="12" y2="16" stroke="currentColor"/>
+                  <line x1="8" y1="12" x2="16" y2="12" stroke="currentColor"/>
+                </svg>
+                <div class="stat-info">
+                  <span class="stat-val" id="stat-new-count">0</span>
+                  <span class="stat-label">New</span>
+                </div>
+              </div>
+
+              <div class="stat-card total">
+                <svg class="stat-icon-svg" viewBox="0 0 24 24">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" fill="none"/>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" stroke="currentColor" fill="none"/>
+                </svg>
+                <div class="stat-info">
+                  <span class="stat-val" id="stat-total-count">0</span>
+                  <span class="stat-label">Total</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Controls and CTA Panel Card -->
+            <div class="dashboard-controls-card card-panel">
+              <!-- Collection (Deck) Selector Dropdown -->
+              <div class="deck-selector-wrapper">
+                <span class="deck-select-label">Collection:</span>
+                <select id="deck-select" class="deck-select">
+                  <option value="all">All Collections</option>
+                  <option value="Default">Default</option>
+                </select>
+              </div>
+
+              <div class="dashboard-actions">
+                <button id="btn-start-review" class="btn btn-primary btn-large btn-full">
+                  Start Review
+                </button>
+              </div>
+
+              <!-- Empty State / All caught up -->
+              <div id="dashboard-empty-state" class="empty-state hidden">
+                <svg class="empty-icon-svg" viewBox="0 0 24 24">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" fill="none"/>
+                  <polyline points="22 4 12 14.01 9 11.01" stroke="currentColor"/>
+                </svg>
+                <h3>All Caught Up</h3>
+                <p>No cards due for review. Go ahead and add some new cards or take a break.</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Study Session Sub-view -->
+        <div id="subview-study" class="subview">
+          <div class="study-header">
+            <button id="btn-cancel-study" class="btn-text">Exit</button>
+            <div class="study-progress">
+              <span id="study-progress-text">Card 1 of 10</span>
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="study-progress-bar" style="width: 10%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Study Card Deck -->
+          <div class="card-container">
+            <div class="flashcard" id="flashcard">
+              <!-- Front Face -->
+              <div class="card-face card-front">
+                <div class="card-tag">QUESTION</div>
+                <div class="card-text-wrapper scrollable-y">
+                  <div class="card-subtext" id="card-front-sub"></div>
+                  <div class="card-content" id="card-front-content">Front of the card</div>
+                </div>
+                <div class="card-hint">Tap card to flip</div>
+              </div>
+              <!-- Back Face -->
+              <div class="card-face card-back">
+                <div class="card-tag">ANSWER</div>
+                <div class="card-text-wrapper scrollable-y">
+                  <div class="card-subtext" id="card-back-sub"></div>
+                  <div class="card-content" id="card-back-content">Back of the card</div>
+                  <hr class="card-divider hidden" id="card-back-divider">
+                  <div class="card-description hidden" id="card-back-description">Description text</div>
+                </div>
+                <div class="card-hint">Tap card to flip back</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Review Controls -->
+          <div class="study-controls">
+            <div id="study-hint-bar" class="study-hint-bar">
+              <span>Tap card to reveal answer</span>
+            </div>
+            
+            <div id="study-grading-bar" class="study-grading-bar hidden">
+              <div class="grading-title">Recall Quality</div>
+              <div class="grading-buttons">
+                <button class="btn-grade" data-grade="0">
+                  <span class="grade-num">0</span>
+                  <span class="grade-label">Forgot</span>
+                </button>
+                <button class="btn-grade" data-grade="1">
+                  <span class="grade-num">1</span>
+                  <span class="grade-label">Wrong</span>
+                </button>
+                <button class="btn-grade" data-grade="2">
+                  <span class="grade-num">2</span>
+                  <span class="grade-label">Almost</span>
+                </button>
+                <button class="btn-grade" data-grade="3">
+                  <span class="grade-num">3</span>
+                  <span class="grade-label">Hard</span>
+                </button>
+                <button class="btn-grade" data-grade="4">
+                  <span class="grade-num">4</span>
+                  <span class="grade-label">Good</span>
+                </button>
+                <button class="btn-grade" data-grade="5">
+                  <span class="grade-num">5</span>
+                  <span class="grade-label">Easy</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Desktop Keyboard Shortcuts Guide -->
+          <div class="study-shortcuts-guide">
+            <span class="shortcut-badge"><kbd>Space</kbd> Flip Card</span>
+            <span class="shortcut-badge"><kbd>0</kbd>–<kbd>5</kbd> Grade</span>
+            <span class="shortcut-badge"><kbd>Esc</kbd> Exit</span>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- VIEW 2: IMPORT & QUICK ADD -->
+      <section id="view-import" class="app-view">
+        <div class="view-header">
+          <h2>Manage Collections</h2>
+          <p>Create cards manually or upload them from CSV backups.</p>
+        </div>
+
+        <!-- Native Quick Add Card Form -->
+        <div class="card-panel">
+          <div class="panel-header">
+            <h3>Quick Add Card</h3>
+            <p>Manually insert a single card to your database.</p>
+          </div>
+          <div class="form-group">
+            <label for="quick-front" class="input-label">Front (Question / Kanji)</label>
+            <input type="text" id="quick-front" placeholder="e.g. 漢字 or Question text">
+          </div>
+          <div class="form-group">
+            <label for="quick-sub" class="input-label">Sub-text (Kana helper / top hint)</label>
+            <input type="text" id="quick-sub" placeholder="e.g. かんじ or Kana pronunciation">
+          </div>
+          <div class="form-group">
+            <label for="quick-back" class="input-label">Back (Answer / English)</label>
+            <input type="text" id="quick-back" placeholder="e.g. Chinese characters or Answer text">
+          </div>
+          <div class="form-group">
+            <label for="quick-description" class="input-label">Description (Optional detailed notes)</label>
+            <input type="text" id="quick-description" placeholder="e.g. Example sentence or detailed explanation">
+          </div>
+          <div class="form-group">
+            <label for="quick-deck" class="input-label">Deck (Collection Name)</label>
+            <input type="text" id="quick-deck" placeholder="Default" value="Default">
+          </div>
+          <button id="btn-quick-add" class="btn btn-primary btn-full">Add Card</button>
+        </div>
+
+        <!-- CSV Bulk Import Panel -->
+        <div class="import-container card-panel">
+          <div class="panel-header">
+            <h3>CSV Bulk Import</h3>
+            <p>Upload a file or paste comma-separated values.</p>
+          </div>
+          
+          <div class="import-format-guide">
+            <h3>CSV Format Guide</h3>
+            <p>Paste lines separated by commas: <code>Front,Back,Sub-text,Deck</code>. Sub-text can also be specified in column 1 using a pipe symbol: <code>Front|Sub-text,Back</code>.</p>
+            <pre class="code-preview">漢字|かんじ,Chinese characters,N5 Kanji,Japanese</pre>
+          </div>
+
+          <div class="import-methods">
+            <div class="file-picker-wrapper">
+              <label for="import-file" class="btn btn-secondary">
+                Choose CSV File
+              </label>
+              <input type="file" id="import-file" accept=".csv" class="hidden">
+              <span id="import-file-name" class="file-name-label">No file chosen</span>
+            </div>
+
+            <div class="text-input-wrapper">
+              <label for="import-text" class="input-label">Or paste CSV content below:</label>
+              <textarea id="import-text" placeholder="Question 1,Answer 1&#10;Question 2,Answer 2,Subtext 2,CustomDeck&#10;漢字|かんじ,Chinese characters"></textarea>
+            </div>
+          </div>
+
+          <div class="import-actions">
+            <button id="btn-parse-csv" class="btn btn-secondary btn-full">Preview Import</button>
+          </div>
+        </div>
+
+        <!-- Preview parsed content before actual database insertion -->
+        <div id="import-preview-section" class="import-preview-section hidden card-panel">
+          <div class="preview-header">
+            <h3>Cards Preview (<span id="preview-count">0</span>)</h3>
+            <div class="preview-actions">
+              <button id="btn-cancel-import" class="btn btn-text">Clear</button>
+              <button id="btn-confirm-import" class="btn btn-primary">Import Now</button>
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="preview-table">
+              <thead>
+                <tr>
+                  <th>Front</th>
+                  <th>Back</th>
+                  <th>Subtext</th>
+                  <th>Deck</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody id="preview-table-body">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 3: SETTINGS -->
+      <section id="view-settings" class="app-view">
+        <div class="view-header">
+          <h2>Settings</h2>
+          <p>Configure device syncing, themes, and manage database.</p>
+        </div>
+
+        <!-- GitHub Gist Remote Sync Section -->
+        <div class="card-panel">
+          <div class="panel-header">
+            <h3>GitHub Gist Sync</h3>
+            <p>Sync cards across devices using a private GitHub Gist.</p>
+          </div>
+          
+          <div class="form-group">
+            <label for="settings-pat" class="input-label">GitHub Personal Access Token (PAT)</label>
+            <input type="password" id="settings-pat" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+            <small class="help-text">Requires <code>gist</code> scope to create or update private gists.</small>
+          </div>
+
+          <div class="form-group">
+            <label for="settings-gist-id" class="input-label">Gist ID</label>
+            <div class="input-with-button">
+              <input type="text" id="settings-gist-id" placeholder="Paste Gist ID or leave empty to auto-create">
+            </div>
+          </div>
+
+          <div class="sync-actions-grid">
+            <button id="btn-validate-token" class="btn btn-secondary">Verify Token</button>
+            <button id="btn-create-gist" class="btn btn-secondary">Create Gist</button>
+            <button id="btn-save-credentials" class="btn btn-primary">Save Config</button>
+          </div>
+
+          <div id="sync-console-log" class="sync-log-terminal hidden">
+            <!-- Terminal logs go here -->
+          </div>
+
+          <div class="manual-sync-trigger hidden" id="manual-sync-container">
+            <button id="btn-force-sync" class="btn btn-secondary btn-full">
+              Sync Data Now
+            </button>
+            <p id="sync-last-time-label" class="sync-timestamp-footer">Last synced: Never</p>
+          </div>
+        </div>
+
+        <!-- Backup / Local Data Management -->
+        <div class="card-panel">
+          <div class="panel-header">
+            <h3>Data Administration</h3>
+            <p>Export your flashcards or clear the offline database.</p>
+          </div>
+          
+          <div class="admin-actions-grid">
+            <button id="btn-export-csv" class="btn btn-secondary btn-full">Export Cards to CSV</button>
+            <button id="btn-clear-db" class="btn btn-danger btn-full">Delete All Local Data</button>
+          </div>
+        </div>
+
+        <!-- Visual Settings -->
+        <div class="card-panel">
+          <div class="panel-header">
+            <h3>Appearance Theme</h3>
+          </div>
+          <div class="theme-picker">
+            <button class="btn btn-theme active" data-theme-value="system">System</button>
+            <button class="btn btn-theme" data-theme-value="light">Light</button>
+            <button class="btn btn-theme" data-theme-value="dark">Dark</button>
+          </div>
+        </div>
+
+        <div class="app-version-footer">
+          <p>anamnesis v1.0.0 (Local-First PWA)</p>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar / Desktop Sidebar -->
+    <footer class="app-nav">
+      <!-- Desktop Sidebar Brand Header -->
+      <div class="sidebar-brand" id="sidebar-logo-home">
+        <svg class="logo-svg" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor"/>
+          <line x1="9" y1="3" x2="9" y2="21" stroke="currentColor"/>
+        </svg>
+        <span class="logo-text">anamnesis</span>
+      </div>
+
+      <button class="nav-item active" data-view="view-review">
+        <svg class="nav-icon-svg" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 16 14"/>
+        </svg>
+        <span class="nav-label">Review</span>
+        <span class="nav-badge hidden" id="nav-due-badge">0</span>
+      </button>
+      <button class="nav-item" data-view="view-import">
+        <svg class="nav-icon-svg" viewBox="0 0 24 24">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <span class="nav-label">Import</span>
+      </button>
+      <button class="nav-item" data-view="view-settings">
+        <svg class="nav-icon-svg" viewBox="0 0 24 24">
+          <line x1="4" y1="21" x2="4" y2="14"/>
+          <line x1="4" y1="10" x2="4" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="12"/>
+          <line x1="12" y1="8" x2="12" y2="3"/>
+          <line x1="20" y1="21" x2="20" y2="16"/>
+          <line x1="20" y1="12" x2="20" y2="3"/>
+          <line x1="1" y1="14" x2="7" y2="14"/>
+          <line x1="9" y1="8" x2="15" y2="8"/>
+          <line x1="17" y1="16" x2="23" y2="16"/>
+        </svg>
+        <span class="nav-label">Settings</span>
+      </button>
+    </footer>
+
+    <!-- Confirmation Modals / Notifications (Placed inside app-container for layout fit) -->
+    <div id="modal-container" class="modal-overlay hidden">
+      <div class="modal-content card-panel">
+        <h3 id="modal-title">Confirm Action</h3>
+        <p id="modal-body">Are you sure you want to proceed?</p>
+        <div class="modal-buttons">
+          <button id="modal-btn-cancel" class="btn btn-secondary">Cancel</button>
+          <button id="modal-btn-confirm" class="btn btn-danger">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast-container" class="toast-container">
+      <!-- Dynamic notification toasts -->
+    </div>
+
+  </div>
+
+  <!-- Main JavaScript File -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
