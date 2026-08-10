@@ -16,32 +16,54 @@ import { generateUUID, escapeHTML } from "./utils.js";
 import { parseAnkiApkg, parseAnkiText, normalizeAnkiDeck, expandClozeCards, cleanHtmlTags } from "../anki.js";
 import * as db from "../db.js";
 import { loadCardsFromDB } from "./dashboard.js";
+import { openCollectionPicker } from "./picker.js";
 
 let onSyncRequest = () => {};
 export function onSyncNeeded(cb) { onSyncRequest = cb; }
 
 let destFolderInput;
 let destDeckInput;
-let destFolderDatalist;
-let destDeckDatalist;
 let useCsvDecksCheckbox;
-let importTargetPill;
+let importTargetLabel;
+let btnBrowseDest;
+let btnNewDeck;
 
 export function initImportEventListeners() {
   destFolderInput = document.getElementById("import-dest-folder");
   destDeckInput = document.getElementById("import-dest-deck");
-  destFolderDatalist = document.getElementById("import-folder-datalist");
-  destDeckDatalist = document.getElementById("import-deck-datalist");
   useCsvDecksCheckbox = document.getElementById("import-use-csv-decks");
-  importTargetPill = document.getElementById("import-target-pill");
+  importTargetLabel = document.getElementById("import-target-label");
+  btnBrowseDest = document.getElementById("btn-import-browse-dest");
+  btnNewDeck = document.getElementById("btn-import-new-deck");
 
   if (dom.importFile) dom.importFile.addEventListener("change", handleFileSelect);
   if (dom.btnParseCsv) dom.btnParseCsv.addEventListener("click", handleCSVParseClick);
   if (dom.btnCancelImport) dom.btnCancelImport.addEventListener("click", clearImportPreview);
   if (dom.btnConfirmImport) dom.btnConfirmImport.addEventListener("click", commitImportedCards);
 
-  if (destFolderInput) destFolderInput.addEventListener("input", updateDestinationPill);
-  if (destDeckInput) destDeckInput.addEventListener("input", updateDestinationPill);
+  if (btnBrowseDest) {
+    btnBrowseDest.addEventListener("click", () => {
+      openCollectionPicker({
+        title: "Select Destination Collection",
+        initialFolder: destFolderInput ? destFolderInput.value : undefined,
+        initialDeck: destDeckInput ? destDeckInput.value : "Default",
+        allowRoot: false,
+        onSelect: (folder, deck) => {
+          setImportDestination(folder, deck);
+        }
+      });
+    });
+  }
+
+  if (btnNewDeck) {
+    btnNewDeck.addEventListener("click", () => {
+      const folder = destFolderInput ? destFolderInput.value.trim() : "";
+      const name = prompt(`Enter new collection name${folder ? ` inside "${folder}"` : ""}:`);
+      if (!name || !name.trim()) return;
+      setImportDestination(folder, name.trim());
+      showToast(`Ready to import into "${name.trim()}"`, "success");
+    });
+  }
 
   updateDestinationPill();
 }
@@ -49,17 +71,17 @@ export function initImportEventListeners() {
 export function updateDestinationPill() {
   if (!destFolderInput) destFolderInput = document.getElementById("import-dest-folder");
   if (!destDeckInput) destDeckInput = document.getElementById("import-dest-deck");
-  if (!importTargetPill) importTargetPill = document.getElementById("import-target-pill");
+  if (!importTargetLabel) importTargetLabel = document.getElementById("import-target-label");
 
-  if (!importTargetPill) return;
+  if (!importTargetLabel) return;
 
   const folder = destFolderInput ? destFolderInput.value.trim() : "";
   const deck = destDeckInput ? (destDeckInput.value.trim() || "Default") : "Default";
 
   if (folder) {
-    importTargetPill.innerHTML = `📁 <strong>${escapeHTML(folder)}</strong> / 🗂️ <strong>${escapeHTML(deck)}</strong>`;
+    importTargetLabel.innerHTML = `📁 <strong>${escapeHTML(folder)}</strong> / 🗂️ <strong>${escapeHTML(deck)}</strong>`;
   } else {
-    importTargetPill.innerHTML = `🗂️ <strong>${escapeHTML(deck)}</strong> <span style="opacity:0.6">(Root)</span>`;
+    importTargetLabel.innerHTML = `🗂️ <strong>${escapeHTML(deck)}</strong> <span style="opacity:0.6">(Root)</span>`;
   }
 }
 

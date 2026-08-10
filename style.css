@@ -3177,3 +3177,464 @@ html[data-theme="light"] .explorer-context-menu {
   }
 }
 
+/* ==========================================================================
+   GUI Collection Picker Trigger Buttons (Dashboard, Import, Browser)
+   ========================================================================== */
+.dashboard-deck-picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.deck-picker-hint {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.gui-picker-btn {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.gui-picker-btn:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: var(--text-secondary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.gui-picker-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.gui-picker-icon-wrap {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.gui-picker-icon {
+  width: 18px;
+  height: 18px;
+  stroke: #eab308;
+  fill: none;
+  stroke-width: 2;
+}
+
+.gui-picker-text-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.gui-picker-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gui-picker-sub {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gui-picker-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.gui-picker-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+}
+
+.gui-picker-badge.has-due {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.gui-picker-chevron {
+  width: 16px;
+  height: 16px;
+  stroke: var(--text-secondary);
+  stroke-width: 2;
+  fill: none;
+}
+
+/* Card Browser Filter Button */
+.gui-picker-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: all 0.15s ease;
+}
+
+.gui-picker-filter-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--text-secondary);
+}
+
+/* Visual Destination Card in Import View */
+.import-destination-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dest-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.dest-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dest-label-sub {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
+.dest-active-hierarchy {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dest-folder-icon {
+  width: 18px;
+  height: 18px;
+  stroke: #eab308;
+  fill: none;
+  stroke-width: 2;
+  flex-shrink: 0;
+}
+
+.dest-target-name {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.dest-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ==========================================================================
+   Windows-Style Universal Collection Browser Modal Dialog
+   ========================================================================== */
+.picker-modal-dialog {
+  max-width: 780px;
+  width: 95%;
+  height: 580px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0 !important;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+  background: rgba(14, 14, 16, 0.96);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+html[data-theme="light"] .picker-modal-dialog {
+  background: rgba(255, 255, 255, 0.98);
+}
+
+.picker-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.picker-modal-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.picker-window-icon {
+  width: 18px;
+  height: 18px;
+  stroke: #60a5fa;
+  fill: none;
+  stroke-width: 2;
+}
+
+.picker-modal-title-row h3 {
+  font-size: 0.96rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* Toolbar in Picker */
+.picker-toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--panel-border);
+  flex-wrap: wrap;
+}
+
+.picker-nav-btns {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.picker-address-bar {
+  flex: 1;
+  min-width: 160px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+html[data-theme="light"] .picker-address-bar {
+  background: rgba(240, 240, 240, 0.8);
+}
+
+.picker-address-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.picker-search-wrap {
+  position: relative;
+  width: 180px;
+}
+
+.picker-search-wrap input {
+  width: 100%;
+  height: 32px;
+  font-size: 0.8rem;
+  padding: 2px 8px 2px 28px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--panel-border);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+html[data-theme="light"] .picker-search-wrap input {
+  background: rgba(240, 240, 240, 0.8);
+}
+
+.picker-search-wrap .search-icon-svg {
+  left: 8px;
+  width: 13px;
+  height: 13px;
+}
+
+.picker-ribbon-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.01);
+  border-bottom: 1px solid var(--panel-border);
+}
+
+/* Picker Dual Pane Body */
+.picker-modal-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.picker-sidebar {
+  width: 220px;
+  border-right: 1px solid var(--panel-border);
+  background: rgba(0, 0, 0, 0.2);
+  padding: 10px 8px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+html[data-theme="light"] .picker-sidebar {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.picker-main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+}
+
+.picker-canvas {
+  width: 100%;
+}
+
+/* Grid layout in picker */
+.picker-grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.picker-card-tile {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.picker-card-tile:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--text-secondary);
+}
+
+.picker-card-tile.selected {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px #3b82f6;
+}
+
+.picker-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  gap: 10px;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+/* Picker Selection Footer */
+.picker-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border-top: 1px solid var(--panel-border);
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.picker-footer-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.picker-footer-label {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.picker-selected-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.picker-pill-highlight {
+  background: rgba(96, 165, 250, 0.12);
+  color: #60a5fa;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(96, 165, 250, 0.25);
+}
+
+.picker-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 600px) {
+  .picker-sidebar {
+    display: none;
+  }
+  .picker-search-wrap {
+    width: 100%;
+  }
+  .picker-grid-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+

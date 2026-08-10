@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Card Browser & Single Card Editor Module
  * 
  * Provides live search, filtering, inline editing, and deletion for individual cards.
@@ -9,6 +9,7 @@ import { showToast, showModal, scrollToElement } from "./ui.js";
 import { getCardFolder, getCardDeck, getCardFullHierarchy, escapeHTML, sanitizeHTML } from "./utils.js";
 import * as db from "../db.js";
 import { loadCardsFromDB, populateDeckDropdown } from "./dashboard.js";
+import { openCollectionPicker } from "./picker.js";
 
 let onSyncRequest = () => {};
 export function onSyncNeeded(cb) { onSyncRequest = cb; }
@@ -28,12 +29,16 @@ let editCardDesc;
 let editModalCancel;
 let editModalSave;
 let btnCloseEditModal;
+let btnBrowserPicker;
+let browserPickerLabel;
 
 export function initCardBrowser() {
   browserSearchInput = document.getElementById("browser-search-input");
   browserDeckFilter = document.getElementById("browser-deck-filter");
   browserCardsTbody = document.getElementById("browser-cards-tbody");
   browserTotalCount = document.getElementById("browser-total-count");
+  btnBrowserPicker = document.getElementById("btn-browser-deck-picker");
+  browserPickerLabel = document.getElementById("browser-deck-filter-label");
 
   editModalContainer = document.getElementById("edit-modal-container");
   editCardId = document.getElementById("edit-card-id");
@@ -53,6 +58,47 @@ export function initCardBrowser() {
 
   if (browserDeckFilter) {
     browserDeckFilter.addEventListener("change", () => renderCardBrowser());
+  }
+
+  if (btnBrowserPicker) {
+    btnBrowserPicker.addEventListener("click", () => {
+      const currentVal = browserDeckFilter ? (browserDeckFilter.value || "all") : "all";
+      let initFolder, initDeck;
+      if (currentVal.startsWith("folder:")) {
+        initFolder = currentVal.substring(7);
+        initDeck = "Default";
+      } else if (currentVal.startsWith("deck:")) {
+        const parts = currentVal.substring(5).split(" / ");
+        if (parts.length > 1) {
+          initFolder = parts[0];
+          initDeck = parts.slice(1).join(" / ");
+        } else {
+          initDeck = parts[0];
+        }
+      } else {
+        initDeck = "all";
+      }
+
+      openCollectionPicker({
+        title: "Filter Cards by Collection",
+        initialFolder: initFolder,
+        initialDeck: initDeck,
+        allowRoot: true,
+        onSelect: (folder, deck) => {
+          if (deck === "all") {
+            browserDeckFilter.value = "all";
+            if (browserPickerLabel) browserPickerLabel.textContent = "📁 All Collections";
+          } else if (folder) {
+            browserDeckFilter.value = `deck:${folder} / ${deck}`;
+            if (browserPickerLabel) browserPickerLabel.textContent = `📁 ${folder} / ${deck}`;
+          } else {
+            browserDeckFilter.value = `deck:${deck}`;
+            if (browserPickerLabel) browserPickerLabel.textContent = `🗂️ ${deck}`;
+          }
+          renderCardBrowser();
+        }
+      });
+    });
   }
 
   if (editModalCancel) {

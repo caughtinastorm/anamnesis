@@ -139,12 +139,29 @@
 
             <!-- Deck Selector & Action Panel -->
             <div class="dashboard-card deck-control-card">
-              <label for="deck-select" class="input-label">Active Collection / Folder</label>
-              <div class="select-wrapper">
-                <select id="deck-select" class="select-input">
-                  <option value="all">📁 All Collections</option>
-                </select>
+              <div class="dashboard-deck-picker-header">
+                <span class="input-label">Active Collection</span>
+                <span class="deck-picker-hint">Click to browse or switch</span>
               </div>
+              <button type="button" id="btn-dashboard-deck-picker" class="gui-picker-btn" title="Browse and switch collections">
+                <div class="gui-picker-left">
+                  <div class="gui-picker-icon-wrap">
+                    <svg class="gui-picker-icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                  </div>
+                  <div class="gui-picker-text-wrap">
+                    <span id="dashboard-deck-name" class="gui-picker-title">📁 All Collections</span>
+                    <span id="dashboard-deck-stats" class="gui-picker-sub">Entire Flashcard Library</span>
+                  </div>
+                </div>
+                <div class="gui-picker-right">
+                  <span id="dashboard-deck-due-pill" class="gui-picker-badge">0 due</span>
+                  <svg class="gui-picker-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+              </button>
+
+              <select id="deck-select" class="hidden">
+                <option value="all">📁 All Collections</option>
+              </select>
               
               <div class="deck-actions-row">
                 <button id="btn-start-review" class="btn btn-primary btn-full btn-lg">
@@ -437,7 +454,12 @@
               </svg>
               <input type="text" id="browser-search-input" placeholder="Search cards by front, back, deck, folder...">
             </div>
-            <select id="browser-deck-filter" class="select-input browser-deck-select">
+            <button type="button" id="btn-browser-deck-picker" class="gui-picker-filter-btn" title="Filter by collection">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <span id="browser-deck-filter-label">📁 All Collections</span>
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <select id="browser-deck-filter" class="hidden">
               <option value="all">📁 All Collections</option>
             </select>
           </div>
@@ -475,32 +497,38 @@
             <p>Select target destination below. Your CSV only needs card data (Front, Back, Sub-text).</p>
           </div>
 
-          <!-- Destination Selector (Folder & Deck) -->
+          <!-- GUI Visual Destination Card (Windows-style folder picker) -->
           <div class="import-destination-card">
-            <div class="dest-header-row">
-              <span class="dest-title">Target Destination:</span>
-              <span class="dest-badge-pill" id="import-target-pill">🗂️ <strong>Default</strong> <span style="opacity:0.6">(Root)</span></span>
-            </div>
-            <div class="form-grid-two-col" style="margin-top: 10px;">
-              <div class="form-group">
-                <label for="import-dest-folder" class="input-label">Destination Folder (Optional)</label>
-                <input type="text" id="import-dest-folder" list="import-folder-datalist" placeholder="e.g. Japanese, Medical, Spanish">
-                <datalist id="import-folder-datalist">
-                  <!-- Dynamically populated -->
-                </datalist>
+            <div class="dest-card-header">
+              <div class="dest-card-info">
+                <span class="dest-label-sub">Importing directly into:</span>
+                <div class="dest-active-hierarchy" id="import-dest-display">
+                  <svg class="dest-folder-icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                  <span id="import-target-label" class="dest-target-name">🗂️ Default <span style="opacity:0.6">(Root)</span></span>
+                </div>
               </div>
-              <div class="form-group">
-                <label for="import-dest-deck" class="input-label">Destination Deck / Collection</label>
-                <input type="text" id="import-dest-deck" list="import-deck-datalist" placeholder="e.g. Core 100 or Verbs" value="Default">
-                <datalist id="import-deck-datalist">
-                  <!-- Dynamically populated -->
-                </datalist>
+              <div class="dest-card-actions">
+                <button type="button" id="btn-import-browse-dest" class="btn btn-secondary btn-sm">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                  Browse / Change...
+                </button>
+                <button type="button" id="btn-import-new-deck" class="btn btn-secondary btn-sm" title="Create a new collection to import into">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  New Deck
+                </button>
               </div>
             </div>
-            <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text-secondary); margin-top: 6px; cursor: pointer;">
-              <input type="checkbox" id="import-use-csv-decks" checked>
-              <span>Auto-detect folders/decks inside multi-deck CSV or Anki packages if present</span>
-            </label>
+            
+            <!-- Hidden inputs to hold values seamlessly -->
+            <input type="hidden" id="import-dest-folder" value="">
+            <input type="hidden" id="import-dest-deck" value="Default">
+
+            <div class="dest-card-footer">
+              <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text-secondary); cursor: pointer;">
+                <input type="checkbox" id="import-use-csv-decks" checked>
+                <span>Auto-detect folders/decks inside multi-deck CSV or Anki packages if present</span>
+              </label>
+            </div>
           </div>
           
           <div class="import-format-guide">
@@ -783,6 +811,86 @@ Gracias,Thank you,greeting,Common polite phrase
         <div class="modal-buttons" style="margin-top: 14px;">
           <button id="edit-modal-cancel" class="btn btn-secondary">Cancel</button>
           <button id="edit-modal-save" class="btn btn-primary">Save Changes</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Windows-Style Universal Collection Browser Dialog -->
+    <div id="collection-picker-modal" class="modal-overlay hidden">
+      <div class="modal-content card-panel picker-modal-dialog">
+        <!-- Dialog Header -->
+        <div class="picker-modal-header">
+          <div class="picker-modal-title-row">
+            <svg class="picker-window-icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            <h3 id="picker-modal-title">Select Collection or Destination</h3>
+          </div>
+          <button id="btn-close-picker-modal" class="btn-text" title="Close">✕</button>
+        </div>
+
+        <!-- Address Bar & Navigation Toolbar -->
+        <div class="picker-toolbar-row">
+          <div class="picker-nav-btns">
+            <button id="btn-picker-back" class="btn-explorer-nav" title="Back" disabled>
+              <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            </button>
+            <button id="btn-picker-forward" class="btn-explorer-nav" title="Forward" disabled>
+              <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </button>
+            <button id="btn-picker-up" class="btn-explorer-nav" title="Up to Parent Folder" disabled>
+              <svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+            </button>
+          </div>
+
+          <div class="picker-address-bar">
+            <div id="picker-breadcrumbs" class="explorer-breadcrumbs">
+              <!-- Dynamically populated breadcrumbs -->
+            </div>
+          </div>
+
+          <div class="picker-search-wrap">
+            <svg class="search-icon-svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="picker-search-input" placeholder="Search all collections...">
+          </div>
+        </div>
+
+        <!-- Picker Actions Ribbon (New Folder, New Deck) -->
+        <div class="picker-ribbon-actions">
+          <button id="btn-picker-new-deck" class="btn-command">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>New Deck</span>
+          </button>
+          <button id="btn-picker-new-folder" class="btn-command">
+            <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            <span>New Folder</span>
+          </button>
+        </div>
+
+        <!-- Dual Pane Body (Tree + Canvas) -->
+        <div class="picker-modal-body">
+          <aside class="picker-sidebar">
+            <div class="sidebar-header-title">Folder Tree</div>
+            <div id="picker-tree-container" class="explorer-tree">
+              <!-- Dynamically populated tree -->
+            </div>
+          </aside>
+
+          <main class="picker-main">
+            <div id="picker-canvas" class="picker-canvas">
+              <!-- Dynamically populated grid / items -->
+            </div>
+          </main>
+        </div>
+
+        <!-- Selection Footer Bar -->
+        <div class="picker-modal-footer">
+          <div class="picker-footer-left">
+            <span class="picker-footer-label">Selected Destination:</span>
+            <div id="picker-selected-label" class="picker-selected-label">🗂️ Default (Root)</div>
+          </div>
+          <div class="picker-footer-right">
+            <button id="btn-picker-cancel" class="btn btn-secondary">Cancel</button>
+            <button id="btn-picker-confirm" class="btn btn-primary">Select This Destination</button>
+          </div>
         </div>
       </div>
     </div>

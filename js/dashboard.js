@@ -5,6 +5,7 @@ import * as db from "../db.js";
 import { populateBrowserDeckFilter, renderCardBrowser } from "./browser.js";
 import { renderExplorer } from "./explorer.js";
 import { populateImportDestinationSuggestions } from "./import.js";
+import { openCollectionPicker } from "./picker.js";
 
 let onSyncRequest = () => {};
 export function onSyncNeeded(cb) { onSyncRequest = cb; }
@@ -165,6 +166,83 @@ export function updateUIStats() {
       dom.dashboardEmptyState.classList.add("hidden");
     }
   }
+
+  updateDashboardPickerDisplay();
+}
+
+export function updateDashboardPickerDisplay() {
+  const currentVal = dom.deckSelect ? (dom.deckSelect.value || "all") : "all";
+  const titleEl = document.getElementById("dashboard-deck-name");
+  const subEl = document.getElementById("dashboard-deck-stats");
+  const duePillEl = document.getElementById("dashboard-deck-due-pill");
+
+  const filtered = filterCards();
+  const due = state.dueCards.length;
+  const total = filtered.length;
+
+  if (titleEl) {
+    if (currentVal === "all") {
+      titleEl.textContent = "📁 All Collections";
+    } else if (currentVal.startsWith("folder:")) {
+      titleEl.textContent = `📁 ${currentVal.substring(7)} (All)`;
+    } else if (currentVal.startsWith("deck:")) {
+      titleEl.textContent = `🗂️ ${currentVal.substring(5)}`;
+    } else {
+      titleEl.textContent = currentVal;
+    }
+  }
+
+  if (subEl) {
+    subEl.textContent = currentVal === "all"
+      ? `Entire Library • ${total} cards`
+      : `${total} cards in this collection`;
+  }
+
+  if (duePillEl) {
+    duePillEl.textContent = `${due} due`;
+    duePillEl.classList.toggle("has-due", due > 0);
+  }
+}
+
+export function initDashboardPickerButton() {
+  const btn = document.getElementById("btn-dashboard-deck-picker");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    const currentVal = dom.deckSelect?.value || "all";
+    let initFolder, initDeck;
+    if (currentVal.startsWith("folder:")) {
+      initFolder = currentVal.substring(7);
+      initDeck = "Default";
+    } else if (currentVal.startsWith("deck:")) {
+      const parts = currentVal.substring(5).split(" / ");
+      if (parts.length > 1) {
+        initFolder = parts[0];
+        initDeck = parts.slice(1).join(" / ");
+      } else {
+        initDeck = parts[0];
+      }
+    } else {
+      initDeck = "all";
+    }
+
+    openCollectionPicker({
+      title: "Select Active Study Collection",
+      initialFolder: initFolder,
+      initialDeck: initDeck,
+      allowRoot: true,
+      onSelect: (folder, deck) => {
+        if (deck === "all") {
+          dom.deckSelect.value = "all";
+        } else if (folder) {
+          dom.deckSelect.value = `deck:${folder} / ${deck}`;
+        } else {
+          dom.deckSelect.value = `deck:${deck}`;
+        }
+        calculateStats();
+        updateUIStats();
+      }
+    });
+  });
 }
 
 export function renderFoldersTree() {
