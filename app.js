@@ -186,6 +186,13 @@ if (document.readyState === 'loading') {
   initApp();
 }
 
+// Auto-sync when returning to the tab or app
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    performBackgroundSync();
+  }
+});
+
 /**
  * Load all cards from IndexedDB and update statistics
  */
