@@ -1,4 +1,4 @@
-﻿/**
+/**
  * anamnesis — Main Application Orchestrator
  *
  * This file wires all modules together and boots the app.
@@ -11,6 +11,7 @@ import { initStudyEventListeners, initTouchGestures, initKeyboardShortcuts, onSy
 import { initImportEventListeners, onSyncNeeded as importOnSync } from "./js/import.js";
 import { initSettingsForm, initSettingsEventListeners, performBackgroundSync, onSyncNeeded as settingsOnSync } from "./js/settings.js";
 import { initCardBrowser, onSyncNeeded as browserOnSync } from "./js/browser.js";
+import { initExplorer, onSyncNeeded as explorerOnSync } from "./js/explorer.js";
 
 // Wire up sync callbacks so all modules trigger background sync
 const requestSync = () => performBackgroundSync();
@@ -19,6 +20,7 @@ studyOnSync(requestSync);
 importOnSync(requestSync);
 settingsOnSync(requestSync);
 browserOnSync(requestSync);
+explorerOnSync(requestSync);
 
 // ==========================================================================
 // Routing
@@ -106,6 +108,7 @@ async function initApp() {
     initSettingsForm();
     initSettingsEventListeners();
     initCardBrowser();
+    initExplorer();
 
     registerServiceWorker();
 

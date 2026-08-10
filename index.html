@@ -275,21 +275,107 @@
 
       </section>
 
-      <!-- VIEW 2: DECKS & FOLDERS -->
+      <!-- VIEW 2: DECKS & FOLDERS (Windows Explorer Style Deck Manager) -->
       <section id="view-decks" class="app-view">
         <div class="view-header">
-          <h2>Decks & Folders</h2>
-          <p>Organize collections under parent folders and create flashcards.</p>
+          <h2>Decks &amp; Folders</h2>
+          <p>Windows-style collection explorer. Browse, create, study, and manage your flashcard hierarchy.</p>
         </div>
 
-        <!-- Collections & Folders Overview Card -->
-        <div class="card-panel" id="folders-explorer-card">
-          <div class="panel-header">
-            <h3>Folder & Collection Hierarchy</h3>
-            <p>Group collections under parent folders for targeted or combined review.</p>
+        <!-- Windows File Explorer Widget Card -->
+        <div class="card-panel win-explorer-panel" id="win-explorer">
+          <!-- Explorer Navigation & Address Bar Ribbon -->
+          <div class="explorer-header-toolbar">
+            <!-- Navigation Action Buttons (Back / Forward / Up / Refresh) -->
+            <div class="explorer-nav-buttons">
+              <button id="btn-explorer-back" class="btn-explorer-nav" title="Back (Alt+Left)" disabled>
+                <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+              </button>
+              <button id="btn-explorer-forward" class="btn-explorer-nav" title="Forward (Alt+Right)" disabled>
+                <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </button>
+              <button id="btn-explorer-up" class="btn-explorer-nav" title="Up to parent folder (Alt+Up)" disabled>
+                <svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+              </button>
+              <button id="btn-explorer-refresh" class="btn-explorer-nav" title="Refresh">
+                <svg viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l.56-.56"/></svg>
+              </button>
+            </div>
+
+            <!-- Windows Explorer Address Bar / Breadcrumbs -->
+            <div class="explorer-address-bar">
+              <div id="explorer-breadcrumbs" class="explorer-breadcrumbs">
+                <!-- Dynamically generated breadcrumb chips -->
+              </div>
+            </div>
+
+            <!-- Explorer Search Box -->
+            <div class="explorer-search-box">
+              <svg class="search-icon-svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="explorer-search-input" placeholder="Search this folder...">
+            </div>
+
+            <!-- View Switcher (Grid / Details) -->
+            <div class="explorer-view-toggle">
+              <button id="btn-view-grid" class="btn-view-mode active" title="Grid / Large Tiles View">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              </button>
+              <button id="btn-view-details" class="btn-view-mode" title="Details / Table List View">
+                <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              </button>
+            </div>
           </div>
-          <div id="folders-tree-container" class="folders-tree-container">
-            <!-- Dynamically populated folder tree -->
+
+          <!-- Explorer Command Ribbon (Actions) -->
+          <div class="explorer-command-bar">
+            <button id="btn-explorer-new-deck" class="btn-command">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span>New Deck</span>
+            </button>
+            <button id="btn-explorer-new-folder" class="btn-command">
+              <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <span>New Folder</span>
+            </button>
+            <button id="btn-explorer-import" class="btn-command">
+              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Import Cards Here</span>
+            </button>
+            <button id="btn-explorer-add-card" class="btn-command">
+              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+              <span>Quick Add</span>
+            </button>
+            <div class="command-bar-divider"></div>
+            <button id="btn-explorer-study" class="btn-command btn-command-primary">
+              <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <span>Study Due</span>
+            </button>
+            <button id="btn-explorer-practice" class="btn-command">
+              <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              <span>Practice All</span>
+            </button>
+          </div>
+
+          <!-- Explorer Body Container (Sidebar Tree + Main Viewport) -->
+          <div class="explorer-body">
+            <!-- Left Sidebar Navigation Pane -->
+            <aside class="explorer-sidebar">
+              <div class="sidebar-header-title">Quick Access &amp; Tree</div>
+              <div id="explorer-tree-root" class="explorer-tree">
+                <!-- Dynamically rendered tree -->
+              </div>
+            </aside>
+
+            <!-- Main Content Area -->
+            <main class="explorer-main">
+              <div id="explorer-canvas" class="explorer-canvas">
+                <!-- Dynamically rendered folder & deck items -->
+              </div>
+            </main>
+          </div>
+
+          <!-- Explorer Status Bar -->
+          <div class="explorer-status-bar">
+            <span id="explorer-status-text">Loading collections...</span>
           </div>
         </div>
 
@@ -338,7 +424,7 @@
         <div class="card-panel browser-panel" id="card-browser-panel">
           <div class="panel-header browser-header-row">
             <div>
-              <h3>Card Browser</h3>
+              <h3>All Cards Browser</h3>
               <p id="browser-total-count">Search, edit, and manage individual flashcards.</p>
             </div>
           </div>
@@ -352,7 +438,7 @@
               <input type="text" id="browser-search-input" placeholder="Search cards by front, back, deck, folder...">
             </div>
             <select id="browser-deck-filter" class="select-input browser-deck-select">
-              <option value="all">?? All Collections</option>
+              <option value="all">📁 All Collections</option>
             </select>
           </div>
 
@@ -379,27 +465,56 @@
       <section id="view-import" class="app-view">
         <div class="view-header">
           <h2>Import Decks</h2>
-          <p>Upload native Anki packages (.apkg), text exports, or CSV spreadsheets.</p>
+          <p>Upload native Anki packages (.apkg), text exports, or pure card CSV spreadsheets.</p>
         </div>
 
         <!-- Universal Bulk Import Panel (Anki .apkg, CSV, TSV) -->
         <div class="import-container card-panel">
           <div class="panel-header">
-            <h3>Import Decks (Anki & CSV)</h3>
-            <p>Upload native Anki <code>.apkg</code> packages, Anki text exports, or CSV spreadsheets.</p>
+            <h3>Import Decks &amp; Cards</h3>
+            <p>Select target destination below. Your CSV only needs card data (Front, Back, Sub-text).</p>
+          </div>
+
+          <!-- Destination Selector (Folder & Deck) -->
+          <div class="import-destination-card">
+            <div class="dest-header-row">
+              <span class="dest-title">Target Destination:</span>
+              <span class="dest-badge-pill" id="import-target-pill">🗂️ <strong>Default</strong> <span style="opacity:0.6">(Root)</span></span>
+            </div>
+            <div class="form-grid-two-col" style="margin-top: 10px;">
+              <div class="form-group">
+                <label for="import-dest-folder" class="input-label">Destination Folder (Optional)</label>
+                <input type="text" id="import-dest-folder" list="import-folder-datalist" placeholder="e.g. Japanese, Medical, Spanish">
+                <datalist id="import-folder-datalist">
+                  <!-- Dynamically populated -->
+                </datalist>
+              </div>
+              <div class="form-group">
+                <label for="import-dest-deck" class="input-label">Destination Deck / Collection</label>
+                <input type="text" id="import-dest-deck" list="import-deck-datalist" placeholder="e.g. Core 100 or Verbs" value="Default">
+                <datalist id="import-deck-datalist">
+                  <!-- Dynamically populated -->
+                </datalist>
+              </div>
+            </div>
+            <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text-secondary); margin-top: 6px; cursor: pointer;">
+              <input type="checkbox" id="import-use-csv-decks" checked>
+              <span>Auto-detect folders/decks inside multi-deck CSV or Anki packages if present</span>
+            </label>
           </div>
           
           <div class="import-format-guide">
             <div class="import-badge-row">
+              <span class="badge-tag card-badge">✨ Card-Only CSV (Clean)</span>
               <span class="badge-tag anki-badge">⭐ Native Anki (.apkg)</span>
-              <span class="badge-tag csv-badge">CSV / TSV</span>
-              <span class="badge-tag folder-badge">Folder Aware</span>
+              <span class="badge-tag csv-badge">TSV / Text</span>
             </div>
-            <p><strong>Anki Decks:</strong> Upload any <code>.apkg</code> file or Anki export. Subdecks like <code>Spanish::Verbs</code> are automatically organized into Folders (<code>Spanish</code>) and Collections (<code>Verbs</code>).</p>
-            <p><strong>CSV Format:</strong> <code>Folder,Deck,Front,Back,Sub-text</code> or <code>Front,Back,Sub-text,Deck</code>.</p>
-            <pre class="code-preview">Spanish,Verbs,Hablar,To speak,hablo
-Spanish,100 words,Hola,Hello,greeting
-Japanese,N5 Kanji,漢字|かんじ,Chinese characters</pre>
+            <p><strong>Card-Only CSV:</strong> No need to repeat folder or deck names! Just provide card data:</p>
+            <pre class="code-preview">Front,Back,Sub-text,Description
+Hablar,To speak,hablo,Regular -ar verb
+Gracias,Thank you,greeting,Common polite phrase
+水,Water,みず,Essential noun</pre>
+            <p class="help-text">Also supports 2 columns (<code>Front,Back</code>) and pipe notation: <code>漢字|かんじ,Chinese characters</code>.</p>
           </div>
 
           <div class="import-methods">
@@ -413,7 +528,7 @@ Japanese,N5 Kanji,漢字|かんじ,Chinese characters</pre>
 
             <div class="text-input-wrapper">
               <label for="import-text" class="input-label">Or paste text / CSV below:</label>
-              <textarea id="import-text" placeholder="Spanish,Verbs,Hablar,To speak&#10;Spanish,100 words,Gracias,Thank you&#10;Japanese,Kanji,水|みず,Water"></textarea>
+              <textarea id="import-text" placeholder="Hablar,To speak,hablo&#10;Gracias,Thank you,greeting&#10;水|みず,Water,Essential noun"></textarea>
             </div>
           </div>
 

@@ -1,30 +1,122 @@
-﻿/**
+/**
  * Universal Importer (10/10 Enterprise Grade)
  * 
  * Features:
- * 1. Full RFC 4180 streaming state-machine parser (handles multiline quoted fields, escaped quotes).
- * 2. Automatic delimiter detection (comma, tab, semicolon, pipe).
- * 3. Smart header recognition & dynamic column mapping.
- * 4. Cloze card expansion for CSV/text imports.
- * 5. Anki package (.apkg) & text import pipeline.
+ * 1. UI-Driven Destination Selection: Flat card-only CSVs automatically route to user-selected Folder & Deck.
+ * 2. Full RFC 4180 streaming state-machine parser (handles multiline quoted fields, escaped quotes).
+ * 3. Automatic delimiter detection (comma, tab, semicolon, pipe).
+ * 4. Smart header recognition & dynamic column mapping.
+ * 5. Cloze card expansion for CSV/text imports.
+ * 6. Anki package (.apkg) & text import pipeline.
  */
 
 import { state } from "./state.js";
-import { dom, showToast, scrollToElement } from "./ui.js";
-import { generateUUID } from "./utils.js";
+import { dom, showToast, scrollToElement, switchView } from "./ui.js";
+import { generateUUID, escapeHTML } from "./utils.js";
 import { parseAnkiApkg, parseAnkiText, normalizeAnkiDeck, expandClozeCards, cleanHtmlTags } from "../anki.js";
 import * as db from "../db.js";
 import { loadCardsFromDB } from "./dashboard.js";
-import { switchView } from "./ui.js";
 
 let onSyncRequest = () => {};
 export function onSyncNeeded(cb) { onSyncRequest = cb; }
 
+let destFolderInput;
+let destDeckInput;
+let destFolderDatalist;
+let destDeckDatalist;
+let useCsvDecksCheckbox;
+let importTargetPill;
+
 export function initImportEventListeners() {
+  destFolderInput = document.getElementById("import-dest-folder");
+  destDeckInput = document.getElementById("import-dest-deck");
+  destFolderDatalist = document.getElementById("import-folder-datalist");
+  destDeckDatalist = document.getElementById("import-deck-datalist");
+  useCsvDecksCheckbox = document.getElementById("import-use-csv-decks");
+  importTargetPill = document.getElementById("import-target-pill");
+
   if (dom.importFile) dom.importFile.addEventListener("change", handleFileSelect);
   if (dom.btnParseCsv) dom.btnParseCsv.addEventListener("click", handleCSVParseClick);
   if (dom.btnCancelImport) dom.btnCancelImport.addEventListener("click", clearImportPreview);
   if (dom.btnConfirmImport) dom.btnConfirmImport.addEventListener("click", commitImportedCards);
+
+  if (destFolderInput) destFolderInput.addEventListener("input", updateDestinationPill);
+  if (destDeckInput) destDeckInput.addEventListener("input", updateDestinationPill);
+
+  updateDestinationPill();
+}
+
+export function updateDestinationPill() {
+  if (!destFolderInput) destFolderInput = document.getElementById("import-dest-folder");
+  if (!destDeckInput) destDeckInput = document.getElementById("import-dest-deck");
+  if (!importTargetPill) importTargetPill = document.getElementById("import-target-pill");
+
+  if (!importTargetPill) return;
+
+  const folder = destFolderInput ? destFolderInput.value.trim() : "";
+  const deck = destDeckInput ? (destDeckInput.value.trim() || "Default") : "Default";
+
+  if (folder) {
+    importTargetPill.innerHTML = `📁 <strong>${escapeHTML(folder)}</strong> / 🗂️ <strong>${escapeHTML(deck)}</strong>`;
+  } else {
+    importTargetPill.innerHTML = `🗂️ <strong>${escapeHTML(deck)}</strong> <span style="opacity:0.6">(Root)</span>`;
+  }
+}
+
+export function setImportDestination(folder = "", deck = "Default") {
+  if (!destFolderInput) destFolderInput = document.getElementById("import-dest-folder");
+  if (!destDeckInput) destDeckInput = document.getElementById("import-dest-deck");
+  
+  if (destFolderInput) destFolderInput.value = folder || "";
+  if (destDeckInput) destDeckInput.value = deck || "Default";
+  
+  updateDestinationPill();
+  switchView("view-import");
+  showToast(`Import destination set to: ${folder ? `${folder} / ` : ""}${deck || "Default"}`, "info");
+}
+
+export function getSelectedImportDestination() {
+  if (typeof document === "undefined") {
+    return { folder: undefined, deck: "Default" };
+  }
+  if (!destFolderInput) destFolderInput = document.getElementById("import-dest-folder");
+  if (!destDeckInput) destDeckInput = document.getElementById("import-dest-deck");
+
+  const folder = destFolderInput ? destFolderInput.value.trim() : "";
+  const deck = destDeckInput ? (destDeckInput.value.trim() || "Default") : "Default";
+  return { folder: folder || undefined, deck };
+}
+
+export function populateImportDestinationSuggestions() {
+  if (!destFolderDatalist) destFolderDatalist = document.getElementById("import-folder-datalist");
+  if (!destDeckDatalist) destDeckDatalist = document.getElementById("import-deck-datalist");
+
+  const folderNames = new Set();
+  const deckNames = new Set();
+
+  state.allCards.forEach(c => {
+    if (c.deleted) return;
+    if (c.folder && c.folder.trim()) folderNames.add(c.folder.trim());
+    if (c.deck && c.deck.trim()) deckNames.add(c.deck.trim());
+  });
+
+  if (destFolderDatalist) {
+    destFolderDatalist.innerHTML = "";
+    Array.from(folderNames).sort().forEach(f => {
+      const opt = document.createElement("option");
+      opt.value = f;
+      destFolderDatalist.appendChild(opt);
+    });
+  }
+
+  if (destDeckDatalist) {
+    destDeckDatalist.innerHTML = "";
+    Array.from(deckNames).sort().forEach(d => {
+      const opt = document.createElement("option");
+      opt.value = d;
+      destDeckDatalist.appendChild(opt);
+    });
+  }
 }
 
 async function handleFileSelect(e) {
@@ -90,10 +182,14 @@ function handleCSVParseClick() {
 
 /**
  * RFC 4180 State Machine CSV/TSV/DSV Parser
- * Handles multiline quoted fields, escaped quotes, and auto-detects delimiters.
+ * Handles multiline quoted fields, escaped quotes, auto-detects delimiters,
+ * and automatically applies UI-selected destination folder/deck.
  */
-export function parseCSV(text) {
+export function parseCSV(text, destinationOverride = null) {
   if (!text || !text.trim()) return [];
+
+  const dest = destinationOverride || getSelectedImportDestination();
+  const allowCsvDecks = useCsvDecksCheckbox ? useCsvDecksCheckbox.checked : true;
 
   const delimiter = detectDelimiter(text);
   const rawGrid = parseDSVGrid(text, delimiter);
@@ -113,8 +209,9 @@ export function parseCSV(text) {
     const row = rawGrid[i];
     if (row.length === 0 || (row.length === 1 && !row[0].trim())) continue;
 
-    let folder = undefined;
-    let deck = "Default";
+    // Default to UI-selected target destination
+    let folder = dest.folder;
+    let deck = dest.deck || "Default";
     let front = "";
     let back = "";
     let sub = "";
@@ -126,48 +223,49 @@ export function parseCSV(text) {
       if (headerMap.sub !== -1) sub = cleanHtmlTags(row[headerMap.sub] || "");
       if (headerMap.desc !== -1) description = cleanHtmlTags(row[headerMap.desc] || "");
 
-      if (headerMap.folder !== -1 && row[headerMap.folder]) {
-        folder = row[headerMap.folder].trim();
-      }
-
-      if (headerMap.deck !== -1 && row[headerMap.deck]) {
-        const norm = normalizeAnkiDeck(row[headerMap.deck]);
-        if (!folder && norm.folder) folder = norm.folder;
-        deck = norm.deck || "Default";
+      // If CSV headers include folder/deck and allowCsvDecks is enabled
+      if (allowCsvDecks) {
+        if (headerMap.folder !== -1 && row[headerMap.folder]?.trim()) {
+          folder = row[headerMap.folder].trim();
+        }
+        if (headerMap.deck !== -1 && row[headerMap.deck]?.trim()) {
+          const norm = normalizeAnkiDeck(row[headerMap.deck]);
+          if (!folder && norm.folder) folder = norm.folder;
+          deck = norm.deck || deck;
+        }
       }
     } else {
-      // Positional heuristic fallback
+      // Positional heuristic fallback for headerless CSVs
       if (row.length === 2) {
+        // [Front, Back] -> pure card data mapped to UI destination!
         front = cleanHtmlTags(row[0] || "");
         back = cleanHtmlTags(row[1] || "");
       } else if (row.length === 3) {
+        // [Front, Back, Sub-text] -> pure card data mapped to UI destination!
         front = cleanHtmlTags(row[0] || "");
         back = cleanHtmlTags(row[1] || "");
         sub = cleanHtmlTags(row[2] || "");
       } else if (row.length === 4) {
-        // [Front, Back, Sub, Deck]
+        // [Front, Back, Sub, Description] -> pure card data mapped to UI destination!
         front = cleanHtmlTags(row[0] || "");
         back = cleanHtmlTags(row[1] || "");
         sub = cleanHtmlTags(row[2] || "");
-        const norm = normalizeAnkiDeck(row[3]);
-        folder = norm.folder;
-        deck = norm.deck;
+        description = cleanHtmlTags(row[3] || "");
       } else if (row.length >= 5) {
-        // Check if format is [Folder, Deck, Front, Back, Sub, Desc]
-        if (row.length >= 6) {
-          folder = row[0].trim() || undefined;
-          deck = row[1].trim() || "Default";
+        // Check if format is legacy multi-deck [Folder, Deck, Front, Back, Sub, Desc]
+        // or pure card [Front, Back, Sub, Desc, ...]
+        if (allowCsvDecks && (row[0].trim().length < 30 && row[1].trim().length < 30)) {
+          folder = row[0].trim() || dest.folder;
+          deck = row[1].trim() || dest.deck;
           front = cleanHtmlTags(row[2] || "");
           back = cleanHtmlTags(row[3] || "");
           sub = cleanHtmlTags(row[4] || "");
-          description = cleanHtmlTags(row[5] || "");
+          if (row.length >= 6) description = cleanHtmlTags(row[5] || "");
         } else {
-          // 5 cols: [Folder, Deck, Front, Back, Sub]
-          folder = row[0].trim() || undefined;
-          deck = row[1].trim() || "Default";
-          front = cleanHtmlTags(row[2] || "");
-          back = cleanHtmlTags(row[3] || "");
-          sub = cleanHtmlTags(row[4] || "");
+          front = cleanHtmlTags(row[0] || "");
+          back = cleanHtmlTags(row[1] || "");
+          sub = cleanHtmlTags(row[2] || "");
+          description = cleanHtmlTags(row[3] || "");
         }
       }
     }
@@ -352,7 +450,7 @@ function detectHeaderMapping(headers) {
     }
   });
 
-  // A valid header must have at least front and back or folder/deck headers
+  // A valid header must have at least front and back
   if (map.front !== -1 && map.back !== -1) {
     map.hasHeader = true;
   }
@@ -370,12 +468,12 @@ function renderImportPreview(cards) {
   previewSlice.forEach(card => {
     const row = document.createElement("tr");
     [
-      card.folder || "-",
-      card.deck || "Default",
+      card.folder ? `📁 ${escapeHTML(card.folder)}` : "-",
+      `🗂️ ${escapeHTML(card.deck || "Default")}`,
       card.front,
       card.back,
-      card.sub || "-",
-      card.description || "-"
+      card.sub ? escapeHTML(card.sub) : "-",
+      card.description ? escapeHTML(card.description) : "-"
     ].forEach(text => {
       const td = document.createElement("td");
       td.innerHTML = text; // Allow formatted <br> and cloze tags
@@ -431,7 +529,7 @@ async function commitImportedCards() {
     showToast(`Successfully imported ${prepared.length} flashcards!`, "success");
     clearImportPreview();
     await loadCardsFromDB();
-    switchView("view-review");
+    switchView("view-decks");
     onSyncRequest();
   } catch (e) {
     console.error(e);

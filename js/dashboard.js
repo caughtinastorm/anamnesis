@@ -1,8 +1,10 @@
-﻿import { state } from "./state.js";
+import { state } from "./state.js";
 import { dom, showToast, showModal, switchView } from "./ui.js";
 import { getCardFolder, getCardDeck, getCardFullHierarchy, escapeHTML, generateUUID } from "./utils.js";
 import * as db from "../db.js";
 import { populateBrowserDeckFilter, renderCardBrowser } from "./browser.js";
+import { renderExplorer } from "./explorer.js";
+import { populateImportDestinationSuggestions } from "./import.js";
 
 let onSyncRequest = () => {};
 export function onSyncNeeded(cb) { onSyncRequest = cb; }
@@ -11,8 +13,10 @@ export async function loadCardsFromDB() {
   try {
     state.allCards = await db.getCards();
     populateDeckDropdown();
+    populateImportDestinationSuggestions();
     calculateStats();
     updateUIStats();
+    renderExplorer();
     renderFoldersTree();
     renderHeatmap();
     populateBrowserDeckFilter();
