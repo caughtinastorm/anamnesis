@@ -1,5 +1,5 @@
 ﻿import { state } from "./state.js";
-import { dom, showToast, switchView } from "./ui.js";
+import { dom, showToast, showModal, switchView } from "./ui.js";
 import { getCardFolder, getCardDeck, getCardFullHierarchy, escapeHTML, generateUUID } from "./utils.js";
 import * as db from "../db.js";
 import { populateBrowserDeckFilter, renderCardBrowser } from "./browser.js";
@@ -201,6 +201,7 @@ export function renderFoldersTree() {
     const header = document.createElement("div"); header.className = "folder-header-row";
     const titleWrap = document.createElement("div"); titleWrap.className = "folder-title-wrap";
     titleWrap.innerHTML = `<svg class="folder-icon-svg" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg><span>${escapeHTML(folder)}</span><span class="folder-count-badge">${totalCards} cards${totalDue > 0 ? ` • ${totalDue} due` : ""}</span>`;
+    
     const actWrap = document.createElement("div"); actWrap.className = "folder-actions-wrap";
     
     const btnStudy = document.createElement("button");
@@ -216,8 +217,20 @@ export function renderFoldersTree() {
       startStudySession(totalDue === 0);
     });
 
+    const btnDeleteFolder = document.createElement("button");
+    btnDeleteFolder.className = "btn-folder-action btn-folder-delete";
+    btnDeleteFolder.title = `Delete folder "${folder}" and all its collections`;
+    btnDeleteFolder.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
+    btnDeleteFolder.addEventListener("click", e => {
+      e.stopPropagation();
+      deleteFolder(folder, totalCards);
+    });
+
     actWrap.appendChild(btnStudy);
-    header.appendChild(titleWrap); header.appendChild(actWrap); node.appendChild(header);
+    actWrap.appendChild(btnDeleteFolder);
+    header.appendChild(titleWrap);
+    header.appendChild(actWrap);
+    node.appendChild(header);
 
     const dl = document.createElement("div"); dl.className = "folder-decks-list";
     Array.from(dm.keys()).sort().forEach(deck => {
@@ -242,6 +255,9 @@ export function renderFoldersTree() {
       leftWrap.appendChild(name);
       leftWrap.appendChild(count);
 
+      const actGroup = document.createElement("div");
+      actGroup.className = "deck-tree-actions";
+
       const btnDeckReview = document.createElement("button");
       btnDeckReview.className = "btn-deck-action";
       btnDeckReview.innerHTML = s.due > 0 ? `Study (${s.due})` : "Review";
@@ -256,8 +272,20 @@ export function renderFoldersTree() {
         startStudySession(s.due === 0);
       });
 
+      const btnDeckDelete = document.createElement("button");
+      btnDeckDelete.className = "btn-deck-action btn-deck-delete";
+      btnDeckDelete.title = `Delete collection "${deck}"`;
+      btnDeckDelete.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
+      btnDeckDelete.addEventListener("click", (e) => {
+        e.stopPropagation();
+        deleteDeck(folder, deck, s.total);
+      });
+
+      actGroup.appendChild(btnDeckReview);
+      actGroup.appendChild(btnDeckDelete);
+
       row.appendChild(leftWrap);
-      row.appendChild(btnDeckReview);
+      row.appendChild(actGroup);
       dl.appendChild(row);
     });
     node.appendChild(dl);
@@ -293,6 +321,9 @@ export function renderFoldersTree() {
       leftWrap.appendChild(name);
       leftWrap.appendChild(count);
 
+      const actGroup = document.createElement("div");
+      actGroup.className = "deck-tree-actions";
+
       const btnDeckReview = document.createElement("button");
       btnDeckReview.className = "btn-deck-action";
       btnDeckReview.innerHTML = s.due > 0 ? `Study (${s.due})` : "Review";
@@ -307,13 +338,83 @@ export function renderFoldersTree() {
         startStudySession(s.due === 0);
       });
 
+      const btnDeckDelete = document.createElement("button");
+      btnDeckDelete.className = "btn-deck-action btn-deck-delete";
+      btnDeckDelete.title = `Delete collection "${deck}"`;
+      btnDeckDelete.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
+      btnDeckDelete.addEventListener("click", (e) => {
+        e.stopPropagation();
+        deleteDeck(null, deck, s.total);
+      });
+
+      actGroup.appendChild(btnDeckReview);
+      actGroup.appendChild(btnDeckDelete);
+
       row.appendChild(leftWrap);
-      row.appendChild(btnDeckReview);
+      row.appendChild(actGroup);
       dl.appendChild(row);
     });
     node.appendChild(dl);
     dom.foldersTreeContainer.appendChild(node);
   }
+}
+
+export function deleteDeck(folderName, deckName, count) {
+  const label = folderName ? `${folderName} / ${deckName}` : deckName;
+  showModal(
+    `Delete Collection "${label}"?`,
+    `Are you sure you want to delete this collection (${count} cards)? This will remove all of its cards.`,
+    async () => {
+      const now = Date.now();
+      const toDelete = state.allCards.filter(c => {
+        if (c.deleted) return false;
+        if (folderName) {
+          return getCardFolder(c).toLowerCase() === folderName.toLowerCase() &&
+                 getCardDeck(c).toLowerCase() === deckName.toLowerCase();
+        } else {
+          return !getCardFolder(c) && getCardDeck(c).toLowerCase() === deckName.toLowerCase();
+        }
+      }).map(c => ({ ...c, deleted: true, last_modified: now }));
+
+      if (toDelete.length > 0) {
+        try {
+          await db.saveCards(toDelete);
+          showToast(`Deleted collection "${label}" (${toDelete.length} cards)`, "success");
+          await loadCardsFromDB();
+          onSyncRequest();
+        } catch (err) {
+          console.error("Delete deck error:", err);
+          showToast("Failed to delete collection locally", "error");
+        }
+      }
+    }
+  );
+}
+
+export function deleteFolder(folderName, count) {
+  showModal(
+    `Delete Folder "${folderName}"?`,
+    `Are you sure you want to delete the folder "${folderName}" and ALL of its collections (${count} total cards)?`,
+    async () => {
+      const now = Date.now();
+      const toDelete = state.allCards.filter(c => {
+        if (c.deleted) return false;
+        return getCardFolder(c).toLowerCase() === folderName.toLowerCase();
+      }).map(c => ({ ...c, deleted: true, last_modified: now }));
+
+      if (toDelete.length > 0) {
+        try {
+          await db.saveCards(toDelete);
+          showToast(`Deleted folder "${folderName}" (${toDelete.length} cards)`, "success");
+          await loadCardsFromDB();
+          onSyncRequest();
+        } catch (err) {
+          console.error("Delete folder error:", err);
+          showToast("Failed to delete folder locally", "error");
+        }
+      }
+    }
+  );
 }
 
 export function recordDailyReview() {

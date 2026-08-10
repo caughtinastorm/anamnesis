@@ -2299,3 +2299,24 @@ textarea {
     margin-top: 8px;
   }
 }
+
+
+.deck-tree-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-deck-delete, .btn-folder-delete {
+  padding: 2px 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+
+.btn-deck-delete:hover, .btn-folder-delete:hover {
+  color: var(--danger-color) !important;
+  border-color: var(--danger-color) !important;
+  background: rgba(255, 68, 102, 0.12) !important;
+}
