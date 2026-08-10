@@ -72,9 +72,14 @@ self.addEventListener('fetch', (event) => {
         }
         return networkResponse;
       })
-      .catch(() => {
-        // When offline or fetch fails, serve from cache
-        return caches.match(event.request);
+      .catch(async () => {
+        // When offline or fetch fails, serve from cache with fallback for navigation
+        const cached = await caches.match(event.request);
+        if (cached) return cached;
+        if (event.request.mode === 'navigate') {
+          return (await caches.match('./index.html')) || (await caches.match('./'));
+        }
+        return null;
       })
   );
 });
