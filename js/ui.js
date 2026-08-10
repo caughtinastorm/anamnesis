@@ -58,6 +58,7 @@ export const dom = {
   settingsVoiceLang: document.getElementById("settings-voice-lang"),
   settingsReviewCap: document.getElementById("settings-review-cap"),
   btnTtsSpeak: document.getElementById("btn-tts-speak"),
+  btnRestartStudy: document.getElementById("btn-restart-study"),
   dashboardHeatmapGrid: document.getElementById("dashboard-heatmap-grid"),
   modalContainer: document.getElementById("modal-container"),
   modalTitle: document.getElementById("modal-title"),
@@ -163,4 +164,5 @@ function applyTheme(theme) {
   const meta = document.querySelector("meta[name='theme-color']");
   if (meta) meta.setAttribute("content", effective === "dark" ? "#121214" : "#ffffff");
 }
+
 

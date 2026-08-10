@@ -132,18 +132,19 @@ export function updateUIStats() {
     dom.navDueBadge.classList.toggle("hidden", overallDue === 0);
   }
 
-  // Primary Start Button
+  // Primary Start Due Button
   if (dom.btnStartReview) {
     dom.btnStartReview.classList.toggle("hidden", due === 0);
+    dom.btnStartReview.innerHTML = `<svg class="btn-icon-svg" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Start Due Review (${due})`;
   }
 
-  // Force Review Button (available whenever there are cards in this collection)
+  // Unlimited Practice Review Button
   if (dom.btnForceReview) {
     dom.btnForceReview.classList.toggle("hidden", filteredTotal === 0);
     if (due === 0 && filteredTotal > 0) {
-      dom.btnForceReview.textContent = "Review All Cards (0 Due)";
+      dom.btnForceReview.innerHTML = `<svg class="btn-icon-svg" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Practice All Cards (${filteredTotal} Cards)`;
     } else {
-      dom.btnForceReview.textContent = "Review All Cards";
+      dom.btnForceReview.innerHTML = `<svg class="btn-icon-svg" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Practice All (${filteredTotal} Cards)`;
     }
   }
 

@@ -8,29 +8,36 @@ import { recordDailyReview, loadCardsFromDB, filterCards } from "./dashboard.js"
 let onSyncRequest = () => {};
 export function onSyncNeeded(cb) { onSyncRequest = cb; }
 
+let currentSessionPool = [];
+let currentSessionIsForce = false;
+
 export function startStudySession(force = false, customCards = null) {
   let pool = [];
+  currentSessionIsForce = force;
 
   if (customCards && Array.isArray(customCards)) {
     pool = customCards.filter(c => !c.deleted);
+    currentSessionPool = [...pool];
   } else if (force) {
     pool = filterCards();
+    currentSessionPool = [...pool];
   } else {
     pool = state.dueCards;
+    currentSessionPool = [...filterCards()]; // Fallback to all cards in deck for restart
   }
 
   if (!pool || pool.length === 0) {
-    showToast(force ? "No cards found in this collection!" : "No cards due for review!", "info");
+    showToast(force ? "No cards found in this collection!" : "No cards due for review! Use 'Practice All Cards' to review anytime.", "info");
     return;
   }
 
   const cap = parseInt(localStorage.getItem("app-review-cap") || "0", 10);
-  if (cap > 0 && pool.length > cap) {
+  if (cap > 0 && pool.length > cap && !force) {
     const originalCount = pool.length;
     pool = pool.slice(0, cap);
-    showToast(`Vacation Mode: Loaded ${cap} of ${originalCount} cards`, "info");
+    showToast(`Vacation Mode: Loaded ${cap} of ${originalCount} due cards`, "info");
   } else if (force) {
-    showToast(`Started review with all ${pool.length} cards`, "info");
+    showToast(`Reviewing all ${pool.length} cards (unlimited mode)`, "info");
   }
 
   state.studySessionCards = shuffle([...pool]);
@@ -39,6 +46,20 @@ export function startStudySession(force = false, customCards = null) {
   dom.subviewDashboard.classList.remove("active");
   dom.subviewStudy.classList.add("active");
   renderCurrentStudyCard();
+}
+
+export function restartStudySession() {
+  const pool = currentSessionPool.length > 0 ? currentSessionPool : filterCards();
+  if (!pool || pool.length === 0) {
+    showToast("No cards available to review", "info");
+    exitStudySession();
+    return;
+  }
+  state.studySessionCards = shuffle([...pool]);
+  state.currentCardIndex = 0;
+  state.isFlipped = false;
+  renderCurrentStudyCard();
+  showToast(`Restarted review (${state.studySessionCards.length} cards)`, "info");
 }
 
 export function renderCurrentStudyCard() {
@@ -122,9 +143,24 @@ export function exitStudySession() {
 }
 
 function finishStudySession() {
-  showToast("Study session completed!", "success");
-  exitStudySession();
   onSyncRequest();
+  showModal(
+    "🎉 Deck Completed!",
+    `You finished all ${state.studySessionCards.length} cards in this session. Would you like to review this deck again or return to the dashboard?`,
+    () => {
+      restartStudySession();
+    }
+  );
+  // Auto-switch back to dashboard if user cancels modal
+  const cancelBtn = dom.modalBtnCancel;
+  const originalCancel = cancelBtn ? cancelBtn.onclick : null;
+  if (cancelBtn) {
+    const handleCancel = () => {
+      exitStudySession();
+      cancelBtn.removeEventListener("click", handleCancel);
+    };
+    cancelBtn.addEventListener("click", handleCancel, { once: true });
+  }
 }
 
 function renderCardContent(text, isBack = false) {
@@ -213,6 +249,11 @@ export function initKeyboardShortcuts() {
 export function initStudyEventListeners() {
   if (dom.btnStartReview) dom.btnStartReview.addEventListener("click", () => startStudySession(false));
   if (dom.btnForceReview) dom.btnForceReview.addEventListener("click", () => startStudySession(true));
+  if (dom.btnRestartStudy) dom.btnRestartStudy.addEventListener("click", () => {
+    showModal("Restart Review Session?", "Do you want to restart reviewing this deck from the beginning?", () => {
+      restartStudySession();
+    });
+  });
   if (dom.btnCancelStudy) dom.btnCancelStudy.addEventListener("click", () =>
     showModal("Exit Study Session?", "Exit study session and return to dashboard?", exitStudySession)
   );
