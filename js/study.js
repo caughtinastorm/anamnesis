@@ -1,4 +1,4 @@
-﻿import { state } from "./state.js";
+import { state } from "./state.js";
 import { dom, showToast, showModal } from "./ui.js";
 import { sanitizeHTML, shuffle } from "./utils.js";
 import { calculateFSRS5, Rating } from "../fsrs.js";
@@ -122,6 +122,7 @@ export async function submitCardGrade(grade) {
     await db.saveCard(updated);
     recordDailyReview();
     if (grade < 3) state.studySessionCards.push(updated);
+    onSyncRequest(2500);
 
     const anim = grade >= 3 ? "slide-out-right-anim" : "slide-out-left-anim";
     dom.flashcard.classList.add(anim);
@@ -140,6 +141,7 @@ export function exitStudySession() {
   dom.subviewStudy.classList.remove("active");
   dom.subviewDashboard.classList.add("active");
   loadCardsFromDB();
+  onSyncRequest(500);
 }
 
 function finishStudySession() {

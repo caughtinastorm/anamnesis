@@ -1,4 +1,4 @@
-﻿import { state } from "./state.js";
+import { state } from "./state.js";
 import { dom, showToast, showModal } from "./ui.js";
 import { getCardFolder, getCardDeck, escapeCSVField } from "./utils.js";
 import * as sync from "../sync.js";
@@ -127,53 +127,100 @@ async function saveSyncConfig() {
   triggerManualSync();
 }
 
+let isSyncInProgress = false;
+let syncQueued = false;
+let syncDebounceTimer = null;
+
+/**
+ * Debounces rapid sync requests (e.g. grading multiple cards in succession)
+ */
+export function requestDebouncedSync(delayMs = 1200) {
+  if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
+  syncDebounceTimer = setTimeout(() => {
+    performBackgroundSync();
+  }, delayMs);
+}
+
 export async function triggerManualSync() {
   if (!state.syncCredentials.pat || !state.syncCredentials.gistId) {
     showToast("Sync not configured", "error");
     return;
   }
+
+  if (isSyncInProgress) {
+    showToast("Sync already in progress...", "info");
+    return;
+  }
+
+  isSyncInProgress = true;
   setSyncStateIndicator("syncing");
   logToConsole("Starting database synchronization...");
   if (dom.btnForceSync) dom.btnForceSync.disabled = true;
+
   try {
     const localCards = await db.getCards();
     const result = await sync.syncCards(localCards);
-    if (result.status === "merged_with_remote") {
+
+    if (result.changed || result.status === "pulled_from_remote" || result.status === "merged_with_remote") {
       await db.replaceCards(result.cards);
-      logToConsole("Downloaded updates from Gist and merged conflicts.");
+      await loadCardsFromDB();
+      logToConsole("Downloaded updates from cloud and merged successfully.");
+    } else if (result.status === "pushed_to_remote") {
+      logToConsole("Pushed local database updates to cloud.");
+    } else if (result.status === "no_change") {
+      logToConsole("Database is already up to date with cloud.");
     }
-    await loadCardsFromDB();
-    logToConsole(`Sync complete. Cards: ${state.allCards.filter(c => !c.deleted).length}`);
+
+    logToConsole(`Sync complete. Active cards: ${state.allCards.filter(c => !c.deleted).length}`);
     showToast("Synchronization complete!", "success");
     setSyncStateIndicator("synced");
   } catch (err) {
     logToConsole(`Sync failed: ${err.message}`, true);
-    showToast("Sync failed", "error");
+    showToast("Sync failed: " + err.message, "error");
     setSyncStateIndicator("failed");
   } finally {
+    isSyncInProgress = false;
     if (dom.btnForceSync) dom.btnForceSync.disabled = false;
     updateSyncUIState();
   }
 }
 
-export async function performBackgroundSync() {
+export async function performBackgroundSync(silent = true) {
   if (!state.syncCredentials.pat || !state.syncCredentials.gistId) {
     setSyncStateIndicator("unconfigured");
     return;
   }
+
+  if (isSyncInProgress) {
+    syncQueued = true;
+    return;
+  }
+
+  isSyncInProgress = true;
   setSyncStateIndicator("syncing");
+
   try {
     const localCards = await db.getCards();
     const result = await sync.syncCards(localCards);
-    if (result.status === "merged_with_remote") {
+
+    if (result.changed || result.status === "pulled_from_remote" || result.status === "merged_with_remote") {
       await db.replaceCards(result.cards);
       await loadCardsFromDB();
-      showToast("Synced card updates from cloud", "success");
+      if (!silent) showToast("Synced card updates from cloud", "success");
     }
+
     setSyncStateIndicator("synced");
   } catch (err) {
-    console.error("Background sync failed:", err);
+    console.warn("Background sync warning:", err);
     setSyncStateIndicator("failed");
+  } finally {
+    isSyncInProgress = false;
+    updateSyncUIState();
+
+    if (syncQueued) {
+      syncQueued = false;
+      setTimeout(() => performBackgroundSync(silent), 500);
+    }
   }
 }
 

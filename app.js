@@ -9,13 +9,13 @@ import { dom, switchView, initTheme, initModalListeners, showToast, scrollToElem
 import { loadCardsFromDB, calculateStats, updateUIStats, handleQuickAddCard, initDashboardPickerButton, onSyncNeeded as dashOnSync } from "./js/dashboard.js";
 import { initStudyEventListeners, initTouchGestures, initKeyboardShortcuts, onSyncNeeded as studyOnSync } from "./js/study.js";
 import { initImportEventListeners, onSyncNeeded as importOnSync } from "./js/import.js";
-import { initSettingsForm, initSettingsEventListeners, performBackgroundSync, onSyncNeeded as settingsOnSync } from "./js/settings.js";
+import { initSettingsForm, initSettingsEventListeners, performBackgroundSync, requestDebouncedSync, onSyncNeeded as settingsOnSync } from "./js/settings.js";
 import { initCardBrowser, onSyncNeeded as browserOnSync } from "./js/browser.js";
 import { initExplorer, onSyncNeeded as explorerOnSync } from "./js/explorer.js";
 import { initCollectionPicker } from "./js/picker.js";
 
-// Wire up sync callbacks so all modules trigger background sync
-const requestSync = () => performBackgroundSync();
+// Wire up sync callbacks so all modules trigger debounced background sync
+const requestSync = (delayMs = 1200) => requestDebouncedSync(delayMs);
 dashOnSync(requestSync);
 studyOnSync(requestSync);
 importOnSync(requestSync);
