@@ -136,7 +136,8 @@ async function updateGist(pat, gistId, cards) {
 }
 
 /**
- * Merge local and remote cards array using Last-Write-Wins
+ * Merge local and remote cards array using Last-Write-Wins with tombstone support.
+ * Retains soft-deleted cards during merge so deletions propagate across devices.
  */
 export function mergeCards(localCards, remoteCards) {
   const cardMap = new Map();

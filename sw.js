@@ -1,10 +1,10 @@
 /**
  * Service Worker for anamnesis PWA
  * 
- * Implements offline caching strategy for static resources.
+ * Implements Network-First caching strategy with offline fallback.
  */
 
-const CACHE_NAME = 'anamnesis-v4';
+const CACHE_NAME = 'anamnesis-v11';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -13,6 +13,7 @@ const ASSETS_TO_CACHE = [
   './db.js',
   './sm2.js',
   './sync.js',
+  './anki.js',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png'
@@ -20,13 +21,13 @@ const ASSETS_TO_CACHE = [
 
 // Install Event
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
         console.log('SW: Pre-caching static assets');
         return cache.addAll(ASSETS_TO_CACHE);
       })
-      .then(() => self.skipWaiting())
   );
 });
 
@@ -46,7 +47,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch Event (Cache-first falling back to network, bypass API)
+// Fetch Event (Network-First falling back to cache when offline)
 self.addEventListener('fetch', (event) => {
   const requestUrl = new URL(event.request.url);
 
@@ -61,27 +62,19 @@ self.addEventListener('fetch', (event) => {
   }
 
   event.respondWith(
-    caches.match(event.request)
-      .then((cachedResponse) => {
-        if (cachedResponse) {
-          // Serve from cache
-          return cachedResponse;
+    fetch(event.request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
         }
-
-        // Otherwise fetch from network
-        return fetch(event.request).then((networkResponse) => {
-          // If response is valid, cache it for future use
-          if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-            const responseToCache = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
-          }
-          return networkResponse;
-        }).catch(() => {
-          // Fail gracefully if offline and not in cache
-          console.warn('SW: Resource fetch failed (Offline):', event.request.url);
-        });
+        return networkResponse;
+      })
+      .catch(() => {
+        // When offline or fetch fails, serve from cache
+        return caches.match(event.request);
       })
   );
 });

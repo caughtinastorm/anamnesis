@@ -1,6 +1,7 @@
 import { calculateSM2 } from './sm2.js';
 import * as db from './db.js';
 import * as sync from './sync.js';
+import { parseAnkiApkg, parseAnkiText, normalizeAnkiDeck } from './anki.js';
 
 // ==========================================================================
 // Application State
@@ -26,10 +27,49 @@ let touchMoveX = 0;
 let touchMoveY = 0;
 
 // ==========================================================================
+// Folder & Hierarchy Helpers
+// ==========================================================================
+export function getCardFolder(card) {
+  if (card.folder && card.folder.trim()) return card.folder.trim();
+  const raw = card.deck || 'Default';
+  if (raw.includes(' / ')) {
+    return raw.split(' / ')[0].trim();
+  }
+  if (raw.includes('::')) {
+    return raw.split('::')[0].trim();
+  }
+  return '';
+}
+
+export function getCardDeck(card) {
+  if (card.folder && card.folder.trim()) return (card.deck || 'Default').trim();
+  const raw = card.deck || 'Default';
+  if (raw.includes(' / ')) {
+    const parts = raw.split(' / ');
+    return parts.slice(1).join(' / ').trim() || 'Default';
+  }
+  if (raw.includes('::')) {
+    const parts = raw.split('::');
+    return parts.slice(1).join(' / ').trim() || 'Default';
+  }
+  return raw.trim() || 'Default';
+}
+
+export function getCardFullHierarchy(card) {
+  const folder = getCardFolder(card);
+  const deck = getCardDeck(card);
+  if (folder) {
+    return `${folder} / ${deck}`;
+  }
+  return deck;
+}
+
+// ==========================================================================
 // DOM Elements
 // ==========================================================================
 const views = {
   review: document.getElementById('view-review'),
+  decks: document.getElementById('view-decks'),
   import: document.getElementById('view-import'),
   settings: document.getElementById('view-settings')
 };
@@ -70,8 +110,12 @@ const quickFront = document.getElementById('quick-front');
 const quickSub = document.getElementById('quick-sub');
 const quickBack = document.getElementById('quick-back');
 const quickDescription = document.getElementById('quick-description');
+const quickFolder = document.getElementById('quick-folder');
 const quickDeck = document.getElementById('quick-deck');
+const folderSuggestions = document.getElementById('folder-suggestions');
+const deckSuggestions = document.getElementById('deck-suggestions');
 const btnQuickAdd = document.getElementById('btn-quick-add');
+const foldersTreeContainer = document.getElementById('folders-tree-container');
 
 // Import elements
 const importFile = document.getElementById('import-file');
@@ -114,22 +158,33 @@ let tempParsedCards = [];
 // ==========================================================================
 // Initialization & Database Loader
 // ==========================================================================
-document.addEventListener('DOMContentLoaded', async () => {
-  initRouting();
-  initTheme();
-  initSettingsForm();
-  initTouchGestures();
-  initKeyboardShortcuts();
-  
-  // Register Service Worker for PWA
-  registerServiceWorker();
+async function initApp() {
+  try {
+    initRouting();
+    initTheme();
+    initSettingsForm();
+    initTouchGestures();
+    initKeyboardShortcuts();
+    
+    // Register Service Worker for PWA
+    registerServiceWorker();
 
-  // Load cards from IndexedDB
-  await loadCardsFromDB();
-  
-  // Attempt remote background sync on boot if configured
-  performBackgroundSync();
-});
+    // Load cards from IndexedDB
+    await loadCardsFromDB();
+    
+    // Attempt remote background sync on boot if configured
+    performBackgroundSync();
+  } catch (err) {
+    console.error('initApp fatal error:', err);
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  // If document is already interactive or complete, initialize immediately
+  initApp();
+}
 
 /**
  * Load all cards from IndexedDB and update statistics
@@ -140,6 +195,7 @@ async function loadCardsFromDB() {
     populateDeckDropdown();
     calculateStats();
     updateUIStats();
+    renderFoldersTree();
   } catch (e) {
     console.error('Error loading cards from DB:', e);
     showToast('Failed to load local database', 'error');
@@ -147,19 +203,54 @@ async function loadCardsFromDB() {
 }
 
 /**
- * Dynamically populates the deck selector dropdown based on unique cards data
+ * Dynamically populates the deck selector dropdown and datalists with folder grouping
  */
 function populateDeckDropdown() {
   if (!deckSelect) return;
-  const selectedDeck = deckSelect.value || 'all';
+  const previousSelection = deckSelect.value || 'all';
 
-  // Find all unique custom decks
-  const decks = new Set();
+  // Map of Folder -> Set of Decks
+  const folderMap = new Map();
+  const standaloneDecks = new Set();
+  const allFolderNames = new Set();
+  const allDeckNames = new Set();
+
   allCards.forEach(card => {
-    if (card.deck && card.deck !== 'Default') {
-      decks.add(card.deck);
+    if (card.deleted) return;
+    const folder = getCardFolder(card);
+    const deck = getCardDeck(card);
+
+    if (folder) {
+      allFolderNames.add(folder);
+      if (!folderMap.has(folder)) {
+        folderMap.set(folder, new Set());
+      }
+      folderMap.get(folder).add(deck);
+    } else {
+      standaloneDecks.add(deck || 'Default');
     }
+
+    if (deck) allDeckNames.add(deck);
   });
+
+  // Populate Datalists for auto-suggest
+  if (folderSuggestions) {
+    folderSuggestions.innerHTML = '';
+    allFolderNames.forEach(folder => {
+      const opt = document.createElement('option');
+      opt.value = folder;
+      folderSuggestions.appendChild(opt);
+    });
+  }
+
+  if (deckSuggestions) {
+    deckSuggestions.innerHTML = '';
+    allDeckNames.forEach(deck => {
+      const opt = document.createElement('option');
+      opt.value = deck;
+      deckSuggestions.appendChild(opt);
+    });
+  }
 
   // Re-build dropdown options
   deckSelect.innerHTML = '';
@@ -169,38 +260,264 @@ function populateDeckDropdown() {
   optAll.textContent = 'All Collections';
   deckSelect.appendChild(optAll);
 
-  const optDefault = document.createElement('option');
-  optDefault.value = 'Default';
-  optDefault.textContent = 'Default';
-  deckSelect.appendChild(optDefault);
+  // Add Folder groups
+  Array.from(folderMap.keys()).sort().forEach(folder => {
+    const optGroup = document.createElement('optgroup');
+    optGroup.label = `📁 ${folder}`;
 
-  decks.forEach(deck => {
-    const opt = document.createElement('option');
-    opt.value = deck;
-    opt.textContent = deck;
-    deckSelect.appendChild(opt);
+    // Option to study entire folder
+    const optFolderAll = document.createElement('option');
+    optFolderAll.value = `folder:${folder}`;
+    optFolderAll.textContent = `📁 ${folder} (All Collections)`;
+    optGroup.appendChild(optFolderAll);
+
+    // Option for each sub-collection
+    const decks = Array.from(folderMap.get(folder)).sort();
+    decks.forEach(deck => {
+      const optDeck = document.createElement('option');
+      optDeck.value = `deck:${folder} / ${deck}`;
+      optDeck.textContent = `  ↳ ${deck}`;
+      optGroup.appendChild(optDeck);
+    });
+
+    deckSelect.appendChild(optGroup);
   });
 
-  // Restore selection if still valid, otherwise default to "all"
-  if (decks.has(selectedDeck) || selectedDeck === 'Default' || selectedDeck === 'all') {
-    deckSelect.value = selectedDeck;
+  // Add Standalone collections
+  if (standaloneDecks.size > 0) {
+    const standaloneGroup = document.createElement('optgroup');
+    standaloneGroup.label = 'Collections';
+
+    Array.from(standaloneDecks).sort().forEach(deck => {
+      const opt = document.createElement('option');
+      opt.value = `deck:${deck}`;
+      opt.textContent = deck;
+      standaloneGroup.appendChild(opt);
+    });
+
+    deckSelect.appendChild(standaloneGroup);
+  }
+
+  // Restore selection if still present in options
+  const optionExists = Array.from(deckSelect.options).some(o => o.value === previousSelection);
+  if (optionExists) {
+    deckSelect.value = previousSelection;
   } else {
     deckSelect.value = 'all';
   }
 }
 
 /**
- * Calculate card categories (due, new, total) based on current deck selection
+ * Renders the visual Folder & Collection Hierarchy Tree Widget in Manage tab
+ */
+function renderFoldersTree() {
+  if (!foldersTreeContainer) return;
+  foldersTreeContainer.innerHTML = '';
+
+  const now = Date.now();
+  const folderMap = new Map();
+  const standaloneMap = new Map();
+
+  allCards.forEach(card => {
+    if (card.deleted) return;
+    const folder = getCardFolder(card);
+    const deck = getCardDeck(card);
+    const isDue = (card.sm2_stats?.next_review || 0) <= now;
+
+    if (folder) {
+      if (!folderMap.has(folder)) {
+        folderMap.set(folder, new Map());
+      }
+      const deckMap = folderMap.get(folder);
+      if (!deckMap.has(deck)) {
+        deckMap.set(deck, { total: 0, due: 0 });
+      }
+      const stats = deckMap.get(deck);
+      stats.total++;
+      if (isDue) stats.due++;
+    } else {
+      const d = deck || 'Default';
+      if (!standaloneMap.has(d)) {
+        standaloneMap.set(d, { total: 0, due: 0 });
+      }
+      const stats = standaloneMap.get(d);
+      stats.total++;
+      if (isDue) stats.due++;
+    }
+  });
+
+  if (folderMap.size === 0 && standaloneMap.size === 0) {
+    foldersTreeContainer.innerHTML = '<p class="help-text">No collections created yet. Add cards below to build your hierarchy.</p>';
+    return;
+  }
+
+  // Render Folder Nodes
+  Array.from(folderMap.keys()).sort().forEach(folder => {
+    const deckMap = folderMap.get(folder);
+    let totalCards = 0;
+    let totalDue = 0;
+    deckMap.forEach(s => {
+      totalCards += s.total;
+      totalDue += s.due;
+    });
+
+    const folderNode = document.createElement('div');
+    folderNode.className = 'folder-node';
+
+    const header = document.createElement('div');
+    header.className = 'folder-header-row';
+
+    const titleWrap = document.createElement('div');
+    titleWrap.className = 'folder-title-wrap';
+    titleWrap.innerHTML = `
+      <svg class="folder-icon-svg" viewBox="0 0 24 24">
+        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+      </svg>
+      <span>${escapeHTML(folder)}</span>
+      <span class="folder-count-badge">${totalCards} cards${totalDue > 0 ? ` • ${totalDue} due` : ''}</span>
+    `;
+
+    const actionsWrap = document.createElement('div');
+    actionsWrap.className = 'folder-actions-wrap';
+
+    const btnStudy = document.createElement('button');
+    btnStudy.className = 'btn-folder-action';
+    btnStudy.textContent = 'Study Folder';
+    btnStudy.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deckSelect.value = `folder:${folder}`;
+      calculateStats();
+      updateUIStats();
+      switchView('view-review');
+    });
+
+    actionsWrap.appendChild(btnStudy);
+    header.appendChild(titleWrap);
+    header.appendChild(actionsWrap);
+    folderNode.appendChild(header);
+
+    // Decks List
+    const decksList = document.createElement('div');
+    decksList.className = 'folder-decks-list';
+
+    Array.from(deckMap.keys()).sort().forEach(deck => {
+      const stats = deckMap.get(deck);
+      const deckRow = document.createElement('div');
+      deckRow.className = 'deck-tree-item';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'deck-tree-name';
+      nameSpan.innerHTML = `↳ ${escapeHTML(deck)}`;
+      nameSpan.addEventListener('click', () => {
+        deckSelect.value = `deck:${folder} / ${deck}`;
+        calculateStats();
+        updateUIStats();
+        switchView('view-review');
+      });
+
+      const countSpan = document.createElement('span');
+      countSpan.className = 'deck-count-pill';
+      countSpan.textContent = `${stats.total} cards${stats.due > 0 ? ` (${stats.due} due)` : ''}`;
+
+      deckRow.appendChild(nameSpan);
+      deckRow.appendChild(countSpan);
+      decksList.appendChild(deckRow);
+    });
+
+    folderNode.appendChild(decksList);
+    foldersTreeContainer.appendChild(folderNode);
+  });
+
+  // Render Standalone Decks Node
+  if (standaloneMap.size > 0) {
+    const standaloneNode = document.createElement('div');
+    standaloneNode.className = 'folder-node';
+
+    const header = document.createElement('div');
+    header.className = 'folder-header-row';
+
+    const titleWrap = document.createElement('div');
+    titleWrap.className = 'folder-title-wrap';
+    titleWrap.innerHTML = `
+      <svg class="folder-icon-svg" viewBox="0 0 24 24">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+      </svg>
+      <span>Standalone Collections</span>
+    `;
+
+    header.appendChild(titleWrap);
+    standaloneNode.appendChild(header);
+
+    const decksList = document.createElement('div');
+    decksList.className = 'folder-decks-list';
+
+    Array.from(standaloneMap.keys()).sort().forEach(deck => {
+      const stats = standaloneMap.get(deck);
+      const deckRow = document.createElement('div');
+      deckRow.className = 'deck-tree-item';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'deck-tree-name';
+      nameSpan.textContent = deck;
+      nameSpan.addEventListener('click', () => {
+        deckSelect.value = `deck:${deck}`;
+        calculateStats();
+        updateUIStats();
+        switchView('view-review');
+      });
+
+      const countSpan = document.createElement('span');
+      countSpan.className = 'deck-count-pill';
+      countSpan.textContent = `${stats.total} cards${stats.due > 0 ? ` (${stats.due} due)` : ''}`;
+
+      deckRow.appendChild(nameSpan);
+      deckRow.appendChild(countSpan);
+      decksList.appendChild(deckRow);
+    });
+
+    standaloneNode.appendChild(decksList);
+    foldersTreeContainer.appendChild(standaloneNode);
+  }
+}
+
+function escapeHTML(str) {
+  return String(str || '').replace(/[&<>"']/g, m => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  }[m]));
+}
+
+/**
+ * Calculate card categories (due, new, total) based on current deck/folder selection
  */
 function calculateStats() {
   const now = Date.now();
-  const selectedDeck = deckSelect ? deckSelect.value : 'all';
+  const selected = deckSelect ? (deckSelect.value || 'all') : 'all';
   
-  // Filter cards by collection
+  // Filter active cards (excluding soft-deleted) by folder or collection
   const filteredCards = allCards.filter(card => {
-    if (selectedDeck === 'all') return true;
-    const cardDeck = card.deck || 'Default';
-    return cardDeck.toLowerCase() === selectedDeck.toLowerCase();
+    if (card.deleted) return false;
+    if (selected === 'all') return true;
+
+    if (selected.startsWith('folder:')) {
+      const targetFolder = selected.substring(7).toLowerCase();
+      return getCardFolder(card).toLowerCase() === targetFolder;
+    }
+
+    if (selected.startsWith('deck:')) {
+      const targetDeck = selected.substring(5).toLowerCase();
+      return getCardFullHierarchy(card).toLowerCase() === targetDeck;
+    }
+
+    // Fallback for direct names
+    const selLower = selected.toLowerCase();
+    return getCardFullHierarchy(card).toLowerCase() === selLower ||
+           getCardFolder(card).toLowerCase() === selLower ||
+           getCardDeck(card).toLowerCase() === selLower;
   });
 
   dueCards = filteredCards.filter(card => {
@@ -217,14 +534,28 @@ function calculateStats() {
  * Update UI counter fields and badge values
  */
 function updateUIStats() {
-  const selectedDeck = deckSelect ? deckSelect.value : 'all';
+  const selected = deckSelect ? (deckSelect.value || 'all') : 'all';
   const now = Date.now();
 
-  // Filter cards by collection for total counter
+  // Filter cards by collection for total counter (excluding soft-deleted)
   const filteredTotal = allCards.filter(card => {
-    if (selectedDeck === 'all') return true;
-    const cardDeck = card.deck || 'Default';
-    return cardDeck.toLowerCase() === selectedDeck.toLowerCase();
+    if (card.deleted) return false;
+    if (selected === 'all') return true;
+
+    if (selected.startsWith('folder:')) {
+      const targetFolder = selected.substring(7).toLowerCase();
+      return getCardFolder(card).toLowerCase() === targetFolder;
+    }
+
+    if (selected.startsWith('deck:')) {
+      const targetDeck = selected.substring(5).toLowerCase();
+      return getCardFullHierarchy(card).toLowerCase() === targetDeck;
+    }
+
+    const selLower = selected.toLowerCase();
+    return getCardFullHierarchy(card).toLowerCase() === selLower ||
+           getCardFolder(card).toLowerCase() === selLower ||
+           getCardDeck(card).toLowerCase() === selLower;
   }).length;
 
   const due = dueCards.length;
@@ -236,6 +567,7 @@ function updateUIStats() {
 
   // Calculate OVERALL due count across ALL decks for the bottom nav badge
   const overallDueCount = allCards.filter(card => {
+    if (card.deleted) return false;
     const nextReview = card.sm2_stats?.next_review || 0;
     return nextReview <= now;
   }).length;
@@ -266,29 +598,31 @@ function updateUIStats() {
   }
 }
 
-// ==========================================================================
-// View Routing & Theme Manager
-// ==========================================================================
 function initRouting() {
-  navItems.forEach(item => {
-    item.addEventListener('click', () => {
-      const targetView = item.getAttribute('data-view');
-      
-      // If user is currently studying, ask before leaving
-      if (subviews.study.classList.contains('active') && targetView !== 'view-review') {
-        showModal('Exit Study Session?', 'Your current session progress will be saved, but the remaining cards will be postponed.', () => {
-          exitStudySession();
+  // Document-level delegated click handler for all nav items and data-view buttons
+  document.addEventListener('click', (e) => {
+    const navBtn = e.target.closest('.nav-item') || e.target.closest('[data-view]');
+    if (navBtn) {
+      const targetView = navBtn.getAttribute('data-view');
+      if (targetView) {
+        e.preventDefault();
+        
+        // If user is currently studying, ask before leaving
+        if (subviews.study && subviews.study.classList.contains('active') && targetView !== 'view-review') {
+          showModal('Exit Study Session?', 'Your current session progress will be saved, but the remaining cards will be postponed.', () => {
+            exitStudySession();
+            switchView(targetView);
+          });
+        } else {
           switchView(targetView);
-        });
-      } else {
-        switchView(targetView);
+        }
       }
-    });
+    }
   });
 
   // Logo click returns to dashboard
   const handleLogoClick = () => {
-    if (subviews.study.classList.contains('active')) {
+    if (subviews.study && subviews.study.classList.contains('active')) {
       showModal('Exit Study Session?', 'Exit study session and return to dashboard?', () => {
         exitStudySession();
         switchView('view-review');
@@ -298,17 +632,19 @@ function initRouting() {
     }
   };
 
-  document.getElementById('header-logo-home').addEventListener('click', handleLogoClick);
+  const headerLogo = document.getElementById('header-logo-home');
+  if (headerLogo) headerLogo.addEventListener('click', handleLogoClick);
+  
   const sidebarLogo = document.getElementById('sidebar-logo-home');
-  if (sidebarLogo) {
-    sidebarLogo.addEventListener('click', handleLogoClick);
-  }
+  if (sidebarLogo) sidebarLogo.addEventListener('click', handleLogoClick);
 
   // Sync button in header triggers settings redirect
-  headerSyncStatus.addEventListener('click', () => {
-    switchView('view-settings');
-    scrollToElement(manualSyncContainer);
-  });
+  if (headerSyncStatus) {
+    headerSyncStatus.addEventListener('click', () => {
+      switchView('view-settings');
+      if (manualSyncContainer) scrollToElement(manualSyncContainer);
+    });
+  }
 
   // Deck selector change updates statistics
   if (deckSelect) {
@@ -324,10 +660,12 @@ function initRouting() {
   }
 }
 
-function switchView(viewId) {
-  // Update view classes
-  Object.keys(views).forEach(key => {
-    const view = views[key];
+export function switchView(viewId) {
+  if (!viewId) return;
+
+  // Update view classes directly from DOM
+  const allViews = document.querySelectorAll('.app-view');
+  allViews.forEach(view => {
     if (view.id === viewId) {
       view.classList.add('active');
     } else {
@@ -335,14 +673,20 @@ function switchView(viewId) {
     }
   });
 
-  // Update nav-item classes
-  navItems.forEach(item => {
+  // Update nav-item classes directly from DOM
+  const allNavItems = document.querySelectorAll('.nav-item');
+  allNavItems.forEach(item => {
     if (item.getAttribute('data-view') === viewId) {
       item.classList.add('active');
     } else {
       item.classList.remove('active');
     }
   });
+}
+
+// Expose switchView to window for immediate global access
+if (typeof window !== 'undefined') {
+  window.switchView = switchView;
 }
 
 function scrollToElement(element) {
@@ -397,8 +741,8 @@ function applyTheme(theme) {
 // ==========================================================================
 // Spaced Repetition Study Session Loop
 // ==========================================================================
-btnStartReview.addEventListener('click', startStudySession);
-btnCancelStudy.addEventListener('click', () => {
+if (btnStartReview) btnStartReview.addEventListener('click', startStudySession);
+if (btnCancelStudy) btnCancelStudy.addEventListener('click', () => {
   showModal('Exit Study Session?', 'Exit study session and return to dashboard?', exitStudySession);
 });
 
@@ -471,11 +815,12 @@ function renderCurrentStudyCard() {
   cardBackContent.parentElement.scrollTop = 0;
 }
 
-// Tap card to flip
-flashcard.addEventListener('click', (e) => {
-  if (e.target.closest('.btn-grade') || isSwipeActive) return;
-  flipCard();
-});
+if (flashcard) {
+  flashcard.addEventListener('click', (e) => {
+    if (e.target.closest('.btn-grade') || isSwipeActive) return;
+    flipCard();
+  });
+}
 
 function flipCard() {
   isFlipped = !isFlipped;
@@ -514,7 +859,7 @@ async function submitCardGrade(grade) {
     
     // Learning queue extension: If card is forgotten/wrong (grade < 3), re-queue it at the end of the session list
     if (grade < 3) {
-      studySessionCards.push(card);
+      studySessionCards.push(updatedCard);
     }
     
     // Animate Card out of viewport (swipe simulation)
@@ -646,6 +991,7 @@ async function handleQuickAddCard() {
   const sub = quickSub.value.trim();
   const back = quickBack.value.trim();
   const desc = quickDescription.value.trim();
+  const folder = quickFolder ? quickFolder.value.trim() : '';
   const deck = quickDeck.value.trim() || 'Default';
 
   if (!front || !back) {
@@ -660,7 +1006,8 @@ async function handleQuickAddCard() {
     sub: sub || undefined,
     back,
     description: desc || undefined,
-    deck,
+    folder: folder || undefined,
+    deck: deck || 'Default',
     sm2_stats: {
       ease_factor: 2.5,
       interval: 0,
@@ -674,12 +1021,11 @@ async function handleQuickAddCard() {
     await db.saveCard(newCard);
     showToast('Card added successfully!', 'success');
     
-    // Clear inputs
+    // Clear inputs (preserve folder for convenience)
     quickFront.value = '';
     quickSub.value = '';
     quickBack.value = '';
     quickDescription.value = '';
-    quickDeck.value = 'Default';
     
     // Reload cards and update stats
     await loadCardsFromDB();
@@ -693,14 +1039,14 @@ async function handleQuickAddCard() {
 }
 
 // ==========================================================================
-// CSV Importer Utility (Support Decks & Sub-texts)
+// Universal Importer Utility (Anki .apkg, Text, CSV, TSV)
 // ==========================================================================
-importFile.addEventListener('change', handleFileSelect);
-btnParseCsv.addEventListener('click', handleCSVParseClick);
-btnCancelImport.addEventListener('click', clearCSVPreview);
-btnConfirmImport.addEventListener('click', commitImportedCards);
+if (importFile) importFile.addEventListener('change', handleFileSelect);
+if (btnParseCsv) btnParseCsv.addEventListener('click', handleCSVParseClick);
+if (btnCancelImport) btnCancelImport.addEventListener('click', clearCSVPreview);
+if (btnConfirmImport) btnConfirmImport.addEventListener('click', commitImportedCards);
 
-function handleFileSelect(e) {
+async function handleFileSelect(e) {
   const file = e.target.files[0];
   if (!file) {
     importFileName.textContent = 'No file chosen';
@@ -708,27 +1054,50 @@ function handleFileSelect(e) {
   }
   
   importFileName.textContent = file.name;
-  
-  const reader = new FileReader();
-  reader.onload = function(evt) {
-    importText.value = evt.target.result;
-    showToast('CSV file loaded. Click Preview to view.', 'info');
-  };
-  reader.onerror = function() {
-    showToast('Failed to read CSV file', 'error');
-  };
-  reader.readAsText(file);
+  const lowerName = file.name.toLowerCase();
+
+  if (lowerName.endsWith('.apkg')) {
+    showToast('Reading Anki package...', 'info');
+    try {
+      const buffer = await file.arrayBuffer();
+      tempParsedCards = await parseAnkiApkg(buffer);
+      if (tempParsedCards.length === 0) {
+        showToast('No cards found in Anki package', 'error');
+        return;
+      }
+      renderImportPreview(tempParsedCards);
+      showToast(`Parsed ${tempParsedCards.length} cards from Anki deck!`, 'success');
+    } catch (err) {
+      console.error('Anki package parse error:', err);
+      showToast(`Anki parse error: ${err.message}`, 'error');
+    }
+  } else {
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      importText.value = evt.target.result;
+      showToast('File loaded. Click Preview Import to view.', 'info');
+    };
+    reader.onerror = function() {
+      showToast('Failed to read file', 'error');
+    };
+    reader.readAsText(file);
+  }
 }
 
 function handleCSVParseClick() {
   const text = importText.value.trim();
   if (!text) {
-    showToast('Please paste CSV text or select a file.', 'error');
+    showToast('Please paste text/CSV or select a file.', 'error');
     return;
   }
 
   try {
-    tempParsedCards = parseCSV(text);
+    if (text.startsWith('#') || text.includes('\t')) {
+      tempParsedCards = parseAnkiText(text);
+    } else {
+      tempParsedCards = parseCSV(text);
+    }
+
     if (tempParsedCards.length === 0) {
       showToast('No valid rows found to import', 'error');
       return;
@@ -737,7 +1106,7 @@ function handleCSVParseClick() {
     renderImportPreview(tempParsedCards);
   } catch (err) {
     console.error(err);
-    showToast('Error parsing CSV content', 'error');
+    showToast('Error parsing content', 'error');
   }
 }
 
@@ -766,7 +1135,7 @@ function splitCSVLine(line) {
 }
 
 /**
- * Parses CSV raw text splitting on columns Front, Back, Sub-text, Deck
+ * Parses CSV raw text supporting Folder, Deck, Front, Back, Sub-text, Description
  */
 function parseCSV(text) {
   const lines = text.split(/\r?\n/);
@@ -776,14 +1145,42 @@ function parseCSV(text) {
     const line = lines[i].trim();
     if (!line) continue;
 
+    // Skip header line if present
+    const lowerLine = line.toLowerCase();
+    if (i === 0 && (lowerLine.startsWith('folder,') || lowerLine.startsWith('front,'))) {
+      continue;
+    }
+
     const fields = splitCSVLine(line).map(cleanCSVField);
-    
-    let front = fields[0] || '';
-    let back = fields[1] || '';
-    let sub = fields[2] || '';
-    let deck = fields[3] || 'Default';
-    let description = fields[4] || '';
-    
+    if (fields.length < 2) continue;
+
+    let folder = undefined;
+    let deck = 'Default';
+    let front = '';
+    let back = '';
+    let sub = '';
+    let description = '';
+
+    if (fields.length >= 5) {
+      // Format: Folder, Deck, Front, Back, Sub, Desc
+      folder = fields[0] || undefined;
+      deck = fields[1] || 'Default';
+      front = fields[2] || '';
+      back = fields[3] || '';
+      sub = fields[4] || '';
+      description = fields[5] || '';
+    } else {
+      // Format: Front, Back, Sub, Deck, Desc
+      front = fields[0] || '';
+      back = fields[1] || '';
+      sub = fields[2] || '';
+      const rawDeck = fields[3] || 'Default';
+      const norm = normalizeAnkiDeck(rawDeck);
+      folder = norm.folder;
+      deck = norm.deck;
+      description = fields[4] || '';
+    }
+
     // Support "Front|Subtext" format in column 1
     if (front.includes('|')) {
       const parts = front.split('|');
@@ -792,8 +1189,10 @@ function parseCSV(text) {
         sub = parts[1].trim();
       }
     }
+
+    if (!front && !back) continue;
     
-    cards.push({ front, back, sub, deck, description });
+    cards.push({ folder: folder || undefined, deck: deck || 'Default', front, back, sub, description });
   }
   
   return cards;
@@ -815,6 +1214,12 @@ function renderImportPreview(cards) {
   cards.forEach(card => {
     const row = document.createElement('tr');
     
+    const tdFolder = document.createElement('td');
+    tdFolder.textContent = card.folder || '-';
+
+    const tdDeck = document.createElement('td');
+    tdDeck.textContent = card.deck || 'Default';
+
     const tdFront = document.createElement('td');
     tdFront.textContent = card.front;
     
@@ -824,16 +1229,14 @@ function renderImportPreview(cards) {
     const tdSub = document.createElement('td');
     tdSub.textContent = card.sub || '-';
 
-    const tdDeck = document.createElement('td');
-    tdDeck.textContent = card.deck || 'Default';
-
     const tdDesc = document.createElement('td');
     tdDesc.textContent = card.description || '-';
     
+    row.appendChild(tdFolder);
+    row.appendChild(tdDeck);
     row.appendChild(tdFront);
     row.appendChild(tdBack);
     row.appendChild(tdSub);
-    row.appendChild(tdDeck);
     row.appendChild(tdDesc);
     
     previewTableBody.appendChild(row);
@@ -863,6 +1266,7 @@ async function commitImportedCards() {
       sub: c.sub || undefined,
       back: c.back,
       description: c.description || undefined,
+      folder: c.folder || undefined,
       deck: c.deck || 'Default',
       sm2_stats: {
         ease_factor: 2.5,
@@ -903,9 +1307,10 @@ function generateUUID() {
 
 // Helper: Hardened HTML sanitizer — allows only specific tag names, no attributes
 function sanitizeHTML(str) {
+  if (str === null || str === undefined) return '';
   // Step 1: Escape everything via textContent trick
   const temp = document.createElement('div');
-  temp.textContent = str;
+  temp.textContent = String(str);
   let html = temp.innerHTML;
 
   // Step 2: Restore ONLY known-safe bare tags (no attributes allowed)
@@ -929,10 +1334,10 @@ function sanitizeHTML(str) {
 // ==========================================================================
 // GitHub Gist Synchronization Manager integration
 // ==========================================================================
-btnValidateToken.addEventListener('click', validateGitHubToken);
-btnCreateGist.addEventListener('click', createSyncGist);
-btnSaveCredentials.addEventListener('click', saveSyncConfig);
-btnForceSync.addEventListener('click', triggerManualSync);
+if (btnValidateToken) btnValidateToken.addEventListener('click', validateGitHubToken);
+if (btnCreateGist) btnCreateGist.addEventListener('click', createSyncGist);
+if (btnSaveCredentials) btnSaveCredentials.addEventListener('click', saveSyncConfig);
+if (btnForceSync) btnForceSync.addEventListener('click', triggerManualSync);
 
 function initSettingsForm() {
   settingsPat.value = syncCredentials.pat || '';
@@ -1037,8 +1442,7 @@ async function triggerManualSync() {
     const result = await sync.syncCards(localCards);
     
     if (result.status === 'merged_with_remote') {
-      await db.clearDatabase();
-      await db.saveCards(result.cards);
+      await db.replaceCards(result.cards);
       logToConsole('Downloaded updates from Gist and merged conflicts successfully.');
     } else if (result.status === 'uploaded_local') {
       logToConsole('Local data uploaded and Remote Gist updated successfully.');
@@ -1046,7 +1450,7 @@ async function triggerManualSync() {
 
     await loadCardsFromDB();
 
-    logToConsole(`Sync complete. Cards count: ${allCards.length}`);
+    logToConsole(`Sync complete. Cards count: ${allCards.filter(c => !c.deleted).length}`);
     showToast('Synchronization complete!', 'success');
     setSyncStateIndicator('synced');
   } catch (err) {
@@ -1075,8 +1479,7 @@ async function performBackgroundSync() {
     const result = await sync.syncCards(localCards);
     
     if (result.status === 'merged_with_remote') {
-      await db.clearDatabase();
-      await db.saveCards(result.cards);
+      await db.replaceCards(result.cards);
       await loadCardsFromDB();
       showToast('Synced card updates from cloud', 'success');
     }
@@ -1126,25 +1529,31 @@ function updateSyncUIState() {
 }
 
 // ==========================================================================
-// Backup & Local Database Administration
+// Backup & Local Database Administration (One-Click Comprehensive CSV Export)
 // ==========================================================================
-btnExportCsv.addEventListener('click', exportDatabaseToCSV);
-btnClearDb.addEventListener('click', resetLocalDatabase);
+if (btnExportCsv) btnExportCsv.addEventListener('click', exportDatabaseToCSV);
+if (btnClearDb) btnClearDb.addEventListener('click', resetLocalDatabase);
 
 async function exportDatabaseToCSV() {
-  if (allCards.length === 0) {
+  const activeCards = allCards.filter(card => !card.deleted);
+  if (activeCards.length === 0) {
     showToast('No cards to export', 'error');
     return;
   }
 
-  let csvContent = '';
-  allCards.forEach(card => {
+  let csvContent = 'Folder,Deck,Front,Back,Sub-text,Description,EaseFactor,Interval,Reps,NextReview\n';
+  activeCards.forEach(card => {
+    const folder = escapeCSVField(getCardFolder(card));
+    const deck = escapeCSVField(getCardDeck(card));
     const front = escapeCSVField(card.front);
     const back = escapeCSVField(card.back);
     const sub = escapeCSVField(card.sub || '');
-    const deck = escapeCSVField(card.deck || 'Default');
     const desc = escapeCSVField(card.description || '');
-    csvContent += `${front},${back},${sub},${deck},${desc}\n`;
+    const ef = card.sm2_stats?.ease_factor || 2.5;
+    const ivl = card.sm2_stats?.interval || 0;
+    const reps = card.sm2_stats?.repetitions || 0;
+    const nextRev = card.sm2_stats?.next_review || 0;
+    csvContent += `${folder},${deck},${front},${back},${sub},${desc},${ef},${ivl},${reps},${nextRev}\n`;
   });
 
   try {
@@ -1152,12 +1561,12 @@ async function exportDatabaseToCSV() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `flashcards_backup_${new Date().toISOString().slice(0,10)}.csv`);
+    link.setAttribute('download', `anamnesis_all_collections_${new Date().toISOString().slice(0,10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    showToast('CSV Backup downloaded!', 'success');
+    showToast(`Exported ${activeCards.length} cards across all collections!`, 'success');
   } catch (err) {
     console.error('CSV Export failure:', err);
     showToast('Failed to export CSV file', 'error');
@@ -1197,18 +1606,22 @@ function showModal(title, body, onConfirm) {
   modalContainer.classList.remove('hidden');
 }
 
-modalBtnCancel.addEventListener('click', () => {
-  modalContainer.classList.add('hidden');
-  modalConfirmCallback = null;
-});
+if (modalBtnCancel) {
+  modalBtnCancel.addEventListener('click', () => {
+    modalContainer.classList.add('hidden');
+    modalConfirmCallback = null;
+  });
+}
 
-modalBtnConfirm.addEventListener('click', () => {
-  modalContainer.classList.add('hidden');
-  if (modalConfirmCallback) {
-    modalConfirmCallback();
-  }
-  modalConfirmCallback = null;
-});
+if (modalBtnConfirm) {
+  modalBtnConfirm.addEventListener('click', () => {
+    modalContainer.classList.add('hidden');
+    if (modalConfirmCallback) {
+      modalConfirmCallback();
+    }
+    modalConfirmCallback = null;
+  });
+}
 
 function showToast(message, type = 'info') {
   const toast = document.createElement('div');

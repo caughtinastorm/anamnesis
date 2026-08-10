@@ -48,6 +48,9 @@ export function calculateSM2(card, grade) {
   // Set next review to 4:00 AM on the target day to align with daily study boundaries
   const targetDate = new Date(now + interval * 24 * 60 * 60 * 1000);
   targetDate.setHours(4, 0, 0, 0);
+  if (targetDate.getTime() <= now) {
+    targetDate.setDate(targetDate.getDate() + 1);
+  }
   const next_review = targetDate.getTime();
 
   return {

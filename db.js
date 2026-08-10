@@ -1,17 +1,24 @@
 /**
  * Promise-based IndexedDB Wrapper
  * 
- * Manages local storage of card objects.
+ * Manages local storage of card objects with singleton connection pooling
+ * and atomic batch transactions.
  */
 
 const DB_NAME = 'FlashcardAppDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'cards';
 
+let dbInstance = null;
+
 /**
- * Open/Initialize the IndexedDB database
+ * Open/Initialize the IndexedDB database (Singleton connection)
  */
-function openDB() {
+export function openDB() {
+  if (dbInstance) {
+    return Promise.resolve(dbInstance);
+  }
+
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
@@ -21,7 +28,11 @@ function openDB() {
     };
 
     request.onsuccess = () => {
-      resolve(request.result);
+      dbInstance = request.result;
+      dbInstance.onclose = () => {
+        dbInstance = null;
+      };
+      resolve(dbInstance);
     };
 
     request.onupgradeneeded = (event) => {
@@ -80,7 +91,31 @@ export async function saveCard(card) {
 }
 
 /**
- * Delete a single card by its ID
+ * Atomically replace all cards in the database in a single transaction.
+ * Prevents any data loss window during cloud sync or full resets.
+ * @param {Array} cards Array of card objects
+ * @returns {Promise<void>}
+ */
+export async function replaceCards(cards) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+
+    store.clear();
+    if (cards && cards.length > 0) {
+      cards.forEach(card => {
+        store.put(card);
+      });
+    }
+
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+  });
+}
+
+/**
+ * Delete a single card by its ID (hard delete)
  * @param {string} cardId Card UUID
  * @returns {Promise<void>}
  */
@@ -111,3 +146,4 @@ export async function clearDatabase() {
     request.onerror = () => reject(request.error);
   });
 }
+
