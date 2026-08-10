@@ -4,7 +4,7 @@
  * Implements Network-First caching strategy with offline fallback.
  */
 
-const CACHE_NAME = 'anamnesis-v13';
+const CACHE_NAME = 'anamnesis-v14';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -52,8 +52,9 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const requestUrl = new URL(event.request.url);
 
-  // Bypass cache for GitHub API requests
-  if (requestUrl.host === 'api.github.com') {
+  // ONLY intercept same-origin local assets!
+  // Let external cross-origin requests (Google Fonts, GitHub API) pass through natively
+  if (requestUrl.origin !== self.location.origin) {
     return;
   }
 
@@ -78,9 +79,10 @@ self.addEventListener('fetch', (event) => {
         const cached = await caches.match(event.request);
         if (cached) return cached;
         if (event.request.mode === 'navigate') {
-          return (await caches.match('./index.html')) || (await caches.match('./'));
+          const fallback = (await caches.match('./index.html')) || (await caches.match('./'));
+          if (fallback) return fallback;
         }
-        return null;
+        return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
       })
   );
 });
