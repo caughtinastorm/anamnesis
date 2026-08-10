@@ -61,9 +61,50 @@ export async function testToken(pat) {
 }
 
 /**
- * Create a new private gist containing flashcards.json
+ * Automatically searches the user's account for an existing flashcards Gist
+ * @param {string} pat Personal Access Token
+ * @returns {Promise<string|null>} The Gist ID if found, or null
+ */
+export async function findExistingFlashcardGist(pat) {
+  try {
+    const res = await fetch('https://api.github.com/gists?per_page=100', {
+      headers: getHeaders(pat),
+      cache: 'no-store'
+    });
+    
+    if (!res.ok) {
+      return null;
+    }
+    
+    const gists = await res.json();
+    if (!Array.isArray(gists)) return null;
+
+    // Search for gist containing flashcards.json or specific description
+    for (const g of gists) {
+      if (g.files && g.files['flashcards.json']) {
+        return g.id;
+      }
+      if (g.description && g.description.toLowerCase().includes('flashcard')) {
+        return g.id;
+      }
+    }
+    return null;
+  } catch (e) {
+    console.warn('Error searching for existing gist:', e);
+    return null;
+  }
+}
+
+/**
+ * Create a new private gist containing flashcards.json, or reuse existing if found
  */
 export async function createFlashcardGist(pat) {
+  // First check if an existing flashcard gist is already present on this account
+  const existingId = await findExistingFlashcardGist(pat);
+  if (existingId) {
+    return existingId;
+  }
+
   const body = {
     description: 'Flashcard PWA HEADLESS JSON Data Store',
     public: false,

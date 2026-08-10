@@ -1376,6 +1376,19 @@ async function validateGitHubToken() {
     const user = await sync.testToken(pat);
     logToConsole(`Success! Connected as GitHub user: @${user.login}`);
     showToast(`Token valid! Account: @${user.login}`, 'success');
+
+    // Auto-discover existing Gist if field is empty
+    if (!settingsGistId.value.trim()) {
+      logToConsole('Searching for existing flashcard storage on your GitHub account...');
+      const existingGistId = await sync.findExistingFlashcardGist(pat);
+      if (existingGistId) {
+        settingsGistId.value = existingGistId;
+        logToConsole(`Found existing Flashcards Gist: ${existingGistId}`);
+        showToast('Auto-linked to your existing Gist!', 'success');
+      } else {
+        logToConsole('No existing Gist found. Click "Create Gist" or "Save Config" to create one.');
+      }
+    }
   } catch (err) {
     logToConsole(err.message, true);
     showToast('Token validation failed', 'error');
@@ -1391,18 +1404,18 @@ async function createSyncGist() {
     return;
   }
 
-  logToConsole('Creating a new private GitHub Gist for data synchronization...');
+  logToConsole('Setting up GitHub Gist for data synchronization...');
   btnCreateGist.disabled = true;
 
   try {
     const gistId = await sync.createFlashcardGist(pat);
     settingsGistId.value = gistId;
-    logToConsole(`Success! Gist created with ID: ${gistId}`);
-    logToConsole('Make sure to click "Save Config" below to persist these credentials.', false);
-    showToast('Private Gist created successfully!', 'success');
+    logToConsole(`Success! Connected to Gist: ${gistId}`);
+    logToConsole('Click "Save Config" below to persist these credentials.', false);
+    showToast('Gist connected successfully!', 'success');
   } catch (err) {
     logToConsole(err.message, true);
-    showToast('Failed to create Gist', 'error');
+    showToast('Failed to connect Gist', 'error');
   } finally {
     btnCreateGist.disabled = false;
   }
@@ -1410,7 +1423,7 @@ async function createSyncGist() {
 
 async function saveSyncConfig() {
   const pat = settingsPat.value.trim();
-  const gistId = settingsGistId.value.trim();
+  let gistId = settingsGistId.value.trim();
 
   if (!pat) {
     sync.clearSyncCredentials();
@@ -1420,15 +1433,23 @@ async function saveSyncConfig() {
     return;
   }
 
+  // Auto-create or auto-discover Gist if empty
   if (!gistId) {
-    showToast('Please enter or create a Gist ID before saving.', 'error');
-    return;
+    try {
+      logToConsole('Auto-discovering or creating Gist for your account...');
+      gistId = await sync.createFlashcardGist(pat);
+      settingsGistId.value = gistId;
+      logToConsole(`Gist linked: ${gistId}`);
+    } catch (e) {
+      showToast('Could not auto-create Gist: ' + e.message, 'error');
+      return;
+    }
   }
 
   sync.saveSyncCredentials(pat, gistId);
   syncCredentials = { pat, gistId };
   updateSyncUIState();
-  showToast('Credentials saved successfully!', 'success');
+  showToast('Credentials saved & synchronized!', 'success');
 
   // Trigger initial synchronization immediately
   triggerManualSync();
