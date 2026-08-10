@@ -3,7 +3,7 @@
  * Implements Network-First caching with offline fallback.
  */
 
-const CACHE_NAME = "anamnesis-v19";
+const CACHE_NAME = "anamnesis-v20";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
@@ -23,7 +23,8 @@ const ASSETS_TO_CACHE = [
   "./js/dashboard.js",
   "./js/study.js",
   "./js/import.js",
-  "./js/settings.js"
+  "./js/settings.js",
+  "./js/browser.js"
 ];
 
 self.addEventListener("install", event => {

@@ -2,6 +2,7 @@
 import { dom, showToast, switchView } from "./ui.js";
 import { getCardFolder, getCardDeck, getCardFullHierarchy, escapeHTML, generateUUID } from "./utils.js";
 import * as db from "../db.js";
+import { populateBrowserDeckFilter, renderCardBrowser } from "./browser.js";
 
 let onSyncRequest = () => {};
 export function onSyncNeeded(cb) { onSyncRequest = cb; }
@@ -14,6 +15,8 @@ export async function loadCardsFromDB() {
     updateUIStats();
     renderFoldersTree();
     renderHeatmap();
+    populateBrowserDeckFilter();
+    renderCardBrowser();
   } catch (e) {
     console.error("Error loading cards from DB:", e);
     showToast("Failed to load local database", "error");

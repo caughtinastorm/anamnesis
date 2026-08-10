@@ -333,6 +333,46 @@
           </div>
           <button id="btn-quick-add" class="btn btn-primary btn-full">Add Card</button>
         </div>
+      
+        <!-- Card Browser & Management Panel -->
+        <div class="card-panel browser-panel" id="card-browser-panel">
+          <div class="panel-header browser-header-row">
+            <div>
+              <h3>Card Browser</h3>
+              <p id="browser-total-count">Search, edit, and manage individual flashcards.</p>
+            </div>
+          </div>
+          
+          <div class="browser-controls-row">
+            <div class="search-input-wrap">
+              <svg class="search-icon-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input type="text" id="browser-search-input" placeholder="Search cards by front, back, deck, folder...">
+            </div>
+            <select id="browser-deck-filter" class="select-input browser-deck-select">
+              <option value="all">?? All Collections</option>
+            </select>
+          </div>
+
+          <div class="browser-table-container table-container">
+            <table class="preview-table browser-table">
+              <thead>
+                <tr>
+                  <th style="width: 22%;">Collection</th>
+                  <th style="width: 32%;">Front</th>
+                  <th style="width: 28%;">Back</th>
+                  <th style="width: 10%;">Status</th>
+                  <th style="width: 8%; text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="browser-cards-tbody">
+                <!-- Dynamically rendered -->
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
 
       <!-- VIEW 3: IMPORT -->
@@ -584,6 +624,50 @@ Japanese,N5 Kanji,漢字|かんじ,Chinese characters</pre>
         <div class="modal-buttons">
           <button id="modal-btn-cancel" class="btn btn-secondary">Cancel</button>
           <button id="modal-btn-confirm" class="btn btn-danger">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+    
+    <!-- Edit Flashcard Modal Dialog -->
+    <div id="edit-modal-container" class="modal-overlay hidden">
+      <div class="modal-content card-panel edit-card-modal-content">
+        <div class="edit-modal-header">
+          <h3>Edit Flashcard</h3>
+          <button id="btn-close-edit-modal" class="btn-text">?</button>
+        </div>
+        <div class="edit-modal-body">
+          <input type="hidden" id="edit-card-id">
+          <div class="form-grid-two-col">
+            <div class="form-group">
+              <label for="edit-card-folder" class="input-label">Folder</label>
+              <input type="text" id="edit-card-folder" list="folder-suggestions" placeholder="e.g. Spanish (Optional)">
+            </div>
+            <div class="form-group">
+              <label for="edit-card-deck" class="input-label">Collection / Deck</label>
+              <input type="text" id="edit-card-deck" list="deck-suggestions" placeholder="e.g. Verbs">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="edit-card-front" class="input-label">Front (Question)</label>
+            <input type="text" id="edit-card-front">
+          </div>
+          <div class="form-group">
+            <label for="edit-card-sub" class="input-label">Sub-text / Pronunciation Hint</label>
+            <input type="text" id="edit-card-sub" placeholder="Optional phonetic helper">
+          </div>
+          <div class="form-group">
+            <label for="edit-card-back" class="input-label">Back (Answer)</label>
+            <input type="text" id="edit-card-back">
+          </div>
+          <div class="form-group">
+            <label for="edit-card-description" class="input-label">Description / Extra Notes</label>
+            <input type="text" id="edit-card-description" placeholder="Optional notes or context">
+          </div>
+        </div>
+        <div class="modal-buttons" style="margin-top: 14px;">
+          <button id="edit-modal-cancel" class="btn btn-secondary">Cancel</button>
+          <button id="edit-modal-save" class="btn btn-primary">Save Changes</button>
         </div>
       </div>
     </div>

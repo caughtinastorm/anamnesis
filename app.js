@@ -10,6 +10,7 @@ import { loadCardsFromDB, calculateStats, updateUIStats, handleQuickAddCard, onS
 import { initStudyEventListeners, initTouchGestures, initKeyboardShortcuts, onSyncNeeded as studyOnSync } from "./js/study.js";
 import { initImportEventListeners, onSyncNeeded as importOnSync } from "./js/import.js";
 import { initSettingsForm, initSettingsEventListeners, performBackgroundSync, onSyncNeeded as settingsOnSync } from "./js/settings.js";
+import { initCardBrowser, onSyncNeeded as browserOnSync } from "./js/browser.js";
 
 // Wire up sync callbacks so all modules trigger background sync
 const requestSync = () => performBackgroundSync();
@@ -17,6 +18,7 @@ dashOnSync(requestSync);
 studyOnSync(requestSync);
 importOnSync(requestSync);
 settingsOnSync(requestSync);
+browserOnSync(requestSync);
 
 // ==========================================================================
 // Routing
@@ -103,6 +105,7 @@ async function initApp() {
     initImportEventListeners();
     initSettingsForm();
     initSettingsEventListeners();
+    initCardBrowser();
 
     registerServiceWorker();
 
