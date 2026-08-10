@@ -808,22 +808,10 @@ textarea {
   opacity: 0.85;
 }
 
-.hero-delta-svg {
-  width: 48px;
-  height: 48px;
-  filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.15));
-}
-
-.delta-outer {
-  fill: none;
-  stroke: var(--text-primary);
-  stroke-width: 2.5;
-}
-
-.delta-inner {
-  fill: #000;
-  stroke: var(--panel-border);
-  stroke-width: 1.5;
+.hero-column-svg {
+  width: 52px;
+  height: 52px;
+  filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.18));
 }
 
 .dashboard-layout-container {
