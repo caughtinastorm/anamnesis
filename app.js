@@ -140,6 +140,7 @@ const manualSyncContainer = document.getElementById('manual-sync-container');
 const btnForceSync = document.getElementById('btn-force-sync');
 const syncLastTimeLabel = document.getElementById('sync-last-time-label');
 const headerSyncStatus = document.getElementById('header-sync-status');
+const syncLabelText = document.getElementById('sync-label-text');
 const btnExportCsv = document.getElementById('btn-export-csv');
 const btnClearDb = document.getElementById('btn-clear-db');
 const themeButtons = document.querySelectorAll('.btn-theme');
@@ -1740,19 +1741,27 @@ async function performBackgroundSync() {
 }
 
 function setSyncStateIndicator(state) {
-  headerSyncStatus.className = 'header-sync';
+  if (headerSyncStatus) {
+    headerSyncStatus.className = 'header-sync';
+    if (state === 'synced') {
+      headerSyncStatus.classList.add('synced');
+    } else if (state === 'syncing') {
+      headerSyncStatus.classList.add('syncing');
+    } else if (state === 'failed') {
+      headerSyncStatus.classList.add('failed');
+    }
+  }
   
-  if (state === 'synced') {
-    headerSyncStatus.classList.add('synced');
-    syncLabelText.textContent = 'Synced';
-  } else if (state === 'syncing') {
-    headerSyncStatus.classList.add('syncing');
-    syncLabelText.textContent = 'Syncing...';
-  } else if (state === 'failed') {
-    headerSyncStatus.classList.add('failed');
-    syncLabelText.textContent = 'Sync Failed';
-  } else {
-    syncLabelText.textContent = 'Offline';
+  if (syncLabelText) {
+    if (state === 'synced') {
+      syncLabelText.textContent = 'Synced';
+    } else if (state === 'syncing') {
+      syncLabelText.textContent = 'Syncing...';
+    } else if (state === 'failed') {
+      syncLabelText.textContent = 'Sync Failed';
+    } else {
+      syncLabelText.textContent = 'Offline';
+    }
   }
 }
 

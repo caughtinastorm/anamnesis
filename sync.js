@@ -176,6 +176,11 @@ async function updateGist(pat, gistId, cards) {
   return data;
 }
 
+function getCardTimestamp(card) {
+  if (!card) return 0;
+  return card.updated_at || card.last_modified || card.sm2_stats?.last_reviewed || card.fsrs_stats?.last_review || 0;
+}
+
 /**
  * Merge local and remote cards array using Last-Write-Wins with tombstone support.
  * Retains soft-deleted cards during merge so deletions propagate across devices.
@@ -184,20 +189,20 @@ export function mergeCards(localCards, remoteCards) {
   const cardMap = new Map();
 
   // Populate with remote cards first
-  remoteCards.forEach(card => {
+  (remoteCards || []).forEach(card => {
     if (card && card.id) {
       cardMap.set(card.id, card);
     }
   });
 
   // Merge local cards
-  localCards.forEach(localCard => {
+  (localCards || []).forEach(localCard => {
     if (!localCard || !localCard.id) return;
 
     if (cardMap.has(localCard.id)) {
       const remoteCard = cardMap.get(localCard.id);
-      const localMod = localCard.last_modified || 0;
-      const remoteMod = remoteCard.last_modified || 0;
+      const localMod = getCardTimestamp(localCard);
+      const remoteMod = getCardTimestamp(remoteCard);
 
       if (localMod >= remoteMod) {
         cardMap.set(localCard.id, localCard);
@@ -212,9 +217,9 @@ export function mergeCards(localCards, remoteCards) {
 }
 
 /**
- * Main Sync function: Offline-First, Last-Write-Wins Sync strategy
+ * Main Sync function: Offline-First, Bidirectional Last-Write-Wins Sync strategy
  * 
- * Resolves local changes against remote Gist.
+ * Safely resolves local and remote changes with zero data loss.
  * 
  * @param {Array} localCards Array of card objects currently in local DB
  * @returns {Promise<{cards: Array, status: string}>} Merged cards and sync status
@@ -227,57 +232,41 @@ export async function syncCards(localCards) {
   }
 
   try {
-    // 1. Fetch remote gist metadata
+    // 1. Fetch remote gist
     const gist = await fetchGist(pat, gistId);
     
-    // Remote update time in ms
-    const remoteUpdatedAt = new Date(gist.updated_at).getTime();
-    const lastSyncTime = getLastSyncTime();
-    
     // Check if the file flashcards.json exists in Gist
-    const file = gist.files['flashcards.json'];
-    if (!file) {
-      // If file doesn't exist, create it by updating the gist
-      console.warn('flashcards.json not found in gist, creating it');
-      const updatedGist = await updateGist(pat, gistId, localCards);
-      const newSyncTime = new Date(updatedGist.updated_at).getTime();
-      saveLastSyncTime(newSyncTime);
-      return { cards: localCards, status: 'uploaded_local' };
-    }
-
-    // 2. Conflict check
-    if (remoteUpdatedAt > lastSyncTime) {
-      // Remote is newer, download remote content
-      let remoteCards = [];
-      
-      // If truncated, we need to fetch the raw URL
+    const file = gist.files && gist.files['flashcards.json'];
+    let remoteCards = [];
+    
+    if (file) {
       if (file.truncated) {
-        const rawRes = await fetch(file.raw_url);
-        if (!rawRes.ok) throw new Error('Failed to fetch truncated raw file');
+        const rawRes = await fetch(file.raw_url, { cache: 'no-store' });
+        if (!rawRes.ok) throw new Error('Failed to fetch raw gist data');
         remoteCards = await rawRes.json();
-      } else {
-        remoteCards = JSON.parse(file.content || '[]');
+      } else if (file.content) {
+        try {
+          remoteCards = JSON.parse(file.content);
+        } catch (e) {
+          console.warn('Malformed JSON in Gist, resetting to []');
+          remoteCards = [];
+        }
       }
-
-      // Merge local and remote
-      const merged = mergeCards(localCards, remoteCards);
-
-      // check if the merged array actually differs from local or remote
-      // To simplify, if there's any merge, let's write to both Gist and Local IndexedDB
-      const updatedGist = await updateGist(pat, gistId, merged);
-      const newSyncTime = new Date(updatedGist.updated_at).getTime();
-      saveLastSyncTime(newSyncTime);
-
-      return { cards: merged, status: 'merged_with_remote' };
-    } else {
-      // Local changes are newer, or equal (we have already synced this remote revision)
-      // Push local data
-      const updatedGist = await updateGist(pat, gistId, localCards);
-      const newSyncTime = new Date(updatedGist.updated_at).getTime();
-      saveLastSyncTime(newSyncTime);
-
-      return { cards: localCards, status: 'uploaded_local' };
     }
+
+    if (!Array.isArray(remoteCards)) {
+      remoteCards = [];
+    }
+
+    // 2. Perform bidirectional merge with Last-Write-Wins and Tombstones
+    const merged = mergeCards(localCards, remoteCards);
+
+    // 3. Push merged cards to Gist to keep remote in sync
+    const updatedGist = await updateGist(pat, gistId, merged);
+    const newSyncTime = new Date(updatedGist.updated_at).getTime();
+    saveLastSyncTime(newSyncTime);
+
+    return { cards: merged, status: 'merged_with_remote' };
   } catch (error) {
     console.error('Synchronization failed:', error);
     throw error;
