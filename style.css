@@ -641,6 +641,31 @@ textarea {
   color: var(--text-secondary);
 }
 
+.hero-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hero-streak-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--panel-border);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.streak-flame {
+  font-size: 0.8rem;
+  filter: drop-shadow(0 0 6px rgba(255, 120, 0, 0.6));
+}
+
 .dashboard-hero h2 {
   font-size: 1.3rem;
   font-weight: 800;
@@ -653,6 +678,125 @@ textarea {
   font-size: 0.78rem;
   line-height: 1.3;
   max-width: 320px;
+}
+
+/* ACTIVITY CONSISTENCY HEATMAP */
+.activity-heatmap-card {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.heatmap-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.heatmap-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
+.heatmap-subtitle {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+}
+
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(20, 1fr);
+  gap: 3px;
+  align-items: center;
+  justify-content: center;
+}
+
+.heatmap-cell {
+  aspect-ratio: 1 / 1;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.05);
+  transition: transform 0.15s ease, background-color 0.2s ease;
+  position: relative;
+}
+
+.heatmap-cell:hover {
+  transform: scale(1.3);
+  z-index: 5;
+}
+
+.heatmap-cell.level-0 {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.heatmap-cell.level-1 {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.heatmap-cell.level-2 {
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.heatmap-cell.level-3 {
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.heatmap-cell.level-4 {
+  background: #ffffff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+}
+
+/* TTS Pronunciation Button */
+.btn-tts {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  color: var(--text-secondary);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-tts:hover {
+  color: var(--text-primary);
+  border-color: var(--text-primary);
+  transform: scale(1.08);
+}
+
+.btn-tts:active {
+  transform: scale(0.92);
+}
+
+/* Cloze Deletions */
+.cloze-blank {
+  display: inline-block;
+  padding: 1px 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px dashed var(--text-secondary);
+  border-radius: 4px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.cloze-answer {
+  display: inline-block;
+  padding: 1px 8px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--text-primary);
+  border-radius: 4px;
+  font-weight: 800;
+  color: #ffffff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
 }
 
 .hero-graphic {

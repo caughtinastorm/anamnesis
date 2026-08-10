@@ -57,9 +57,15 @@
           <div class="dashboard-hero">
             <div class="hero-glow-backdrop"></div>
             <div class="hero-content">
-              <div class="hero-badge">SPACED REPETITION ENGINE</div>
-              <h2>Active Recall</h2>
-              <p class="dashboard-subtitle">Optimized memory retention powered by SM-2 spacing algorithms.</p>
+              <div class="hero-badge">FSRS-5 SCHEDULER ACTIVE</div>
+              <div class="hero-title-row">
+                <h2>Active Recall</h2>
+                <div class="hero-streak-badge" id="hero-streak-badge">
+                  <span class="streak-flame">🔥</span>
+                  <span id="stat-streak-days">0</span>d Streak
+                </div>
+              </div>
+              <p class="dashboard-subtitle">Optimal memory retention powered by FSRS-5 Stability & Retrievability models.</p>
             </div>
             <div class="hero-graphic">
               <svg class="hero-delta-svg" viewBox="0 0 100 100">
@@ -109,32 +115,43 @@
               </div>
             </div>
 
-            <!-- Controls and CTA Panel Card -->
-            <div class="dashboard-controls-card card-panel">
-              <!-- Collection (Deck) Selector Dropdown -->
-              <div class="deck-selector-wrapper">
-                <span class="deck-select-label">Collection:</span>
-                <select id="deck-select" class="deck-select">
-                  <option value="all">All Collections</option>
-                  <option value="Default">Default</option>
+            <!-- Activity Consistency Heatmap Card -->
+            <div class="dashboard-card activity-heatmap-card">
+              <div class="heatmap-header">
+                <span class="heatmap-title">Study Consistency</span>
+                <span class="heatmap-subtitle" id="heatmap-reviews-count">0 reviews recorded</span>
+              </div>
+              <div class="heatmap-grid" id="dashboard-heatmap-grid">
+                <!-- 60-day heatmap squares rendered via JS -->
+              </div>
+            </div>
+
+            <!-- Deck Selector & Action Panel -->
+            <div class="dashboard-card deck-control-card">
+              <label for="deck-select" class="input-label">Active Collection / Folder</label>
+              <div class="select-wrapper">
+                <select id="deck-select" class="select-input">
+                  <option value="all">📁 All Collections</option>
                 </select>
               </div>
-
-              <div class="dashboard-actions">
-                <button id="btn-start-review" class="btn btn-primary btn-large btn-full">
-                  Start Review
-                </button>
-              </div>
-
-              <!-- Empty State / All caught up -->
-              <div id="dashboard-empty-state" class="empty-state hidden">
-                <svg class="empty-icon-svg" viewBox="0 0 24 24">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" fill="none"/>
-                  <polyline points="22 4 12 14.01 9 11.01" stroke="currentColor"/>
+              
+              <button id="btn-start-review" class="btn btn-primary btn-full btn-lg">
+                <svg class="btn-icon-svg" viewBox="0 0 24 24">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
                 </svg>
-                <h3>All Caught Up</h3>
-                <p>No cards due for review. Go ahead and add some new cards or take a break.</p>
+                Start Study Session
+              </button>
+            </div>
+
+            <!-- Empty State Display -->
+            <div id="dashboard-empty-state" class="empty-state hidden">
+              <div class="empty-icon-circle">
+                <svg class="empty-icon-svg" viewBox="0 0 24 24">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                </svg>
               </div>
+              <h3>No Cards Due</h3>
+              <p>You're all caught up! Add cards or import decks to continue.</p>
             </div>
 
           </div>
@@ -150,6 +167,12 @@
                 <div class="progress-bar-fill" id="study-progress-bar" style="width: 10%;"></div>
               </div>
             </div>
+            <button id="btn-tts-speak" class="btn-tts" title="Pronounce with Speech Audio (R)">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
           </div>
 
           <!-- Study Card Deck -->
@@ -403,6 +426,44 @@ Japanese,N5 Kanji,漢字|かんじ,Chinese characters</pre>
               Sync Data Now
             </button>
             <p id="sync-last-time-label" class="sync-timestamp-footer">Last synced: Never</p>
+          </div>
+        </div>
+
+        <!-- Spaced Repetition & Audio Settings -->
+        <div class="card-panel">
+          <div class="panel-header">
+            <h3>Spaced Repetition & Audio</h3>
+            <p>FSRS-5 Next-Gen Model & Native Speech Pronunciation</p>
+          </div>
+          
+          <div class="form-group">
+            <label for="settings-voice-lang" class="input-label">Pronunciation Language</label>
+            <select id="settings-voice-lang" class="select-input">
+              <option value="auto">Auto-Detect Language</option>
+              <option value="es-ES">Spanish (Spain - es-ES)</option>
+              <option value="es-MX">Spanish (Latin America - es-MX)</option>
+              <option value="en-US">English (US - en-US)</option>
+              <option value="en-GB">English (UK - en-GB)</option>
+              <option value="fr-FR">French (France - fr-FR)</option>
+              <option value="de-DE">German (Germany - de-DE)</option>
+              <option value="ja-JP">Japanese (Japan - ja-JP)</option>
+              <option value="it-IT">Italian (Italy - it-IT)</option>
+              <option value="ru-RU">Russian (Russia - ru-RU)</option>
+              <option value="pt-BR">Portuguese (Brazil - pt-BR)</option>
+              <option value="zh-CN">Chinese (Mandarin - zh-CN)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="settings-review-cap" class="input-label">Vacation / Catch-Up Mode (Daily Review Cap)</label>
+            <select id="settings-review-cap" class="select-input">
+              <option value="0">Off (Review All Due Cards)</option>
+              <option value="15">Max 15 Due Cards / Session</option>
+              <option value="25">Max 25 Due Cards / Session (Recommended)</option>
+              <option value="35">Max 35 Due Cards / Session</option>
+              <option value="50">Max 50 Due Cards / Session</option>
+            </select>
+            <small class="help-text">Caps overdue card load to prevent burnout when returning after a break.</small>
           </div>
         </div>
 

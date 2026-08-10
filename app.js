@@ -1,4 +1,5 @@
 import { calculateSM2 } from './sm2.js';
+import { calculateFSRS5, Rating, State } from './fsrs.js';
 import * as db from './db.js';
 import * as sync from './sync.js';
 import { parseAnkiApkg, parseAnkiText, normalizeAnkiDeck } from './anki.js';
@@ -139,10 +140,14 @@ const manualSyncContainer = document.getElementById('manual-sync-container');
 const btnForceSync = document.getElementById('btn-force-sync');
 const syncLastTimeLabel = document.getElementById('sync-last-time-label');
 const headerSyncStatus = document.getElementById('header-sync-status');
-const syncLabelText = document.getElementById('sync-label-text');
 const btnExportCsv = document.getElementById('btn-export-csv');
 const btnClearDb = document.getElementById('btn-clear-db');
 const themeButtons = document.querySelectorAll('.btn-theme');
+const settingsVoiceLang = document.getElementById('settings-voice-lang');
+const settingsReviewCap = document.getElementById('settings-review-cap');
+const btnTtsSpeak = document.getElementById('btn-tts-speak');
+const dashboardHeatmapGrid = document.getElementById('dashboard-heatmap-grid');
+const heroStreakBadge = document.getElementById('hero-streak-badge');
 
 // Modal & Toast elements
 const modalContainer = document.getElementById('modal-container');
@@ -203,6 +208,7 @@ async function loadCardsFromDB() {
     calculateStats();
     updateUIStats();
     renderFoldersTree();
+    renderHeatmap();
   } catch (e) {
     console.error('Error loading cards from DB:', e);
     showToast('Failed to load local database', 'error');
@@ -753,14 +759,34 @@ if (btnCancelStudy) btnCancelStudy.addEventListener('click', () => {
   showModal('Exit Study Session?', 'Exit study session and return to dashboard?', exitStudySession);
 });
 
+// TTS Pronunciation speaker button binding
+if (btnTtsSpeak) {
+  btnTtsSpeak.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const card = studySessionCards[currentCardIndex];
+    if (card) {
+      const text = isFlipped ? card.back : card.front;
+      speakCardText(text);
+    }
+  });
+}
+
 function startStudySession() {
   if (dueCards.length === 0) {
     showToast('No cards due for review!', 'info');
     return;
   }
 
+  // Check Vacation / Daily Review Cap
+  const reviewCap = parseInt(localStorage.getItem('app-review-cap') || '0', 10);
+  let sessionPool = dueCards;
+  if (reviewCap > 0 && dueCards.length > reviewCap) {
+    sessionPool = dueCards.slice(0, reviewCap);
+    showToast(`Vacation Mode Active: Loaded ${reviewCap} of ${dueCards.length} due cards`, 'info');
+  }
+
   // Shuffle due cards to keep it fresh
-  studySessionCards = shuffle([...dueCards]);
+  studySessionCards = shuffle([...sessionPool]);
   currentCardIndex = 0;
   isFlipped = false;
 
@@ -784,9 +810,9 @@ function renderCurrentStudyCard() {
   const pct = (currentCardIndex / studySessionCards.length) * 100;
   studyProgressBar.style.width = `${pct}%`;
 
-  // Render front and back content (allowing basic HTML styles)
-  cardFrontContent.innerHTML = sanitizeHTML(card.front);
-  cardBackContent.innerHTML = sanitizeHTML(card.back);
+  // Render front and back content with Cloze Deletion support
+  cardFrontContent.innerHTML = renderCardContent(card.front, false);
+  cardBackContent.innerHTML = renderCardContent(card.back, true);
 
   // Render subtext (furigana / pronunciation) if populated
   if (card.sub) {
@@ -857,12 +883,22 @@ gradeButtons.forEach(btn => {
 async function submitCardGrade(grade) {
   const card = studySessionCards[currentCardIndex];
   
-  // Calculate SM-2 adjustments
-  const updatedCard = calculateSM2(card, grade);
+  // Map Grade (0-5) to FSRS-5 Rating
+  let fsrsRating = Rating.Good;
+  if (grade <= 1) fsrsRating = Rating.Again;
+  else if (grade <= 3) fsrsRating = Rating.Hard;
+  else if (grade === 4) fsrsRating = Rating.Good;
+  else if (grade === 5) fsrsRating = Rating.Easy;
+
+  // Calculate next state with FSRS-5 algorithm
+  const updatedCard = calculateFSRS5(card, fsrsRating);
   
   try {
     // Save to IndexedDB
     await db.saveCard(updatedCard);
+    
+    // Record in daily activity heatmap
+    recordDailyReview();
     
     // Learning queue extension: If card is forgotten/wrong (grade < 3), re-queue it at the end of the session list
     if (grade < 3) {
@@ -984,6 +1020,12 @@ function initKeyboardShortcuts() {
     } else if (isFlipped && e.key >= '0' && e.key <= '5') {
       const grade = parseInt(e.key, 10);
       submitCardGrade(grade);
+    } else if (e.key === 'r' || e.key === 'R') {
+      // Hotkey R speaks card text
+      const card = studySessionCards[currentCardIndex];
+      if (card) {
+        speakCardText(isFlipped ? card.back : card.front);
+      }
     } else if (e.code === 'Escape') {
       showModal('Exit Study Session?', 'Exit study session?', exitStudySession);
     }
@@ -1350,7 +1392,185 @@ function initSettingsForm() {
   settingsPat.value = syncCredentials.pat || '';
   settingsGistId.value = syncCredentials.gistId || '';
   
+  if (settingsVoiceLang) {
+    settingsVoiceLang.value = localStorage.getItem('app-speech-lang') || 'auto';
+    settingsVoiceLang.addEventListener('change', () => {
+      localStorage.setItem('app-speech-lang', settingsVoiceLang.value);
+      showToast('Speech language preference saved', 'success');
+    });
+  }
+
+  if (settingsReviewCap) {
+    settingsReviewCap.value = localStorage.getItem('app-review-cap') || '0';
+    settingsReviewCap.addEventListener('change', () => {
+      localStorage.setItem('app-review-cap', settingsReviewCap.value);
+      showToast('Daily review cap updated', 'success');
+      calculateStats();
+      updateUIStats();
+    });
+  }
+
   updateSyncUIState();
+}
+
+// ==========================================================================
+// Speech Synthesis (TTS Audio Engine)
+// ==========================================================================
+function speakCardText(text) {
+  if (!('speechSynthesis' in window)) {
+    showToast('Speech synthesis not supported on this browser', 'info');
+    return;
+  }
+  window.speechSynthesis.cancel();
+  
+  // Clean raw HTML and bracket markers
+  const clean = text
+    .replace(/<[^>]+>/g, '')
+    .replace(/\[([^\]]+)\]/g, '$1')
+    .replace(/\{\{c\d+::([^}]+)\}\}/g, '$1')
+    .trim();
+
+  if (!clean) return;
+
+  const utterance = new SpeechSynthesisUtterance(clean);
+  const selectedLang = localStorage.getItem('app-speech-lang') || 'auto';
+
+  if (selectedLang !== 'auto') {
+    utterance.lang = selectedLang;
+  } else {
+    // Smart auto-detection heuristics
+    if (/[áéíóúüñ¿¡]/i.test(clean)) {
+      utterance.lang = 'es-ES';
+    } else if (/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(clean)) {
+      utterance.lang = 'ja-JP';
+    } else if (/[а-яА-ЯёЁ]/.test(clean)) {
+      utterance.lang = 'ru-RU';
+    } else if (/[äöüß]/i.test(clean)) {
+      utterance.lang = 'de-DE';
+    } else if (/[éàèùâêîôûëïç]/i.test(clean)) {
+      utterance.lang = 'fr-FR';
+    }
+  }
+
+  window.speechSynthesis.speak(utterance);
+}
+
+// ==========================================================================
+// Cloze Deletion ("Fill-in-the-blank") Renderer
+// ==========================================================================
+function renderCardContent(text, isBackFace = false) {
+  if (!text) return '';
+
+  // Check for cloze syntax: [word] or {{c1::word}}
+  const hasBrackets = /\[([^\]]+)\]/.test(text);
+  const hasCloze = /\{\{c\d+::([^}]+)\}\}/.test(text);
+
+  if (hasBrackets || hasCloze) {
+    if (isBackFace) {
+      // Reveal answer with glowing badge
+      return sanitizeHTML(text)
+        .replace(/\{\{c\d+::([^}]+)\}\}/g, '<span class="cloze-answer">$1</span>')
+        .replace(/\[([^\]]+)\]/g, '<span class="cloze-answer">$1</span>');
+    } else {
+      // Hide answer with blank
+      return sanitizeHTML(text)
+        .replace(/\{\{c\d+::([^}]+)\}\}/g, '<span class="cloze-blank">[ ... ]</span>')
+        .replace(/\[([^\]]+)\]/g, '<span class="cloze-blank">[ ... ]</span>');
+    }
+  }
+
+  return sanitizeHTML(text);
+}
+
+// ==========================================================================
+// Activity Heatmap & Daily Streak Engine
+// ==========================================================================
+function recordDailyReview() {
+  const today = new Date().toISOString().slice(0, 10);
+  let history = {};
+  try {
+    history = JSON.parse(localStorage.getItem('app-review-history') || '{}');
+  } catch (e) {
+    history = {};
+  }
+  history[today] = (history[today] || 0) + 1;
+  localStorage.setItem('app-review-history', JSON.stringify(history));
+  renderHeatmap();
+}
+
+function calculateStreak(history) {
+  let streak = 0;
+  const today = new Date();
+  
+  let checkDate = new Date(today);
+  const todayKey = checkDate.toISOString().slice(0, 10);
+  
+  if (history[todayKey] && history[todayKey] > 0) {
+    streak++;
+    checkDate.setDate(checkDate.getDate() - 1);
+  } else {
+    checkDate.setDate(checkDate.getDate() - 1);
+    const yestKey = checkDate.toISOString().slice(0, 10);
+    if (!history[yestKey] || history[yestKey] <= 0) {
+      return 0;
+    }
+    streak++;
+    checkDate.setDate(checkDate.getDate() - 1);
+  }
+  
+  while (true) {
+    const key = checkDate.toISOString().slice(0, 10);
+    if (history[key] && history[key] > 0) {
+      streak++;
+      checkDate.setDate(checkDate.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+function renderHeatmap() {
+  const container = document.getElementById('dashboard-heatmap-grid');
+  if (!container) return;
+
+  let history = {};
+  try {
+    history = JSON.parse(localStorage.getItem('app-review-history') || '{}');
+  } catch (e) {
+    history = {};
+  }
+
+  container.innerHTML = '';
+  let totalReviews = 0;
+  const daysToShow = 60;
+  const today = new Date();
+
+  for (let i = daysToShow - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    const count = history[key] || 0;
+    totalReviews += count;
+
+    const cell = document.createElement('div');
+    cell.className = 'heatmap-cell';
+    cell.title = `${key}: ${count} reviews`;
+
+    if (count === 0) cell.classList.add('level-0');
+    else if (count <= 5) cell.classList.add('level-1');
+    else if (count <= 15) cell.classList.add('level-2');
+    else if (count <= 30) cell.classList.add('level-3');
+    else cell.classList.add('level-4');
+
+    container.appendChild(cell);
+  }
+
+  const subLabel = document.getElementById('heatmap-reviews-count');
+  if (subLabel) subLabel.textContent = `${totalReviews} reviews in last 60 days`;
+
+  const streakBadge = document.getElementById('stat-streak-days');
+  if (streakBadge) streakBadge.textContent = calculateStreak(history);
 }
 
 function logToConsole(text, isError = false) {
