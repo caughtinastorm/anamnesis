@@ -109,9 +109,13 @@ export function getSelectedImportDestination() {
   return { folder: folder || undefined, deck };
 }
 
+let destFolderDatalist;
+let destDeckDatalist;
+
 export function populateImportDestinationSuggestions() {
-  if (!destFolderDatalist) destFolderDatalist = document.getElementById("import-folder-datalist");
-  if (!destDeckDatalist) destDeckDatalist = document.getElementById("import-deck-datalist");
+  if (typeof document === "undefined") return;
+  destFolderDatalist = document.getElementById("import-folder-datalist");
+  destDeckDatalist = document.getElementById("import-deck-datalist");
 
   const folderNames = new Set();
   const deckNames = new Set();
@@ -139,6 +143,8 @@ export function populateImportDestinationSuggestions() {
       destDeckDatalist.appendChild(opt);
     });
   }
+
+  updateDestinationPill();
 }
 
 async function handleFileSelect(e) {
