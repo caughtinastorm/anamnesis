@@ -6,12 +6,13 @@
  */
 
 import { dom, switchView, initTheme, initModalListeners, showToast, scrollToElement } from "./js/ui.js";
-import { loadCardsFromDB, calculateStats, updateUIStats, handleQuickAddCard, initDashboardPickerButton, onSyncNeeded as dashOnSync } from "./js/dashboard.js";
+import { loadCardsFromDB, onCardsRefreshed } from "./js/cards.js";
+import { calculateStats, updateUIStats, handleQuickAddCard, initDashboardPickerButton, onSyncNeeded as dashOnSync, refreshDashboard } from "./js/dashboard.js";
 import { initStudyEventListeners, initTouchGestures, initKeyboardShortcuts, onSyncNeeded as studyOnSync } from "./js/study.js";
-import { initImportEventListeners, onSyncNeeded as importOnSync } from "./js/import.js";
+import { initImportEventListeners, onSyncNeeded as importOnSync, refreshImport } from "./js/import.js";
 import { initSettingsForm, initSettingsEventListeners, performBackgroundSync, requestDebouncedSync, onSyncNeeded as settingsOnSync } from "./js/settings.js";
-import { initCardBrowser, onSyncNeeded as browserOnSync } from "./js/browser.js";
-import { initExplorer, onSyncNeeded as explorerOnSync } from "./js/explorer.js";
+import { initCardBrowser, onSyncNeeded as browserOnSync, refreshBrowser } from "./js/browser.js";
+import { initExplorer, onSyncNeeded as explorerOnSync, renderExplorer } from "./js/explorer.js";
 import { initCollectionPicker } from "./js/picker.js";
 
 // Wire up sync callbacks so all modules trigger debounced background sync
@@ -22,6 +23,12 @@ importOnSync(requestSync);
 settingsOnSync(requestSync);
 browserOnSync(requestSync);
 explorerOnSync(requestSync);
+
+// Register card refresh subscribers — called in order after every loadCardsFromDB()
+onCardsRefreshed(refreshDashboard);  // populateDeckDropdown, calculateStats, renderFoldersTree, renderHeatmap
+onCardsRefreshed(refreshImport);     // populateImportDestinationSuggestions
+onCardsRefreshed(renderExplorer);    // Explorer sidebar tree + canvas
+onCardsRefreshed(refreshBrowser);    // Browser deck filter + card table
 
 // ==========================================================================
 // Routing

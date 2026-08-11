@@ -1,9 +1,9 @@
-﻿/**
+/**
  * Service Worker for anamnesis PWA
  * Implements Network-First caching with offline fallback.
  */
 
-const CACHE_NAME = "anamnesis-v21";
+const CACHE_NAME = "anamnesis-v22";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
@@ -24,7 +24,12 @@ const ASSETS_TO_CACHE = [
   "./js/study.js",
   "./js/import.js",
   "./js/settings.js",
-  "./js/browser.js"
+  "./js/browser.js",
+  "./js/explorer.js",
+  "./js/explorer-state.js",
+  "./js/explorer-actions.js",
+  "./js/cards.js",
+  "./js/picker.js"
 ];
 
 self.addEventListener("install", event => {

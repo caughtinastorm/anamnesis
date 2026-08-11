@@ -2,30 +2,22 @@ import { state } from "./state.js";
 import { dom, showToast, showModal, switchView } from "./ui.js";
 import { getCardFolder, getCardDeck, getCardFullHierarchy, escapeHTML, generateUUID } from "./utils.js";
 import * as db from "../db.js";
-import { populateBrowserDeckFilter, renderCardBrowser } from "./browser.js";
-import { renderExplorer } from "./explorer.js";
-import { populateImportDestinationSuggestions } from "./import.js";
+import { loadCardsFromDB } from "./cards.js";
 import { openCollectionPicker } from "./picker.js";
 
 let onSyncRequest = () => {};
 export function onSyncNeeded(cb) { onSyncRequest = cb; }
 
-export async function loadCardsFromDB() {
-  try {
-    state.allCards = await db.getCards();
-    populateDeckDropdown();
-    populateImportDestinationSuggestions();
-    calculateStats();
-    updateUIStats();
-    renderExplorer();
-    renderFoldersTree();
-    renderHeatmap();
-    populateBrowserDeckFilter();
-    renderCardBrowser();
-  } catch (e) {
-    console.error("Error loading cards from DB:", e);
-    showToast("Failed to load local database", "error");
-  }
+/**
+ * Called by cards.js subscriber after every loadCardsFromDB().
+ * Registered in app.js via onCardsRefreshed(refreshDashboard).
+ */
+export function refreshDashboard() {
+  populateDeckDropdown();
+  calculateStats();
+  updateUIStats();
+  renderFoldersTree();
+  renderHeatmap();
 }
 
 export function populateDeckDropdown() {

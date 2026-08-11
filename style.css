@@ -3,7 +3,33 @@
    Inspired by Vercel's extreme monochrome aesthetic.
    ========================================================================== */
 
+/* ==========================================================================
+ * TABLE OF CONTENTS (approximate line numbers — search the section title)
+ *
+ *   §1  Variables & Theming ........... ~6
+ *   §2  Light Theme Overrides ......... ~52
+ *   §3  Reset & Base .................. ~85
+ *   §4  Layout & App Shell ............ ~145
+ *   §5  Buttons & Forms ............... ~379
+ *   §6  Navigation Footer ............. ~496
+ *   §7  Dashboard & Review View ........ ~570
+ *   §8  Activity Heatmap .............. ~683
+ *   §9  Flashcard & Study Session ...... ~927
+ *  §10  CSV Importer .................. ~1207
+ *  §11  Settings View ................. ~1313
+ *  §12  Overlays, Toasts, Animations ... ~1401
+ *  §13  Desktop Sidebar & Layout ....... ~1542
+ *  §14  Folder Tree (Dashboard) ........ ~1937
+ *  §15  Card Browser & Edit Modal ....... ~2086
+ *  §16  Explorer — Full Feature ........ ~2325
+ *  §17  Mobile Responsiveness .......... ~3124
+ *  §18  Card Browser Filter ............ ~3180
+ *  §19  Import Destination Card ........ ~3321
+ *  §20  Collection Picker ............. ~3383
+ * ========================================================================== */
+
 /* Variables */
+
 :root {
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);

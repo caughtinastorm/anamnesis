@@ -15,7 +15,7 @@ import { dom, showToast, scrollToElement, switchView } from "./ui.js";
 import { generateUUID, escapeHTML } from "./utils.js";
 import { parseAnkiApkg, parseAnkiText, normalizeAnkiDeck, expandClozeCards, cleanHtmlTags } from "../anki.js";
 import * as db from "../db.js";
-import { loadCardsFromDB } from "./dashboard.js";
+import { loadCardsFromDB } from "./cards.js";
 import { openCollectionPicker } from "./picker.js";
 
 let onSyncRequest = () => {};
@@ -145,6 +145,14 @@ export function populateImportDestinationSuggestions() {
   }
 
   updateDestinationPill();
+}
+
+/**
+ * Refresh import UI after card data changes.
+ * Registered in app.js via onCardsRefreshed(refreshImport).
+ */
+export function refreshImport() {
+  populateImportDestinationSuggestions();
 }
 
 async function handleFileSelect(e) {

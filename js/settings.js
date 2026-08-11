@@ -3,7 +3,8 @@ import { dom, showToast, showModal } from "./ui.js";
 import { getCardFolder, getCardDeck, escapeCSVField } from "./utils.js";
 import * as sync from "../sync.js";
 import * as db from "../db.js";
-import { loadCardsFromDB, calculateStats, updateUIStats } from "./dashboard.js";
+import { loadCardsFromDB } from "./cards.js";
+import { calculateStats, updateUIStats } from "./dashboard.js";
 
 let onSyncRequest = () => {};
 export function onSyncNeeded(cb) { onSyncRequest = cb; }

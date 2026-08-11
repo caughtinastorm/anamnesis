@@ -8,7 +8,7 @@ import { state } from "./state.js";
 import { showToast, showModal, scrollToElement } from "./ui.js";
 import { getCardFolder, getCardDeck, getCardFullHierarchy, escapeHTML, sanitizeHTML } from "./utils.js";
 import * as db from "../db.js";
-import { loadCardsFromDB, populateDeckDropdown } from "./dashboard.js";
+import { loadCardsFromDB } from "./cards.js";
 import { openCollectionPicker } from "./picker.js";
 
 let onSyncRequest = () => {};
@@ -115,7 +115,6 @@ export function initCardBrowser() {
 }
 
 export function populateBrowserDeckFilter() {
-  if (!browserDeckFilter) browserDeckFilter = document.getElementById("browser-deck-filter");
   if (!browserDeckFilter) return;
 
   const prev = browserDeckFilter.value || "all";
@@ -174,7 +173,6 @@ export function populateBrowserDeckFilter() {
 }
 
 export function renderCardBrowser() {
-  if (!browserCardsTbody) browserCardsTbody = document.getElementById("browser-cards-tbody");
   if (!browserCardsTbody) return;
 
   const query = (browserSearchInput ? browserSearchInput.value : "").trim().toLowerCase();
@@ -330,22 +328,14 @@ export function openEditCardModal(cardId) {
     return;
   }
 
-  if (!editModalContainer) editModalContainer = document.getElementById("edit-modal-container");
-  if (!editCardId) editCardId = document.getElementById("edit-card-id");
-  if (!editCardFolder) editCardFolder = document.getElementById("edit-card-folder");
-  if (!editCardDeck) editCardDeck = document.getElementById("edit-card-deck");
-  if (!editCardFront) editCardFront = document.getElementById("edit-card-front");
-  if (!editCardSub) editCardSub = document.getElementById("edit-card-sub");
-  if (!editCardBack) editCardBack = document.getElementById("edit-card-back");
-  if (!editCardDesc) editCardDesc = document.getElementById("edit-card-description");
-
-  editCardId.value = card.id;
+  // DOM refs are guaranteed to be set by initCardBrowser() at boot
+  editCardId.value     = card.id;
   editCardFolder.value = getCardFolder(card);
-  editCardDeck.value = getCardDeck(card);
-  editCardFront.value = card.front || "";
-  editCardSub.value = card.sub || "";
-  editCardBack.value = card.back || "";
-  editCardDesc.value = card.description || "";
+  editCardDeck.value   = getCardDeck(card);
+  editCardFront.value  = card.front || "";
+  editCardSub.value    = card.sub   || "";
+  editCardBack.value   = card.back  || "";
+  editCardDesc.value   = card.description || "";
 
   editModalContainer.classList.remove("hidden");
 }
@@ -386,9 +376,7 @@ export async function saveCardEdits() {
     await db.saveCard(updatedCard);
     showToast("Card updated successfully!", "success");
     closeEditModal();
-    await loadCardsFromDB();
-    populateBrowserDeckFilter();
-    renderCardBrowser();
+    await loadCardsFromDB(); // triggers all subscribers (refreshBrowser included)
     onSyncRequest();
   } catch (err) {
     console.error("Failed to save card edits:", err);
@@ -412,9 +400,7 @@ export function deleteCard(cardId) {
         };
         await db.saveCard(deletedCard);
         showToast("Card deleted", "success");
-        await loadCardsFromDB();
-        populateBrowserDeckFilter();
-        renderCardBrowser();
+        await loadCardsFromDB(); // triggers all subscribers (refreshBrowser included)
         onSyncRequest();
       } catch (err) {
         console.error("Failed to delete card:", err);
@@ -422,4 +408,13 @@ export function deleteCard(cardId) {
       }
     }
   );
+}
+
+/**
+ * Refresh browser UI after card data changes.
+ * Registered in app.js via onCardsRefreshed(refreshBrowser).
+ */
+export function refreshBrowser() {
+  populateBrowserDeckFilter();
+  renderCardBrowser();
 }

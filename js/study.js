@@ -3,7 +3,8 @@ import { dom, showToast, showModal } from "./ui.js";
 import { sanitizeHTML, shuffle } from "./utils.js";
 import { calculateFSRS5, Rating } from "../fsrs.js";
 import * as db from "../db.js";
-import { recordDailyReview, loadCardsFromDB, filterCards } from "./dashboard.js";
+import { loadCardsFromDB } from "./cards.js";
+import { recordDailyReview, filterCards } from "./dashboard.js";
 
 let onSyncRequest = () => {};
 export function onSyncNeeded(cb) { onSyncRequest = cb; }
