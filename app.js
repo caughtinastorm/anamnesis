@@ -7,7 +7,8 @@
 
 import { dom, switchView, initTheme, initModalListeners, showToast, scrollToElement } from "./js/ui.js";
 import { loadCardsFromDB, onCardsRefreshed } from "./js/cards.js";
-import { calculateStats, updateUIStats, handleQuickAddCard, initDashboardPickerButton, onSyncNeeded as dashOnSync, refreshDashboard } from "./js/dashboard.js";
+import { calculateStats, updateUIStats, setActiveDeckSelection, handleQuickAddCard, initDashboardPickerButton, onSyncNeeded as dashOnSync, refreshDashboard } from "./js/dashboard.js";
+
 import { initStudyEventListeners, initTouchGestures, initKeyboardShortcuts, onSyncNeeded as studyOnSync } from "./js/study.js";
 import { initImportEventListeners, onSyncNeeded as importOnSync, refreshImport } from "./js/import.js";
 import { initSettingsForm, initSettingsEventListeners, performBackgroundSync, requestDebouncedSync, onSyncNeeded as settingsOnSync } from "./js/settings.js";
@@ -80,10 +81,10 @@ function initRouting() {
     if (dom.manualSyncContainer) scrollToElement(dom.manualSyncContainer);
   });
 
-  dom.deckSelect?.addEventListener("change", () => {
-    calculateStats();
-    updateUIStats();
+  dom.deckSelect?.addEventListener("change", (e) => {
+    setActiveDeckSelection(e.target.value);
   });
+
 
   dom.btnQuickAdd?.addEventListener("click", handleQuickAddCard);
 }

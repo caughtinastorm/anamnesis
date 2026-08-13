@@ -105,7 +105,7 @@ export function openCollectionPicker({
   pickerState.isOpen = true;
   pickerState.title = title;
   pickerState.selectedFolder = initialFolder;
-  pickerState.selectedDeck = initialDeck || "Default";
+  pickerState.selectedDeck = initialDeck || (allowRoot ? "all" : "Default");
   pickerState.allowRoot = allowRoot;
   pickerState.onSelectCallback = onSelect;
   pickerState.searchQuery = "";
@@ -124,6 +124,10 @@ export function openCollectionPicker({
   pickerState.historyIndex = 0;
 
   if (titleEl) titleEl.textContent = title;
+  if (btnConfirm) {
+    btnConfirm.textContent = allowRoot ? "Select This Collection" : "Select Destination";
+  }
+
   updateSelectionLabel();
   renderPicker();
 
@@ -139,7 +143,7 @@ export function closeCollectionPicker() {
 
 function confirmSelection() {
   const folder = pickerState.selectedFolder;
-  const deck = pickerState.selectedDeck || "Default";
+  const deck = pickerState.selectedDeck || (pickerState.allowRoot ? "all" : "Default");
 
   if (pickerState.onSelectCallback) {
     pickerState.onSelectCallback(folder, deck);
@@ -197,27 +201,31 @@ function updateSelectionLabel() {
   const folder = pickerState.selectedFolder;
   const deck = pickerState.selectedDeck;
 
-  if (deck === "all") {
+  if (!folder && (deck === "all" || !deck)) {
     selectedLabelEl.innerHTML = `<span class="picker-pill-highlight">📁 <strong>All Collections</strong> (Entire Library)</span>`;
+  } else if (folder && (deck === "all" || !deck)) {
+    selectedLabelEl.innerHTML = `<span class="picker-pill-highlight">📁 <strong>${escapeHTML(folder)}</strong> (All Decks in Folder)</span>`;
   } else if (folder) {
     selectedLabelEl.innerHTML = `<span class="picker-pill-highlight">📁 <strong>${escapeHTML(folder)}</strong> / 🗂️ <strong>${escapeHTML(deck || "Default")}</strong></span>`;
   } else {
-    selectedLabelEl.innerHTML = `<span class="picker-pill-highlight">🗂️ <strong>${escapeHTML(deck || "Default")}</strong> <span style="opacity:0.6">(Root)</span></span>`;
+    selectedLabelEl.innerHTML = `<span class="picker-pill-highlight">🗂️ <strong>${escapeHTML(deck || "Default")}</strong> <span style="opacity:0.6">(Standalone)</span></span>`;
   }
 }
 
 function selectDeck(folder, deck) {
   pickerState.selectedFolder = folder;
-  pickerState.selectedDeck = deck || "Default";
+  pickerState.selectedDeck = deck || (pickerState.allowRoot ? "all" : "Default");
   updateSelectionLabel();
   renderPickerCanvas();
 }
 
 function selectFolderAsTarget(folder) {
   pickerState.selectedFolder = folder;
-  pickerState.selectedDeck = "Default";
+  // If in study mode, selecting folder defaults to all decks in that folder
+  pickerState.selectedDeck = pickerState.allowRoot ? "all" : "Default";
   updateSelectionLabel();
 }
+
 
 /**
  * Get hierarchy data for picker

@@ -14,8 +14,9 @@ import { state } from "./state.js";
 import { dom, showToast, switchView } from "./ui.js";
 import { getCardFolder, getCardDeck, escapeHTML } from "./utils.js";
 import { loadCardsFromDB } from "./cards.js";
-import { calculateStats, updateUIStats } from "./dashboard.js";
+import { calculateStats, updateUIStats, setActiveDeckSelection } from "./dashboard.js";
 import { setImportDestination } from "./import.js";
+
 import { openEditCardModal, deleteCard } from "./browser.js";
 import { explorerState } from "./explorer-state.js";
 import {
@@ -545,17 +546,18 @@ function renderGridCanvas(items) {
 
     card.querySelector(".btn-study-item")?.addEventListener("click", async (e) => {
       e.stopPropagation();
+      let sel = "all";
       if (isFolder) {
-        dom.deckSelect.value = `folder:${item.name}`;
+        sel = `folder:${item.name}`;
       } else {
-        dom.deckSelect.value = item.folder ? `deck:${item.folder} / ${item.name}` : `deck:${item.name}`;
+        sel = item.folder ? `deck:${item.folder} / ${item.name}` : `deck:${item.name}`;
       }
-      calculateStats();
-      updateUIStats();
+      setActiveDeckSelection(sel);
       switchView("view-review");
       const { startStudySession } = await import("./study.js");
       startStudySession(item.due === 0);
     });
+
 
     card.querySelector(".btn-import-item")?.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -646,17 +648,18 @@ function renderDetailsCanvas(items) {
 
     row.querySelector(".btn-study-action")?.addEventListener("click", async (e) => {
       e.stopPropagation();
+      let sel = "all";
       if (isFolder) {
-        dom.deckSelect.value = `folder:${item.name}`;
+        sel = `folder:${item.name}`;
       } else {
-        dom.deckSelect.value = item.folder ? `deck:${item.folder} / ${item.name}` : `deck:${item.name}`;
+        sel = item.folder ? `deck:${item.folder} / ${item.name}` : `deck:${item.name}`;
       }
-      calculateStats();
-      updateUIStats();
+      setActiveDeckSelection(sel);
       switchView("view-review");
       const { startStudySession } = await import("./study.js");
       startStudySession(item.due === 0);
     });
+
 
     row.querySelector(".btn-import-action")?.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -754,13 +757,13 @@ function renderDeckDetailCanvas(folder, deck, stats) {
 
   // Hero button handlers
   detailView.querySelector("#btn-hero-study")?.addEventListener("click", async () => {
-    dom.deckSelect.value = folder ? `deck:${folder} / ${deck}` : `deck:${deck}`;
-    calculateStats();
-    updateUIStats();
+    const sel = folder ? `deck:${folder} / ${deck}` : `deck:${deck}`;
+    setActiveDeckSelection(sel);
     switchView("view-review");
     const { startStudySession } = await import("./study.js");
     startStudySession(due === 0);
   });
+
 
   detailView.querySelector("#btn-hero-import")?.addEventListener("click", () => {
     setImportDestination(folder || "", deck);

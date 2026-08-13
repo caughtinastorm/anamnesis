@@ -20,7 +20,7 @@ import { state } from "./state.js";
 import { dom, showToast, showModal, switchView, scrollToElement } from "./ui.js";
 import { getCardFolder, getCardDeck, escapeHTML, escapeCSVField } from "./utils.js";
 import * as db from "../db.js";
-import { calculateStats, updateUIStats } from "./dashboard.js";
+import { calculateStats, updateUIStats, setActiveDeckSelection } from "./dashboard.js";
 import { setImportDestination } from "./import.js";
 
 // Injected by explorer.js during initExplorer()
@@ -90,21 +90,19 @@ export function handleAddCardHere() {
 
 export async function handleStudyCurrent(force = false) {
   const path = explorerState.currentPath;
+  let sel = "all";
   if (path.length === 2) {
-    dom.deckSelect.value = `deck:${path[0]} / ${path[1]}`;
+    sel = `deck:${path[0]} / ${path[1]}`;
   } else if (path.length === 1) {
     const { folderMap } = _getExplorerData();
     if (folderMap.has(path[0])) {
-      dom.deckSelect.value = `folder:${path[0]}`;
+      sel = `folder:${path[0]}`;
     } else {
-      dom.deckSelect.value = `deck:${path[0]}`;
+      sel = `deck:${path[0]}`;
     }
-  } else {
-    dom.deckSelect.value = "all";
   }
 
-  calculateStats();
-  updateUIStats();
+  setActiveDeckSelection(sel);
   switchView("view-review");
   const { startStudySession } = await import("./study.js");
   startStudySession(force);
@@ -171,17 +169,18 @@ export function showItemContextMenu(e, item) {
 
   menu.querySelector(".menu-study")?.addEventListener("click", async () => {
     menu.remove();
+    let sel = "all";
     if (isFolder) {
-      dom.deckSelect.value = `folder:${item.name}`;
+      sel = `folder:${item.name}`;
     } else {
-      dom.deckSelect.value = item.folder ? `deck:${item.folder} / ${item.name}` : `deck:${item.name}`;
+      sel = item.folder ? `deck:${item.folder} / ${item.name}` : `deck:${item.name}`;
     }
-    calculateStats();
-    updateUIStats();
+    setActiveDeckSelection(sel);
     switchView("view-review");
     const { startStudySession } = await import("./study.js");
     startStudySession(item.due === 0);
   });
+
 
   menu.querySelector(".menu-import")?.addEventListener("click", () => {
     menu.remove();

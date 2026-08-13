@@ -141,7 +141,10 @@
             <div class="dashboard-card deck-control-card">
               <div class="dashboard-deck-picker-header">
                 <span class="input-label">Active Collection</span>
-                <span class="deck-picker-hint">Click to browse or switch</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <button type="button" id="btn-dashboard-reset-deck" class="gui-picker-clear-btn hidden" title="Reset filter to All Collections">All Decks</button>
+                  <span class="deck-picker-hint">Click to browse or switch</span>
+                </div>
               </div>
               <button type="button" id="btn-dashboard-deck-picker" class="gui-picker-btn" title="Browse and switch collections">
                 <div class="gui-picker-left">
@@ -179,6 +182,22 @@
               </div>
             </div>
 
+            <!-- Collections Quick Study Panel -->
+            <div class="dashboard-card collections-tree-card" id="dashboard-collections-panel">
+              <div class="panel-header-with-action">
+                <div>
+                  <span class="heatmap-title">Collections &amp; Decks</span>
+                  <p class="panel-subtext">Click any deck to study due cards or practice anytime.</p>
+                </div>
+                <button type="button" id="btn-dashboard-all-decks" class="btn btn-secondary btn-sm" title="View all collections in Explorer">
+                  Explorer View
+                </button>
+              </div>
+              <div id="folders-tree-container" class="folders-tree-container">
+                <!-- Dynamically populated folders and decks -->
+              </div>
+            </div>
+
             <!-- Empty State Display -->
             <div id="dashboard-empty-state" class="empty-state hidden">
               <div class="empty-icon-circle">
@@ -197,12 +216,14 @@
         <div id="subview-study" class="subview">
           <div class="study-header">
             <button id="btn-cancel-study" class="btn-text">Exit</button>
+            <div class="study-deck-badge" id="study-deck-badge" title="Active Study Collection">📁 All Collections</div>
             <div class="study-progress">
               <span id="study-progress-text">Card 1 of 10</span>
               <div class="progress-bar-bg">
                 <div class="progress-bar-fill" id="study-progress-bar" style="width: 10%;"></div>
               </div>
             </div>
+
             <div class="study-header-actions">
               <button id="btn-restart-study" class="btn-tts" title="Restart / Review Again">
                 <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">

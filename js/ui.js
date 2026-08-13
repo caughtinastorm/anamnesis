@@ -1,4 +1,4 @@
-﻿import { state } from "./state.js";
+import { state } from "./state.js";
 
 export const dom = {
   deckSelect: document.getElementById("deck-select"),
@@ -68,7 +68,11 @@ export const dom = {
   toastContainer: document.getElementById("toast-container"),
   subviewDashboard: document.getElementById("subview-dashboard"),
   subviewStudy: document.getElementById("subview-study"),
+  studyDeckBadge: document.getElementById("study-deck-badge"),
+  btnDashboardResetDeck: document.getElementById("btn-dashboard-reset-deck"),
+  btnDashboardAllDecks: document.getElementById("btn-dashboard-all-decks"),
 };
+
 
 export function switchView(viewId) {
   if (!viewId) return;

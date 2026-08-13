@@ -1,4 +1,4 @@
-﻿export function getCardFolder(card) {
+export function getCardFolder(card) {
   if (card.folder && card.folder.trim()) return card.folder.trim();
   const raw = card.deck || "Default";
   if (raw.includes(" / ")) return raw.split(" / ")[0].trim();
@@ -25,6 +25,50 @@ export function getCardFullHierarchy(card) {
   const deck = getCardDeck(card);
   return folder ? `${folder} / ${deck}` : deck;
 }
+
+/**
+ * Checks if a card matches the given deck selection filter.
+ * @param {Object} card
+ * @param {string} selection e.g. "all", "folder:Spanish", "deck:Spanish / Verbs", "deck:Verbs"
+ * @returns {boolean}
+ */
+export function matchesDeckSelection(card, selection = "all") {
+  if (!card || card.deleted) return false;
+  if (!selection || selection === "all") return true;
+
+  const sel = String(selection).trim();
+  const cardFolder = getCardFolder(card).toLowerCase();
+  const cardDeck = getCardDeck(card).toLowerCase();
+  const cardHierarchy = getCardFullHierarchy(card).toLowerCase();
+
+  if (sel.startsWith("folder:")) {
+    const targetFolder = sel.substring(7).trim().toLowerCase();
+    return cardFolder === targetFolder;
+  }
+
+  if (sel.startsWith("deck:")) {
+    const targetDeck = sel.substring(5).trim().toLowerCase();
+    return cardHierarchy === targetDeck ||
+           (!cardFolder && cardDeck === targetDeck) ||
+           cardHierarchy.endsWith(` / ${targetDeck}`);
+  }
+
+  const s = sel.toLowerCase();
+  return cardHierarchy === s || cardFolder === s || cardDeck === s;
+}
+
+/**
+ * Format a human-readable display label for a deck selection.
+ * @param {string} selection
+ * @returns {string}
+ */
+export function formatDeckSelectionLabel(selection = "all") {
+  if (!selection || selection === "all") return "📁 All Collections";
+  if (selection.startsWith("folder:")) return `📁 ${selection.substring(7)} (All)`;
+  if (selection.startsWith("deck:")) return `🗂️ ${selection.substring(5)}`;
+  return selection;
+}
+
 
 export function escapeHTML(str) {
   return String(str || "").replace(/[&<>"'"]/g, m => ({

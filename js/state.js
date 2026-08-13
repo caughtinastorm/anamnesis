@@ -1,10 +1,12 @@
-﻿import * as sync from '../sync.js';
+import * as sync from '../sync.js';
 
 export const state = {
   allCards: [],
   dueCards: [],
   newCards: [],
+  selectedDeck: "all", // "all" | "folder:<folderName>" | "deck:<folder> / <deck>" | "deck:<standaloneDeck>"
   studySessionCards: [],
+  studySessionInfo: { name: "All Collections", type: "all", count: 0, isForce: false },
   currentCardIndex: 0,
   syncCredentials: sync.getSyncCredentials(),
   isFlipped: false,
@@ -16,3 +18,4 @@ export const state = {
   touchMoveY: 0,
   tempParsedCards: []
 };
+

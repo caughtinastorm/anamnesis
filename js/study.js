@@ -1,6 +1,6 @@
 import { state } from "./state.js";
-import { dom, showToast, showModal } from "./ui.js";
-import { sanitizeHTML, shuffle } from "./utils.js";
+import { dom, showToast, showModal, switchView } from "./ui.js";
+import { sanitizeHTML, shuffle, formatDeckSelectionLabel } from "./utils.js";
 import { calculateFSRS5, Rating } from "../fsrs.js";
 import * as db from "../db.js";
 import { loadCardsFromDB } from "./cards.js";
@@ -11,8 +11,9 @@ export function onSyncNeeded(cb) { onSyncRequest = cb; }
 
 let currentSessionPool = [];
 let currentSessionIsForce = false;
+let isGradingInProgress = false;
 
-export function startStudySession(force = false, customCards = null) {
+export function startStudySession(force = false, customCards = null, sessionTitle = null) {
   let pool = [];
   currentSessionIsForce = force;
 
@@ -23,29 +24,53 @@ export function startStudySession(force = false, customCards = null) {
     pool = filterCards();
     currentSessionPool = [...pool];
   } else {
-    pool = state.dueCards;
-    currentSessionPool = [...filterCards()]; // Fallback to all cards in deck for restart
+    const due = state.dueCards || [];
+    if (due.length > 0) {
+      pool = [...due];
+      currentSessionPool = [...filterCards()]; // Fallback for restart
+    } else {
+      // If no cards are due, fall back to practicing all cards in the selection
+      const allInDeck = filterCards();
+      if (allInDeck.length > 0) {
+        pool = [...allInDeck];
+        currentSessionPool = [...pool];
+        currentSessionIsForce = true;
+        showToast("No cards due today — loaded all cards in practice mode", "info");
+      }
+    }
   }
 
   if (!pool || pool.length === 0) {
-    showToast(force ? "No cards found in this collection!" : "No cards due for review! Use 'Practice All Cards' to review anytime.", "info");
+    showToast("No flashcards found in this collection to study", "info");
     return;
   }
 
   const cap = parseInt(localStorage.getItem("app-review-cap") || "0", 10);
-  if (cap > 0 && pool.length > cap && !force) {
+  if (cap > 0 && pool.length > cap && !currentSessionIsForce) {
     const originalCount = pool.length;
     pool = pool.slice(0, cap);
     showToast(`Vacation Mode: Loaded ${cap} of ${originalCount} due cards`, "info");
-  } else if (force) {
-    showToast(`Reviewing all ${pool.length} cards (unlimited mode)`, "info");
+  }
+
+  const displayTitle = sessionTitle || formatDeckSelectionLabel(state.selectedDeck);
+  state.studySessionInfo = {
+    name: displayTitle,
+    isForce: currentSessionIsForce,
+    count: pool.length
+  };
+
+  if (dom.studyDeckBadge) {
+    dom.studyDeckBadge.textContent = displayTitle;
+    dom.studyDeckBadge.title = displayTitle;
   }
 
   state.studySessionCards = shuffle([...pool]);
   state.currentCardIndex = 0;
   state.isFlipped = false;
-  dom.subviewDashboard.classList.remove("active");
-  dom.subviewStudy.classList.add("active");
+  isGradingInProgress = false;
+
+  if (dom.subviewDashboard) dom.subviewDashboard.classList.remove("active");
+  if (dom.subviewStudy) dom.subviewStudy.classList.add("active");
   renderCurrentStudyCard();
 }
 
@@ -59,58 +84,93 @@ export function restartStudySession() {
   state.studySessionCards = shuffle([...pool]);
   state.currentCardIndex = 0;
   state.isFlipped = false;
+  isGradingInProgress = false;
+
+  if (dom.studyDeckBadge && state.studySessionInfo?.name) {
+    dom.studyDeckBadge.textContent = state.studySessionInfo.name;
+  }
+
   renderCurrentStudyCard();
-  showToast(`Restarted review (${state.studySessionCards.length} cards)`, "info");
+  showToast(`Restarted session (${state.studySessionCards.length} cards)`, "info");
 }
 
 export function renderCurrentStudyCard() {
   if (state.currentCardIndex >= state.studySessionCards.length) {
-    finishStudySession(); return;
+    finishStudySession();
+    return;
   }
   const card = state.studySessionCards[state.currentCardIndex];
+  if (!card) {
+    finishStudySession();
+    return;
+  }
+
   state.isFlipped = false;
+  isGradingInProgress = false;
 
-  dom.studyProgressText.textContent = `Card ${state.currentCardIndex + 1} of ${state.studySessionCards.length}`;
-  const pct = (state.currentCardIndex / state.studySessionCards.length) * 100;
-  dom.studyProgressBar.style.width = `${pct}%`;
-
-  dom.cardFrontContent.innerHTML = renderCardContent(card.front, false);
-  dom.cardBackContent.innerHTML = renderCardContent(card.back, true);
-
-  if (card.sub) {
-    dom.cardFrontSub.textContent = card.sub; dom.cardFrontSub.classList.remove("hidden");
-    dom.cardBackSub.textContent = card.sub; dom.cardBackSub.classList.remove("hidden");
-  } else {
-    dom.cardFrontSub.textContent = ""; dom.cardFrontSub.classList.add("hidden");
-    dom.cardBackSub.textContent = ""; dom.cardBackSub.classList.add("hidden");
+  if (dom.studyProgressText) {
+    dom.studyProgressText.textContent = `Card ${state.currentCardIndex + 1} of ${state.studySessionCards.length}`;
   }
 
-  if (card.description) {
-    dom.cardBackDescription.innerHTML = sanitizeHTML(card.description);
-    dom.cardBackDescription.classList.remove("hidden");
-    dom.cardBackDivider.classList.remove("hidden");
-  } else {
-    dom.cardBackDescription.innerHTML = "";
-    dom.cardBackDescription.classList.add("hidden");
-    dom.cardBackDivider.classList.add("hidden");
+  if (dom.studyProgressBar) {
+    const pct = ((state.currentCardIndex) / state.studySessionCards.length) * 100;
+    dom.studyProgressBar.style.width = `${pct}%`;
   }
 
-  dom.flashcard.className = "flashcard";
-  dom.studyHintBar.classList.remove("hidden");
-  dom.studyGradingBar.classList.add("hidden");
-  dom.cardFrontContent.parentElement.scrollTop = 0;
-  dom.cardBackContent.parentElement.scrollTop = 0;
+  if (dom.cardFrontContent) dom.cardFrontContent.innerHTML = renderCardContent(card.front, false);
+  if (dom.cardBackContent) dom.cardBackContent.innerHTML = renderCardContent(card.back, true);
+
+  if (dom.cardFrontSub && dom.cardBackSub) {
+    if (card.sub) {
+      dom.cardFrontSub.textContent = card.sub;
+      dom.cardFrontSub.classList.remove("hidden");
+      dom.cardBackSub.textContent = card.sub;
+      dom.cardBackSub.classList.remove("hidden");
+    } else {
+      dom.cardFrontSub.textContent = "";
+      dom.cardFrontSub.classList.add("hidden");
+      dom.cardBackSub.textContent = "";
+      dom.cardBackSub.classList.add("hidden");
+    }
+  }
+
+  if (dom.cardBackDescription && dom.cardBackDivider) {
+    if (card.description) {
+      dom.cardBackDescription.innerHTML = sanitizeHTML(card.description);
+      dom.cardBackDescription.classList.remove("hidden");
+      dom.cardBackDivider.classList.remove("hidden");
+    } else {
+      dom.cardBackDescription.innerHTML = "";
+      dom.cardBackDescription.classList.add("hidden");
+      dom.cardBackDivider.classList.add("hidden");
+    }
+  }
+
+  if (dom.flashcard) dom.flashcard.className = "flashcard";
+  if (dom.studyHintBar) dom.studyHintBar.classList.remove("hidden");
+  if (dom.studyGradingBar) dom.studyGradingBar.classList.add("hidden");
+
+  if (dom.cardFrontContent?.parentElement) dom.cardFrontContent.parentElement.scrollTop = 0;
+  if (dom.cardBackContent?.parentElement) dom.cardBackContent.parentElement.scrollTop = 0;
 }
 
 export function flipCard() {
+  if (isGradingInProgress) return;
   state.isFlipped = !state.isFlipped;
-  dom.flashcard.classList.toggle("flipped", state.isFlipped);
-  dom.studyHintBar.classList.toggle("hidden", state.isFlipped);
-  dom.studyGradingBar.classList.toggle("hidden", !state.isFlipped);
+  if (dom.flashcard) dom.flashcard.classList.toggle("flipped", state.isFlipped);
+  if (dom.studyHintBar) dom.studyHintBar.classList.toggle("hidden", state.isFlipped);
+  if (dom.studyGradingBar) dom.studyGradingBar.classList.toggle("hidden", !state.isFlipped);
 }
 
 export async function submitCardGrade(grade) {
+  if (isGradingInProgress) return;
+  if (state.currentCardIndex >= state.studySessionCards.length) return;
+
   const card = state.studySessionCards[state.currentCardIndex];
+  if (!card) return;
+
+  isGradingInProgress = true;
+
   let fsrsRating = Rating.Good;
   if (grade <= 1) fsrsRating = Rating.Again;
   else if (grade <= 3) fsrsRating = Rating.Hard;
@@ -119,44 +179,60 @@ export async function submitCardGrade(grade) {
 
   const updated = calculateFSRS5(card, fsrsRating);
 
+  // Update in-memory allCards immediately
+  const allIdx = state.allCards.findIndex(c => c.id === card.id);
+  if (allIdx !== -1) {
+    state.allCards[allIdx] = { ...state.allCards[allIdx], ...updated };
+  }
+
   try {
     await db.saveCard(updated);
     recordDailyReview();
-    if (grade < 3) state.studySessionCards.push(updated);
+    if (grade < 3) {
+      state.studySessionCards.push(updated);
+    }
     onSyncRequest(2500);
 
     const anim = grade >= 3 ? "slide-out-right-anim" : "slide-out-left-anim";
-    dom.flashcard.classList.add(anim);
+    if (dom.flashcard) dom.flashcard.classList.add(anim);
+
     setTimeout(() => {
-      dom.flashcard.classList.remove(anim);
+      if (dom.flashcard) dom.flashcard.classList.remove(anim);
       state.currentCardIndex++;
+      isGradingInProgress = false;
       renderCurrentStudyCard();
-    }, 250);
+    }, 220);
   } catch (e) {
     console.error("Error saving graded card:", e);
     showToast("Error saving progress locally", "error");
+    isGradingInProgress = false;
   }
 }
 
 export function exitStudySession() {
-  dom.subviewStudy.classList.remove("active");
-  dom.subviewDashboard.classList.add("active");
+  if (dom.subviewStudy) dom.subviewStudy.classList.remove("active");
+  if (dom.subviewDashboard) dom.subviewDashboard.classList.add("active");
+  isGradingInProgress = false;
   loadCardsFromDB();
   onSyncRequest(500);
 }
 
 function finishStudySession() {
+  if (dom.studyProgressBar) dom.studyProgressBar.style.width = "100%";
   onSyncRequest();
+
+  const deckName = state.studySessionInfo?.name || "this collection";
+  const count = state.studySessionCards.length;
+
   showModal(
     "🎉 Deck Completed!",
-    `You finished all ${state.studySessionCards.length} cards in this session. Would you like to review this deck again or return to the dashboard?`,
+    `Great job! You finished all ${count} cards in ${deckName}. Would you like to review this deck again or return to dashboard?`,
     () => {
       restartStudySession();
     }
   );
-  // Auto-switch back to dashboard if user cancels modal
+
   const cancelBtn = dom.modalBtnCancel;
-  const originalCancel = cancelBtn ? cancelBtn.onclick : null;
   if (cancelBtn) {
     const handleCancel = () => {
       exitStudySession();
@@ -204,7 +280,7 @@ export function speakCardText(text) {
 export function initTouchGestures() {
   if (!dom.flashcard) return;
   dom.flashcard.addEventListener("touchstart", e => {
-    if (e.touches.length !== 1 || !state.isFlipped) return;
+    if (e.touches.length !== 1 || !state.isFlipped || isGradingInProgress) return;
     const t = e.touches[0];
     state.touchStartX = t.clientX; state.touchStartY = t.clientY;
     state.isSwipeActive = true;
@@ -212,7 +288,7 @@ export function initTouchGestures() {
   }, { passive: true });
 
   dom.flashcard.addEventListener("touchmove", e => {
-    if (!state.isSwipeActive) return;
+    if (!state.isSwipeActive || isGradingInProgress) return;
     const t = e.touches[0];
     state.touchMoveX = t.clientX - state.touchStartX;
     state.touchMoveY = t.clientY - state.touchStartY;
@@ -238,13 +314,16 @@ export function initKeyboardShortcuts() {
   document.addEventListener("keydown", e => {
     if (!dom.subviewStudy?.classList.contains("active")) return;
     if (["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName)) return;
-    if (e.code === "Space") { e.preventDefault(); flipCard(); }
-    else if (state.isFlipped && e.key >= "0" && e.key <= "5") submitCardGrade(parseInt(e.key, 10));
-    else if (e.key === "r" || e.key === "R") {
+    if (e.code === "Space") {
+      e.preventDefault();
+      flipCard();
+    } else if (state.isFlipped && e.key >= "0" && e.key <= "5") {
+      submitCardGrade(parseInt(e.key, 10));
+    } else if (e.key === "r" || e.key === "R") {
       const card = state.studySessionCards[state.currentCardIndex];
       if (card) speakCardText(state.isFlipped ? card.back : card.front);
     } else if (e.code === "Escape") {
-      showModal("Exit Study Session?", "Exit study session?", exitStudySession);
+      showModal("Exit Study Session?", "Exit study session and return to dashboard?", exitStudySession);
     }
   });
 }
@@ -280,3 +359,4 @@ export function initStudyEventListeners() {
     });
   }
 }
+

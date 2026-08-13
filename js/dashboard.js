@@ -1,6 +1,6 @@
 import { state } from "./state.js";
 import { dom, showToast, showModal, switchView } from "./ui.js";
-import { getCardFolder, getCardDeck, getCardFullHierarchy, escapeHTML, generateUUID } from "./utils.js";
+import { getCardFolder, getCardDeck, getCardFullHierarchy, matchesDeckSelection, formatDeckSelectionLabel, escapeHTML, generateUUID } from "./utils.js";
 import * as db from "../db.js";
 import { loadCardsFromDB } from "./cards.js";
 import { openCollectionPicker } from "./picker.js";
@@ -20,9 +20,32 @@ export function refreshDashboard() {
   renderHeatmap();
 }
 
+/**
+ * Set the active deck/collection filter across the application.
+ * @param {string} selection e.g. "all", "folder:Spanish", "deck:Spanish / Verbs", "deck:Verbs"
+ */
+export function setActiveDeckSelection(selection = "all") {
+  state.selectedDeck = selection || "all";
+
+  // Sync hidden deckSelect dropdown for backwards compatibility
+  if (dom.deckSelect) {
+    let exists = Array.from(dom.deckSelect.options).some(o => o.value === state.selectedDeck);
+    if (!exists && state.selectedDeck !== "all") {
+      const o = document.createElement("option");
+      o.value = state.selectedDeck;
+      o.textContent = formatDeckSelectionLabel(state.selectedDeck);
+      dom.deckSelect.appendChild(o);
+    }
+    dom.deckSelect.value = state.selectedDeck;
+  }
+
+  calculateStats();
+  updateUIStats();
+}
+
 export function populateDeckDropdown() {
   if (!dom.deckSelect) return;
-  const prev = dom.deckSelect.value || "all";
+  const currentSel = state.selectedDeck || "all";
   const folderMap = new Map();
   const standaloneDecks = new Set();
   const allFolderNames = new Set();
@@ -87,26 +110,18 @@ export function populateDeckDropdown() {
     dom.deckSelect.appendChild(grp);
   }
 
-  const exists = Array.from(dom.deckSelect.options).some(o => o.value === prev);
-  dom.deckSelect.value = exists ? prev : "all";
+  const exists = Array.from(dom.deckSelect.options).some(o => o.value === currentSel);
+  if (exists) {
+    dom.deckSelect.value = currentSel;
+  } else {
+    state.selectedDeck = "all";
+    dom.deckSelect.value = "all";
+  }
 }
 
 export function filterCards(customSelected = null) {
-  const selected = customSelected || (dom.deckSelect ? (dom.deckSelect.value || "all") : "all");
-  return state.allCards.filter(card => {
-    if (card.deleted) return false;
-    if (selected === "all") return true;
-    if (selected.startsWith("folder:")) {
-      return getCardFolder(card).toLowerCase() === selected.substring(7).toLowerCase();
-    }
-    if (selected.startsWith("deck:")) {
-      return getCardFullHierarchy(card).toLowerCase() === selected.substring(5).toLowerCase();
-    }
-    const s = selected.toLowerCase();
-    return getCardFullHierarchy(card).toLowerCase() === s ||
-           getCardFolder(card).toLowerCase() === s ||
-           getCardDeck(card).toLowerCase() === s;
-  });
+  const selected = customSelected !== null ? customSelected : (state.selectedDeck || "all");
+  return state.allCards.filter(card => matchesDeckSelection(card, selected));
 }
 
 export function calculateStats() {
@@ -150,10 +165,10 @@ export function updateUIStats() {
 
   // Empty State Display
   if (dom.dashboardEmptyState) {
-    if (filteredTotal === 0) {
+    if (filteredTotal === 0 && state.allCards.filter(c => !c.deleted).length === 0) {
       dom.dashboardEmptyState.classList.remove("hidden");
       dom.dashboardEmptyState.querySelector("h3").textContent = "No Cards Yet";
-      dom.dashboardEmptyState.querySelector("p").textContent = "Add cards in the Import tab to get started.";
+      dom.dashboardEmptyState.querySelector("p").textContent = "Add cards in the Import tab or Quick Add form to get started.";
     } else {
       dom.dashboardEmptyState.classList.add("hidden");
     }
@@ -163,25 +178,18 @@ export function updateUIStats() {
 }
 
 export function updateDashboardPickerDisplay() {
-  const currentVal = dom.deckSelect ? (dom.deckSelect.value || "all") : "all";
+  const currentVal = state.selectedDeck || "all";
   const titleEl = document.getElementById("dashboard-deck-name");
   const subEl = document.getElementById("dashboard-deck-stats");
   const duePillEl = document.getElementById("dashboard-deck-due-pill");
+  const resetBtn = dom.btnDashboardResetDeck;
 
   const filtered = filterCards();
   const due = state.dueCards.length;
   const total = filtered.length;
 
   if (titleEl) {
-    if (currentVal === "all") {
-      titleEl.textContent = "📁 All Collections";
-    } else if (currentVal.startsWith("folder:")) {
-      titleEl.textContent = `📁 ${currentVal.substring(7)} (All)`;
-    } else if (currentVal.startsWith("deck:")) {
-      titleEl.textContent = `🗂️ ${currentVal.substring(5)}`;
-    } else {
-      titleEl.textContent = currentVal;
-    }
+    titleEl.textContent = formatDeckSelectionLabel(currentVal);
   }
 
   if (subEl) {
@@ -194,47 +202,69 @@ export function updateDashboardPickerDisplay() {
     duePillEl.textContent = `${due} due`;
     duePillEl.classList.toggle("has-due", due > 0);
   }
+
+  if (resetBtn) {
+    resetBtn.classList.toggle("hidden", currentVal === "all");
+  }
 }
 
 export function initDashboardPickerButton() {
   const btn = document.getElementById("btn-dashboard-deck-picker");
-  if (!btn) return;
-  btn.addEventListener("click", () => {
-    const currentVal = dom.deckSelect?.value || "all";
-    let initFolder, initDeck;
-    if (currentVal.startsWith("folder:")) {
-      initFolder = currentVal.substring(7);
-      initDeck = "Default";
-    } else if (currentVal.startsWith("deck:")) {
-      const parts = currentVal.substring(5).split(" / ");
-      if (parts.length > 1) {
-        initFolder = parts[0];
-        initDeck = parts.slice(1).join(" / ");
-      } else {
-        initDeck = parts[0];
-      }
-    } else {
-      initDeck = "all";
-    }
-
-    openCollectionPicker({
-      title: "Select Active Study Collection",
-      initialFolder: initFolder,
-      initialDeck: initDeck,
-      allowRoot: true,
-      onSelect: (folder, deck) => {
-        if (deck === "all") {
-          dom.deckSelect.value = "all";
-        } else if (folder) {
-          dom.deckSelect.value = `deck:${folder} / ${deck}`;
+  if (btn) {
+    btn.addEventListener("click", () => {
+      const currentVal = state.selectedDeck || "all";
+      let initFolder, initDeck;
+      if (currentVal.startsWith("folder:")) {
+        initFolder = currentVal.substring(7);
+        initDeck = "all";
+      } else if (currentVal.startsWith("deck:")) {
+        const full = currentVal.substring(5);
+        const parts = full.split(" / ");
+        if (parts.length > 1) {
+          initFolder = parts[0];
+          initDeck = parts.slice(1).join(" / ");
         } else {
-          dom.deckSelect.value = `deck:${deck}`;
+          initDeck = parts[0];
         }
-        calculateStats();
-        updateUIStats();
+      } else {
+        initDeck = "all";
       }
+
+      openCollectionPicker({
+        title: "Select Collection to Study / Practice",
+        initialFolder: initFolder,
+        initialDeck: initDeck,
+        allowRoot: true,
+        onSelect: (folder, deck) => {
+          let sel = "all";
+          if (deck === "all" && folder) {
+            sel = `folder:${folder}`;
+          } else if (deck === "all" || (!folder && !deck)) {
+            sel = "all";
+          } else if (folder) {
+            sel = `deck:${folder} / ${deck}`;
+          } else {
+            sel = `deck:${deck}`;
+          }
+          setActiveDeckSelection(sel);
+        }
+      });
     });
-  });
+  }
+
+  if (dom.btnDashboardResetDeck) {
+    dom.btnDashboardResetDeck.addEventListener("click", (e) => {
+      e.stopPropagation();
+      setActiveDeckSelection("all");
+      showToast("Selected All Collections", "info");
+    });
+  }
+
+  if (dom.btnDashboardAllDecks) {
+    dom.btnDashboardAllDecks.addEventListener("click", () => {
+      switchView("view-decks");
+    });
+  }
 }
 
 export function renderFoldersTree() {
@@ -262,10 +292,11 @@ export function renderFoldersTree() {
   });
 
   if (folderMap.size === 0 && standaloneMap.size === 0) {
-    dom.foldersTreeContainer.innerHTML = "<p class='help-text'>No collections created yet.</p>";
+    dom.foldersTreeContainer.innerHTML = "<p class='help-text' style='padding: 10px 0;'>No collections created yet. Add cards or import decks to begin.</p>";
     return;
   }
 
+  // Folders with sub-decks
   Array.from(folderMap.keys()).sort().forEach(folder => {
     const dm = folderMap.get(folder);
     let totalCards = 0, totalDue = 0;
@@ -276,20 +307,40 @@ export function renderFoldersTree() {
     const titleWrap = document.createElement("div"); titleWrap.className = "folder-title-wrap";
     titleWrap.innerHTML = `<svg class="folder-icon-svg" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg><span>${escapeHTML(folder)}</span><span class="folder-count-badge">${totalCards} cards${totalDue > 0 ? ` • ${totalDue} due` : ""}</span>`;
     
+    titleWrap.addEventListener("click", () => {
+      setActiveDeckSelection(`folder:${folder}`);
+      showToast(`Selected folder "${folder}"`, "info");
+    });
+
     const actWrap = document.createElement("div"); actWrap.className = "folder-actions-wrap";
     
-    const btnStudy = document.createElement("button");
-    btnStudy.className = "btn-folder-action";
-    btnStudy.textContent = totalDue > 0 ? `Study (${totalDue})` : "Review All";
-    btnStudy.addEventListener("click", async e => {
+    if (totalDue > 0) {
+      const btnStudy = document.createElement("button");
+      btnStudy.className = "btn-folder-action";
+      btnStudy.textContent = `Study (${totalDue})`;
+      btnStudy.title = `Study due cards in folder ${folder}`;
+      btnStudy.addEventListener("click", async e => {
+        e.stopPropagation();
+        setActiveDeckSelection(`folder:${folder}`);
+        switchView("view-review");
+        const { startStudySession } = await import("./study.js");
+        startStudySession(false);
+      });
+      actWrap.appendChild(btnStudy);
+    }
+
+    const btnPracticeFolder = document.createElement("button");
+    btnPracticeFolder.className = "btn-folder-action";
+    btnPracticeFolder.textContent = "Practice All";
+    btnPracticeFolder.title = `Practice all ${totalCards} cards in ${folder}`;
+    btnPracticeFolder.addEventListener("click", async e => {
       e.stopPropagation();
-      dom.deckSelect.value = `folder:${folder}`;
-      calculateStats();
-      updateUIStats();
+      setActiveDeckSelection(`folder:${folder}`);
       switchView("view-review");
       const { startStudySession } = await import("./study.js");
-      startStudySession(totalDue === 0);
+      startStudySession(true);
     });
+    actWrap.appendChild(btnPracticeFolder);
 
     const btnDeleteFolder = document.createElement("button");
     btnDeleteFolder.className = "btn-folder-action btn-folder-delete";
@@ -299,9 +350,8 @@ export function renderFoldersTree() {
       e.stopPropagation();
       deleteFolder(folder, totalCards);
     });
-
-    actWrap.appendChild(btnStudy);
     actWrap.appendChild(btnDeleteFolder);
+
     header.appendChild(titleWrap);
     header.appendChild(actWrap);
     node.appendChild(header);
@@ -317,9 +367,10 @@ export function renderFoldersTree() {
       const name = document.createElement("span");
       name.className = "deck-tree-name";
       name.innerHTML = `↳ ${escapeHTML(deck)}`;
+      name.title = `Select collection ${deck}`;
       name.addEventListener("click", () => {
-        dom.deckSelect.value = `deck:${folder} / ${deck}`;
-        calculateStats(); updateUIStats(); switchView("view-review");
+        setActiveDeckSelection(`deck:${folder} / ${deck}`);
+        showToast(`Selected collection "${deck}"`, "info");
       });
 
       const count = document.createElement("span");
@@ -332,19 +383,33 @@ export function renderFoldersTree() {
       const actGroup = document.createElement("div");
       actGroup.className = "deck-tree-actions";
 
-      const btnDeckReview = document.createElement("button");
-      btnDeckReview.className = "btn-deck-action";
-      btnDeckReview.innerHTML = s.due > 0 ? `Study (${s.due})` : "Review";
-      btnDeckReview.title = `Review cards in ${deck}`;
-      btnDeckReview.addEventListener("click", async (e) => {
+      if (s.due > 0) {
+        const btnDeckStudy = document.createElement("button");
+        btnDeckStudy.className = "btn-deck-action";
+        btnDeckStudy.innerHTML = `Study (${s.due})`;
+        btnDeckStudy.title = `Study due cards in ${deck}`;
+        btnDeckStudy.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          setActiveDeckSelection(`deck:${folder} / ${deck}`);
+          switchView("view-review");
+          const { startStudySession } = await import("./study.js");
+          startStudySession(false);
+        });
+        actGroup.appendChild(btnDeckStudy);
+      }
+
+      const btnDeckPractice = document.createElement("button");
+      btnDeckPractice.className = "btn-deck-action practice-all";
+      btnDeckPractice.innerHTML = "Practice";
+      btnDeckPractice.title = `Practice all ${s.total} cards in ${deck}`;
+      btnDeckPractice.addEventListener("click", async (e) => {
         e.stopPropagation();
-        dom.deckSelect.value = `deck:${folder} / ${deck}`;
-        calculateStats();
-        updateUIStats();
+        setActiveDeckSelection(`deck:${folder} / ${deck}`);
         switchView("view-review");
         const { startStudySession } = await import("./study.js");
-        startStudySession(s.due === 0);
+        startStudySession(true);
       });
+      actGroup.appendChild(btnDeckPractice);
 
       const btnDeckDelete = document.createElement("button");
       btnDeckDelete.className = "btn-deck-action btn-deck-delete";
@@ -354,8 +419,6 @@ export function renderFoldersTree() {
         e.stopPropagation();
         deleteDeck(folder, deck, s.total);
       });
-
-      actGroup.appendChild(btnDeckReview);
       actGroup.appendChild(btnDeckDelete);
 
       row.appendChild(leftWrap);
@@ -366,6 +429,7 @@ export function renderFoldersTree() {
     dom.foldersTreeContainer.appendChild(node);
   });
 
+  // Standalone Decks
   if (standaloneMap.size > 0) {
     const node = document.createElement("div"); node.className = "folder-node";
     const header = document.createElement("div"); header.className = "folder-header-row";
@@ -383,9 +447,10 @@ export function renderFoldersTree() {
       const name = document.createElement("span");
       name.className = "deck-tree-name";
       name.textContent = deck;
+      name.title = `Select collection ${deck}`;
       name.addEventListener("click", () => {
-        dom.deckSelect.value = `deck:${deck}`;
-        calculateStats(); updateUIStats(); switchView("view-review");
+        setActiveDeckSelection(`deck:${deck}`);
+        showToast(`Selected collection "${deck}"`, "info");
       });
 
       const count = document.createElement("span");
@@ -398,19 +463,33 @@ export function renderFoldersTree() {
       const actGroup = document.createElement("div");
       actGroup.className = "deck-tree-actions";
 
-      const btnDeckReview = document.createElement("button");
-      btnDeckReview.className = "btn-deck-action";
-      btnDeckReview.innerHTML = s.due > 0 ? `Study (${s.due})` : "Review";
-      btnDeckReview.title = `Review cards in ${deck}`;
-      btnDeckReview.addEventListener("click", async (e) => {
+      if (s.due > 0) {
+        const btnDeckStudy = document.createElement("button");
+        btnDeckStudy.className = "btn-deck-action";
+        btnDeckStudy.innerHTML = `Study (${s.due})`;
+        btnDeckStudy.title = `Study due cards in ${deck}`;
+        btnDeckStudy.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          setActiveDeckSelection(`deck:${deck}`);
+          switchView("view-review");
+          const { startStudySession } = await import("./study.js");
+          startStudySession(false);
+        });
+        actGroup.appendChild(btnDeckStudy);
+      }
+
+      const btnDeckPractice = document.createElement("button");
+      btnDeckPractice.className = "btn-deck-action practice-all";
+      btnDeckPractice.innerHTML = "Practice";
+      btnDeckPractice.title = `Practice all ${s.total} cards in ${deck}`;
+      btnDeckPractice.addEventListener("click", async (e) => {
         e.stopPropagation();
-        dom.deckSelect.value = `deck:${deck}`;
-        calculateStats();
-        updateUIStats();
+        setActiveDeckSelection(`deck:${deck}`);
         switchView("view-review");
         const { startStudySession } = await import("./study.js");
-        startStudySession(s.due === 0);
+        startStudySession(true);
       });
+      actGroup.appendChild(btnDeckPractice);
 
       const btnDeckDelete = document.createElement("button");
       btnDeckDelete.className = "btn-deck-action btn-deck-delete";
@@ -420,8 +499,6 @@ export function renderFoldersTree() {
         e.stopPropagation();
         deleteDeck(null, deck, s.total);
       });
-
-      actGroup.appendChild(btnDeckReview);
       actGroup.appendChild(btnDeckDelete);
 
       row.appendChild(leftWrap);
