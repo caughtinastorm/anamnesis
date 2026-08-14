@@ -6,7 +6,7 @@
 
 import { state } from "./state.js";
 import { showToast, showModal, scrollToElement } from "./ui.js";
-import { getCardFolder, getCardDeck, getCardFullHierarchy, matchesDeckSelection, escapeHTML, sanitizeHTML } from "./utils.js";
+import { getCardFolder, getCardDeck, getCardFullHierarchy, matchesDeckSelection, formatDeckSelectionLabel, escapeHTML, sanitizeHTML } from "./utils.js";
 import { isCardDue, isCardNew, getCardNextReview } from "../fsrs.js";
 import * as db from "../db.js";
 import { loadCardsFromDB } from "./cards.js";
@@ -36,12 +36,12 @@ let browserPickerLabel;
 export function initCardBrowser() {
   browserSearchInput = document.getElementById("browser-search-input");
   browserDeckFilter = document.getElementById("browser-deck-filter");
-  browserCardsTbody = document.getElementById("browser-cards-tbody");
-  browserTotalCount = document.getElementById("browser-total-count");
   btnBrowserPicker = document.getElementById("btn-browser-deck-picker");
   browserPickerLabel = document.getElementById("browser-deck-filter-label");
+  browserCardsTbody = document.getElementById("browser-cards-tbody");
+  browserTotalCount = document.getElementById("browser-total-count");
 
-  editModalContainer = document.getElementById("edit-modal-container");
+  editModalContainer = document.getElementById("edit-card-modal");
   editCardId = document.getElementById("edit-card-id");
   editCardFolder = document.getElementById("edit-card-folder");
   editCardDeck = document.getElementById("edit-card-deck");
@@ -58,7 +58,9 @@ export function initCardBrowser() {
   }
 
   if (browserDeckFilter) {
-    browserDeckFilter.addEventListener("change", () => renderCardBrowser());
+    browserDeckFilter.addEventListener("change", () => {
+      setBrowserDeckSelection(browserDeckFilter.value);
+    });
   }
 
   if (btnBrowserPicker) {
@@ -67,7 +69,7 @@ export function initCardBrowser() {
       let initFolder, initDeck;
       if (currentVal.startsWith("folder:")) {
         initFolder = currentVal.substring(7);
-        initDeck = "Default";
+        initDeck = "all";
       } else if (currentVal.startsWith("deck:")) {
         const parts = currentVal.substring(5).split(" / ");
         if (parts.length > 1) {
@@ -86,17 +88,17 @@ export function initCardBrowser() {
         initialDeck: initDeck,
         allowRoot: true,
         onSelect: (folder, deck) => {
-          if (deck === "all") {
-            browserDeckFilter.value = "all";
-            if (browserPickerLabel) browserPickerLabel.textContent = "📁 All Collections";
+          let sel = "all";
+          if (deck === "all" && folder) {
+            sel = `folder:${folder}`;
+          } else if (deck === "all" || (!folder && !deck)) {
+            sel = "all";
           } else if (folder) {
-            browserDeckFilter.value = `deck:${folder} / ${deck}`;
-            if (browserPickerLabel) browserPickerLabel.textContent = `📁 ${folder} / ${deck}`;
+            sel = `deck:${folder} / ${deck}`;
           } else {
-            browserDeckFilter.value = `deck:${deck}`;
-            if (browserPickerLabel) browserPickerLabel.textContent = `🗂️ ${deck}`;
+            sel = `deck:${deck}`;
           }
-          renderCardBrowser();
+          setBrowserDeckSelection(sel);
         }
       });
     });
@@ -113,6 +115,29 @@ export function initCardBrowser() {
   if (editModalSave) {
     editModalSave.addEventListener("click", saveCardEdits);
   }
+}
+
+export function setBrowserDeckSelection(selection = "all") {
+  if (!browserDeckFilter) browserDeckFilter = document.getElementById("browser-deck-filter");
+  if (!browserPickerLabel) browserPickerLabel = document.getElementById("browser-deck-filter-label");
+
+  const sel = selection || "all";
+  if (browserDeckFilter) {
+    let exists = Array.from(browserDeckFilter.options).some(o => o.value === sel);
+    if (!exists && sel !== "all") {
+      const o = document.createElement("option");
+      o.value = sel;
+      o.textContent = formatDeckSelectionLabel(sel);
+      browserDeckFilter.appendChild(o);
+    }
+    browserDeckFilter.value = sel;
+  }
+
+  if (browserPickerLabel) {
+    browserPickerLabel.textContent = formatDeckSelectionLabel(sel);
+  }
+
+  renderCardBrowser();
 }
 
 export function populateBrowserDeckFilter() {
@@ -169,8 +194,7 @@ export function populateBrowserDeckFilter() {
     browserDeckFilter.appendChild(grp);
   }
 
-  const exists = Array.from(browserDeckFilter.options).some(o => o.value === prev);
-  browserDeckFilter.value = exists ? prev : "all";
+  setBrowserDeckSelection(prev);
 }
 
 export function renderCardBrowser() {

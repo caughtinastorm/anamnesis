@@ -125,8 +125,14 @@ export function openCollectionPicker({
   pickerState.historyIndex = 0;
 
   if (titleEl) titleEl.textContent = title;
+  if (!btnConfirm) btnConfirm = document.getElementById("btn-picker-confirm");
   if (btnConfirm) {
     btnConfirm.textContent = allowRoot ? "Select This Collection" : "Select Destination";
+    btnConfirm.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      confirmSelection();
+    };
   }
 
   updateSelectionLabel();
@@ -145,12 +151,13 @@ export function closeCollectionPicker() {
 function confirmSelection() {
   const folder = pickerState.selectedFolder;
   const deck = pickerState.selectedDeck || (pickerState.allowRoot ? "all" : "Default");
-
-  if (pickerState.onSelectCallback) {
-    pickerState.onSelectCallback(folder, deck);
-  }
+  const cb = pickerState.onSelectCallback;
 
   closeCollectionPicker();
+
+  if (cb && typeof cb === "function") {
+    cb(folder, deck);
+  }
 }
 
 export function navigatePickerTo(pathSegments, addToHistory = true) {

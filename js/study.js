@@ -323,12 +323,29 @@ export function initKeyboardShortcuts() {
   document.addEventListener("keydown", e => {
     if (!dom.subviewStudy?.classList.contains("active")) return;
     if (["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName)) return;
-    if (e.code === "Space") {
+
+    if (e.code === "Space" || e.code === "Enter") {
       e.preventDefault();
       flipCard();
-    } else if (state.isFlipped && e.key >= "1" && e.key <= "4") {
-      submitCardGrade(parseInt(e.key, 10));
-    } else if (e.key === "r" || e.key === "R") {
+      return;
+    }
+
+    let grade = null;
+    if (e.key === "1" || e.code === "Digit1" || e.code === "Numpad1") grade = 1;
+    else if (e.key === "2" || e.code === "Digit2" || e.code === "Numpad2") grade = 2;
+    else if (e.key === "3" || e.code === "Digit3" || e.code === "Numpad3") grade = 3;
+    else if (e.key === "4" || e.code === "Digit4" || e.code === "Numpad4") grade = 4;
+
+    if (grade !== null) {
+      e.preventDefault();
+      if (!state.isFlipped) {
+        flipCard();
+      }
+      submitCardGrade(grade);
+      return;
+    }
+
+    if (e.key === "r" || e.key === "R" || e.code === "KeyR") {
       const card = state.studySessionCards[state.currentCardIndex];
       if (card) speakCardText(state.isFlipped ? card.back : card.front);
     } else if (e.code === "Escape") {

@@ -42,6 +42,9 @@ export function setActiveDeckSelection(selection = "all") {
 
   calculateStats();
   updateUIStats();
+  if (selection && selection !== "all") {
+    showToast(`Active Collection: ${formatDeckSelectionLabel(selection)}`, "info");
+  }
 }
 
 export function populateDeckDropdown() {
@@ -183,7 +186,7 @@ export function updateDashboardPickerDisplay() {
   const titleEl = document.getElementById("dashboard-deck-name");
   const subEl = document.getElementById("dashboard-deck-stats");
   const duePillEl = document.getElementById("dashboard-deck-due-pill");
-  const resetBtn = dom.btnDashboardResetDeck;
+  const resetBtn = document.getElementById("btn-dashboard-reset-deck");
 
   const filtered = filterCards();
   const due = state.dueCards.length;
@@ -206,6 +209,7 @@ export function updateDashboardPickerDisplay() {
 
   if (resetBtn) {
     resetBtn.classList.toggle("hidden", currentVal === "all");
+    resetBtn.style.display = currentVal === "all" ? "none" : "inline-flex";
   }
 }
 
@@ -253,11 +257,13 @@ export function initDashboardPickerButton() {
     });
   }
 
-  if (dom.btnDashboardResetDeck) {
-    dom.btnDashboardResetDeck.addEventListener("click", (e) => {
+  const resetBtn = document.getElementById("btn-dashboard-reset-deck");
+  if (resetBtn) {
+    resetBtn.addEventListener("click", (e) => {
       e.stopPropagation();
+      e.preventDefault();
       setActiveDeckSelection("all");
-      showToast("Selected All Collections", "info");
+      showToast("Reset to All Collections", "info");
     });
   }
 
