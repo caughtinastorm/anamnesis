@@ -422,6 +422,17 @@ html[data-theme="light"] .app-header {
 
 .btn:active { transform: scale(0.97); }
 
+.btn svg {
+  width: 16px !important;
+  height: 16px !important;
+  max-width: 16px !important;
+  max-height: 16px !important;
+  min-width: 16px !important;
+  min-height: 16px !important;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
 /* Primary: solid white fill */
 .btn-primary {
   background: var(--btn-primary-bg);
@@ -453,9 +464,25 @@ html[data-theme="light"] .app-header {
   color: #fff;
 }
 
-.btn-large {
-  padding: 12px 28px;
-  font-size: 0.95rem;
+.btn-large, .btn-lg {
+  padding: 10px 22px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  border-radius: var(--radius-pill);
+  min-height: 42px;
+  max-height: 46px;
+}
+
+.btn-icon-svg {
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  min-height: 16px !important;
+  max-width: 16px !important;
+  max-height: 16px !important;
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .btn-full { width: 100%; }
@@ -2155,8 +2182,23 @@ textarea {
 .deck-actions-row {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
+  margin-top: 14px;
+}
+
+.deck-actions-row .btn {
+  width: 100%;
+  height: 44px;
+  min-height: 44px;
+  max-height: 44px;
+  border-radius: var(--radius-pill);
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .deck-tree-left {
