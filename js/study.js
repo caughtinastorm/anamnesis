@@ -332,7 +332,7 @@ export function initKeyboardShortcuts() {
       const card = state.studySessionCards[state.currentCardIndex];
       if (card) speakCardText(state.isFlipped ? card.back : card.front);
     } else if (e.code === "Escape") {
-      showModal("Exit Study Session?", "Exit study session and return to dashboard?", exitStudySession);
+      exitStudySession();
     }
   });
 }
@@ -345,9 +345,7 @@ export function initStudyEventListeners() {
       restartStudySession();
     });
   });
-  if (dom.btnCancelStudy) dom.btnCancelStudy.addEventListener("click", () =>
-    showModal("Exit Study Session?", "Exit study session and return to dashboard?", exitStudySession)
-  );
+  if (dom.btnCancelStudy) dom.btnCancelStudy.addEventListener("click", () => exitStudySession());
   if (dom.flashcard) {
     dom.flashcard.addEventListener("click", e => {
       if (e.target.closest(".btn-grade") || state.isSwipeActive) return;

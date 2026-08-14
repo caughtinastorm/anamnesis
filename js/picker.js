@@ -217,6 +217,7 @@ function selectDeck(folder, deck) {
   pickerState.selectedFolder = folder;
   pickerState.selectedDeck = deck || (pickerState.allowRoot ? "all" : "Default");
   updateSelectionLabel();
+  renderPickerTree();
   renderPickerCanvas();
 }
 
@@ -225,6 +226,8 @@ function selectFolderAsTarget(folder) {
   // If in study mode, selecting folder defaults to all decks in that folder
   pickerState.selectedDeck = pickerState.allowRoot ? "all" : "Default";
   updateSelectionLabel();
+  renderPickerTree();
+  renderPickerCanvas();
 }
 
 
@@ -278,9 +281,14 @@ function renderBreadcrumbs() {
   breadcrumbsEl.innerHTML = "";
 
   const rootChip = document.createElement("button");
-  rootChip.className = "breadcrumb-chip root-chip";
+  rootChip.className = `breadcrumb-chip root-chip ${pickerState.currentPath.length === 0 ? "active" : ""}`;
   rootChip.innerHTML = `<svg class="chip-icon-svg" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><span>Collections Root</span>`;
-  rootChip.addEventListener("click", () => navigatePickerTo([]));
+  rootChip.addEventListener("click", () => {
+    if (pickerState.allowRoot) {
+      selectDeck(undefined, "all");
+    }
+    navigatePickerTo([]);
+  });
   breadcrumbsEl.appendChild(rootChip);
 
   let accumulated = [];
@@ -312,12 +320,12 @@ function renderPickerTree() {
   // 1. All Collections (if allowed)
   if (pickerState.allowRoot) {
     const allItem = document.createElement("div");
-    const isAllSelected = pickerState.selectedDeck === "all";
+    const isAllSelected = !pickerState.selectedFolder && pickerState.selectedDeck === "all";
     allItem.className = `tree-item root-tree-item ${isAllSelected ? "active" : ""}`;
     allItem.innerHTML = `
       <div class="tree-item-content">
         <svg class="tree-icon-svg" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-        <span class="tree-item-label">📁 All Collections (All)</span>
+        <span class="tree-item-label">📁 All Collections</span>
       </div>
     `;
     allItem.addEventListener("click", () => {
@@ -333,8 +341,8 @@ function renderPickerTree() {
     let folderTotal = 0;
     dMap.forEach(s => { folderTotal += s.total; });
 
-    const isFolderActive = pickerState.currentPath[0] === folderName;
-    const isExpanded = pickerState.expandedFolders.has(folderName) || isFolderActive;
+    const isFolderActive = pickerState.selectedFolder === folderName && pickerState.selectedDeck === "all";
+    const isExpanded = pickerState.expandedFolders.has(folderName) || pickerState.currentPath[0] === folderName;
 
     const folderNode = document.createElement("div");
     folderNode.className = "tree-folder-node";
@@ -448,27 +456,28 @@ function renderPickerCanvas() {
       const dMap = folderMap.get(folderName);
       let total = 0;
       dMap.forEach(s => total += s.total);
-
       if (folderName.toLowerCase().includes(q)) {
-        results.push({ type: "folder", name: folderName, count: `${dMap.size} collections • ${total} cards` });
+        results.push({
+          type: "folder",
+          name: folderName,
+          count: `${dMap.size} collections • ${total} cards`
+        });
       }
-
-      // Search decks inside folder
+      // Search Decks inside Folder
       Array.from(dMap.keys()).forEach(deckName => {
         const s = dMap.get(deckName);
-        if (deckName.toLowerCase().includes(q) || folderName.toLowerCase().includes(q)) {
+        if (deckName.toLowerCase().includes(q) || `${folderName}/${deckName}`.toLowerCase().includes(q)) {
           results.push({
             type: "deck",
             folder: folderName,
             name: deckName,
-            count: `${s.total} cards`,
-            hierarchy: `${folderName} / ${deckName}`
+            count: `${folderName} / ${deckName} • ${s.total} cards`
           });
         }
       });
     });
 
-    // Search standalone decks
+    // Search Standalone Decks
     Array.from(standaloneMap.keys()).forEach(deckName => {
       const s = standaloneMap.get(deckName);
       if (deckName.toLowerCase().includes(q)) {
@@ -476,79 +485,32 @@ function renderPickerCanvas() {
           type: "deck",
           folder: undefined,
           name: deckName,
-          count: `${s.total} cards`,
-          hierarchy: deckName
+          count: `${s.total} cards`
         });
       }
     });
 
-    if (results.length === 0) {
-      canvasEl.innerHTML = `
-        <div class="picker-empty-state">
-          <p>No collections match "<strong>${escapeHTML(q)}</strong>".</p>
-          <button class="btn btn-secondary btn-sm" id="btn-search-create-deck">Create deck "${escapeHTML(q)}"</button>
-        </div>
-      `;
-      canvasEl.querySelector("#btn-search-create-deck")?.addEventListener("click", () => {
-        selectDeck(path[0] || undefined, q);
-        confirmSelection();
-      });
-      return;
-    }
-
-    const grid = document.createElement("div");
-    grid.className = "picker-grid-container";
-
-    results.forEach(it => {
-      const tile = document.createElement("div");
-      const isSelected = it.type === "deck" &&
-        it.folder === pickerState.selectedFolder &&
-        it.name === pickerState.selectedDeck;
-
-      tile.className = `picker-card-tile ${isSelected ? "selected" : ""}`;
-      const icon = it.type === "folder"
-        ? `<svg class="tile-icon-svg folder-icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`
-        : `<svg class="tile-icon-svg deck-icon" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`;
-
-      tile.innerHTML = `
-        <div class="tile-icon-wrap">${icon}</div>
-        <div class="tile-main-info">
-          <div class="tile-title">${escapeHTML(it.hierarchy || it.name)}</div>
-          <div class="tile-subtitle">${it.count}</div>
-        </div>
-      `;
-
-      tile.addEventListener("click", () => {
-        if (it.type === "folder") {
-          pickerState.expandedFolders.add(it.name);
-          navigatePickerTo([it.name]);
-          selectFolderAsTarget(it.name);
-        } else {
-          selectDeck(it.folder, it.name);
-        }
-      });
-
-      tile.addEventListener("dblclick", () => {
-        if (it.type === "deck") {
-          selectDeck(it.folder, it.name);
-          confirmSelection();
-        }
-      });
-
-      grid.appendChild(tile);
-    });
-
-    canvasEl.appendChild(grid);
+    renderPickerItemList(results);
     return;
   }
 
-  // 2. Folder Navigation Mode: Show items inside current path
-  let items = [];
+  // 2. Path-based Directory Browsing
+  const items = [];
 
-  if (path.length === 1 && folderMap.has(path[0])) {
-    // Inside folder path[0] -> show collections inside this folder
+  if (path.length > 0) {
     const folderName = path[0];
     const dMap = folderMap.get(folderName) || new Map();
+
+    if (pickerState.allowRoot) {
+      let folderTotal = 0;
+      dMap.forEach(s => folderTotal += s.total);
+      items.push({
+        type: "folder_all",
+        folder: folderName,
+        name: `📁 All in ${folderName}`,
+        count: `${dMap.size} collections • ${folderTotal} cards`
+      });
+    }
 
     Array.from(dMap.keys()).sort().forEach(deckName => {
       const s = dMap.get(deckName);
@@ -560,7 +522,17 @@ function renderPickerCanvas() {
       });
     });
   } else {
-    // Root level -> show all folders + standalone decks
+    // Root level -> show All Collections tile (if allowed) + all folders + standalone decks
+    if (pickerState.allowRoot) {
+      const totalAll = state.allCards.filter(c => !c.deleted).length;
+      items.push({
+        type: "root",
+        folder: undefined,
+        name: "📁 All Collections",
+        count: `Entire Flashcard Library • ${totalAll} cards`
+      });
+    }
+
     Array.from(folderMap.keys()).sort().forEach(folderName => {
       const dMap = folderMap.get(folderName);
       let total = 0;
@@ -583,10 +555,14 @@ function renderPickerCanvas() {
     });
   }
 
+  renderPickerItemList(items);
+}
+
+function renderPickerItemList(items) {
   if (items.length === 0) {
     canvasEl.innerHTML = `
       <div class="picker-empty-state">
-        <p>Folder is empty.</p>
+        <p>No collections found.</p>
         <button class="btn btn-primary btn-sm" id="btn-create-first-deck">➕ Create New Deck Here</button>
       </div>
     `;
@@ -599,14 +575,22 @@ function renderPickerCanvas() {
 
   items.forEach(it => {
     const tile = document.createElement("div");
-    const isSelected = it.type === "deck" &&
-      it.folder === pickerState.selectedFolder &&
-      it.name === pickerState.selectedDeck;
+    let isSelected = false;
+    if (it.type === "root") {
+      isSelected = !pickerState.selectedFolder && pickerState.selectedDeck === "all";
+    } else if (it.type === "folder_all") {
+      isSelected = pickerState.selectedFolder === it.folder && pickerState.selectedDeck === "all";
+    } else if (it.type === "deck") {
+      isSelected = it.folder === pickerState.selectedFolder && it.name === pickerState.selectedDeck;
+    }
 
     tile.className = `picker-card-tile ${isSelected ? "selected" : ""}`;
-    const icon = it.type === "folder"
-      ? `<svg class="tile-icon-svg folder-icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`
-      : `<svg class="tile-icon-svg deck-icon" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`;
+    let icon = `<svg class="tile-icon-svg deck-icon" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`;
+    if (it.type === "root") {
+      icon = `<svg class="tile-icon-svg" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`;
+    } else if (it.type === "folder" || it.type === "folder_all") {
+      icon = `<svg class="tile-icon-svg folder-icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
+    }
 
     tile.innerHTML = `
       <div class="tile-icon-wrap">${icon}</div>
@@ -617,7 +601,11 @@ function renderPickerCanvas() {
     `;
 
     tile.addEventListener("click", () => {
-      if (it.type === "folder") {
+      if (it.type === "root") {
+        selectDeck(undefined, "all");
+      } else if (it.type === "folder_all") {
+        selectFolderAsTarget(it.folder);
+      } else if (it.type === "folder") {
         pickerState.expandedFolders.add(it.name);
         selectFolderAsTarget(it.name);
         navigatePickerTo([it.name]);
@@ -627,7 +615,13 @@ function renderPickerCanvas() {
     });
 
     tile.addEventListener("dblclick", () => {
-      if (it.type === "deck") {
+      if (it.type === "root") {
+        selectDeck(undefined, "all");
+        confirmSelection();
+      } else if (it.type === "folder_all") {
+        selectFolderAsTarget(it.folder);
+        confirmSelection();
+      } else if (it.type === "deck") {
         selectDeck(it.folder, it.name);
         confirmSelection();
       }

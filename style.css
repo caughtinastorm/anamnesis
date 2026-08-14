@@ -2155,6 +2155,8 @@ textarea {
   cursor: pointer;
   transition: all 0.15s ease;
   flex-shrink: 0;
+}
+
 .btn-deck-action.practice-all {
   background: rgba(255, 255, 255, 0.03);
   border-color: rgba(255, 255, 255, 0.12);
