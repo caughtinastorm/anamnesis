@@ -605,9 +605,30 @@ function renderPickerItemList(items) {
         <div class="tile-title">${escapeHTML(it.name)}</div>
         <div class="tile-subtitle">${it.count}</div>
       </div>
+      <button type="button" class="btn btn-sm btn-secondary tile-select-btn" title="Choose this collection">Select</button>
     `;
 
-    tile.addEventListener("click", () => {
+    // Direct 1-tap select button
+    tile.querySelector(".tile-select-btn")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (it.type === "root") {
+        selectDeck(undefined, "all");
+        confirmSelection();
+      } else if (it.type === "folder_all") {
+        selectFolderAsTarget(it.folder);
+        confirmSelection();
+      } else if (it.type === "folder") {
+        pickerState.expandedFolders.add(it.name);
+        selectFolderAsTarget(it.name);
+        navigatePickerTo([it.name]);
+      } else {
+        selectDeck(it.folder, it.name);
+        confirmSelection();
+      }
+    });
+
+    tile.addEventListener("click", (e) => {
+      if (e.target.closest(".tile-select-btn")) return;
       if (it.type === "root") {
         selectDeck(undefined, "all");
       } else if (it.type === "folder_all") {

@@ -3687,6 +3687,20 @@ html[data-theme="light"] .picker-sidebar {
   box-shadow: 0 0 0 1px #3b82f6;
 }
 
+.tile-select-btn {
+  margin-left: auto;
+  font-size: 0.72rem;
+  padding: 3px 8px;
+  flex-shrink: 0;
+  border-radius: var(--radius-pill);
+}
+
+.picker-card-tile.selected .tile-select-btn {
+  background: #3b82f6;
+  color: #fff;
+  border-color: #3b82f6;
+}
+
 .picker-empty-state {
   display: flex;
   flex-direction: column;

@@ -3,7 +3,7 @@
  * Implements Network-First caching with offline fallback.
  */
 
-const CACHE_NAME = "anamnesis-v26";
+const CACHE_NAME = "anamnesis-v27";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",

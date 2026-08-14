@@ -29,7 +29,7 @@ export function setActiveDeckSelection(selection = "all") {
   state.selectedDeck = selection || "all";
 
   // Sync hidden deckSelect dropdown for backwards compatibility
-  if (dom.deckSelect) {
+  if (dom.deckSelect && dom.deckSelect.options) {
     let exists = Array.from(dom.deckSelect.options).some(o => o.value === state.selectedDeck);
     if (!exists && state.selectedDeck !== "all") {
       const o = document.createElement("option");
