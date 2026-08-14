@@ -1771,20 +1771,27 @@ textarea {
     flex: 1;
     min-height: 0;
     width: 100%;
+    display: none;
+  }
+  .subview.active {
+    display: flex;
   }
   #subview-dashboard {
     padding: 0;
     gap: 20px;
-    display: flex;
+    display: none;
     flex-direction: column;
     max-width: 960px;
     width: 100%;
     margin: 0 auto;
     flex: 1;
   }
+  #subview-dashboard.active {
+    display: flex;
+  }
   #subview-study {
     padding: 16px 20px;
-    display: flex;
+    display: none;
     flex-direction: column;
     align-items: center;
     justify-content: space-between;
@@ -1792,6 +1799,9 @@ textarea {
     max-width: 760px;
     width: 100%;
     margin: 0 auto;
+  }
+  #subview-study.active {
+    display: flex;
   }
 
   /* ── Dashboard hero banner ── */
