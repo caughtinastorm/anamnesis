@@ -91,11 +91,12 @@ export function scrollToElement(el) {
   setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
 }
 
-export function showModal(title, body, onConfirm) {
+export function showModal(title, body, onConfirm, onCancel = null) {
   if (!dom.modalContainer) return;
   dom.modalTitle.textContent = title;
   dom.modalBody.textContent = body;
   state.modalConfirmCallback = onConfirm;
+  state.modalCancelCallback = onCancel;
   dom.modalContainer.classList.remove("hidden");
 }
 
@@ -103,14 +104,19 @@ export function initModalListeners() {
   if (dom.modalBtnCancel) {
     dom.modalBtnCancel.addEventListener("click", () => {
       dom.modalContainer.classList.add("hidden");
+      const cancelCb = state.modalCancelCallback;
       state.modalConfirmCallback = null;
+      state.modalCancelCallback = null;
+      if (cancelCb) cancelCb();
     });
   }
   if (dom.modalBtnConfirm) {
     dom.modalBtnConfirm.addEventListener("click", () => {
       dom.modalContainer.classList.add("hidden");
-      if (state.modalConfirmCallback) state.modalConfirmCallback();
+      const confirmCb = state.modalConfirmCallback;
       state.modalConfirmCallback = null;
+      state.modalCancelCallback = null;
+      if (confirmCb) confirmCb();
     });
   }
 }

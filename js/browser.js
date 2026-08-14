@@ -6,7 +6,8 @@
 
 import { state } from "./state.js";
 import { showToast, showModal, scrollToElement } from "./ui.js";
-import { getCardFolder, getCardDeck, getCardFullHierarchy, escapeHTML, sanitizeHTML } from "./utils.js";
+import { getCardFolder, getCardDeck, getCardFullHierarchy, matchesDeckSelection, escapeHTML, sanitizeHTML } from "./utils.js";
+import { isCardDue, isCardNew, getCardNextReview } from "../fsrs.js";
 import * as db from "../db.js";
 import { loadCardsFromDB } from "./cards.js";
 import { openCollectionPicker } from "./picker.js";
@@ -184,15 +185,7 @@ export function renderCardBrowser() {
   // Filter cards by collection & query
   const filtered = activeCards.filter(card => {
     // 1. Deck Filter
-    if (selectedDeck !== "all") {
-      if (selectedDeck.startsWith("folder:")) {
-        const target = selectedDeck.substring(7).toLowerCase();
-        if (getCardFolder(card).toLowerCase() !== target) return false;
-      } else if (selectedDeck.startsWith("deck:")) {
-        const target = selectedDeck.substring(5).toLowerCase();
-        if (getCardFullHierarchy(card).toLowerCase() !== target) return false;
-      }
-    }
+    if (!matchesDeckSelection(card, selectedDeck)) return false;
 
     // 2. Search Query
     if (query) {
@@ -262,22 +255,22 @@ export function renderCardBrowser() {
 
     // 4. Status Pill
     const tdStatus = document.createElement("td");
-    const reps = card.sm2_stats?.repetitions || 0;
-    const nextRev = card.sm2_stats?.next_review || 0;
-    const isDue = nextRev <= now;
+    const cardIsNew = isCardNew(card);
+    const cardIsDue = isCardDue(card, now);
+    const nextRev = getCardNextReview(card);
 
     let statusClass = "status-new";
     let statusText = "New";
 
-    if (reps === 0) {
+    if (cardIsNew) {
       statusClass = "status-new";
       statusText = "New";
-    } else if (isDue) {
+    } else if (cardIsDue) {
       statusClass = "status-due";
       statusText = "Due";
     } else {
       statusClass = "status-review";
-      const daysLeft = Math.ceil((nextRev - now) / (1000 * 60 * 60 * 24));
+      const daysLeft = Math.max(1, Math.ceil((nextRev - now) / (1000 * 60 * 60 * 24)));
       statusText = `${daysLeft}d`;
     }
 

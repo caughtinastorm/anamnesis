@@ -13,6 +13,7 @@
 import { state } from "./state.js";
 import { dom, showToast, switchView } from "./ui.js";
 import { getCardFolder, getCardDeck, escapeHTML } from "./utils.js";
+import { isCardDue, isCardNew, getCardNextReview } from "../fsrs.js";
 import { loadCardsFromDB } from "./cards.js";
 import { calculateStats, updateUIStats, setActiveDeckSelection } from "./dashboard.js";
 import { setImportDestination } from "./import.js";
@@ -183,8 +184,8 @@ export function getExplorerData() {
     if (card.deleted) return;
     const folder = getCardFolder(card);
     const deck   = getCardDeck(card);
-    const isDue  = (card.sm2_stats?.next_review || 0) <= now;
-    const isNew  = !card.sm2_stats || card.sm2_stats.repetitions === 0;
+    const isDue  = isCardDue(card, now);
+    const isNew  = isCardNew(card);
 
     if (folder) {
       if (!folderMap.has(folder)) folderMap.set(folder, new Map());
@@ -811,14 +812,15 @@ function renderDeckDetailCanvas(folder, deck, stats) {
     const now = Date.now();
     filtered.slice(0, 100).forEach(c => {
       const row  = document.createElement("tr");
-      const isDue = (c.sm2_stats?.next_review || 0) <= now;
-      const reps  = c.sm2_stats?.repetitions || 0;
+      const cardIsDue = isCardDue(c, now);
+      const cardIsNew = isCardNew(c);
+      const nextRev = getCardNextReview(c);
 
       let statusBadge = `<span class="status-badge status-new">New</span>`;
-      if (reps > 0) {
-        statusBadge = isDue
+      if (!cardIsNew) {
+        statusBadge = cardIsDue
           ? `<span class="status-badge status-due">Due</span>`
-          : `<span class="status-badge status-review">${Math.ceil(((c.sm2_stats?.next_review || 0) - now) / 86400000)}d</span>`;
+          : `<span class="status-badge status-review">${Math.max(1, Math.ceil((nextRev - now) / 86400000))}d</span>`;
       }
 
       row.innerHTML = `

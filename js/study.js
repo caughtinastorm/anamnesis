@@ -1,7 +1,7 @@
 import { state } from "./state.js";
 import { dom, showToast, showModal, switchView } from "./ui.js";
 import { sanitizeHTML, shuffle, formatDeckSelectionLabel } from "./utils.js";
-import { calculateFSRS5, Rating } from "../fsrs.js";
+import { calculateFSRS5, Rating, calculateProjectedIntervals } from "../fsrs.js";
 import * as db from "../db.js";
 import { loadCardsFromDB } from "./cards.js";
 import { recordDailyReview, filterCards } from "./dashboard.js";
@@ -94,6 +94,19 @@ export function restartStudySession() {
   showToast(`Restarted session (${state.studySessionCards.length} cards)`, "info");
 }
 
+function updateGradeButtonIntervals(card) {
+  if (!card) return;
+  const proj = calculateProjectedIntervals(card);
+  const int1 = document.getElementById("grade-interval-1");
+  const int2 = document.getElementById("grade-interval-2");
+  const int3 = document.getElementById("grade-interval-3");
+  const int4 = document.getElementById("grade-interval-4");
+  if (int1) int1.textContent = proj.again;
+  if (int2) int2.textContent = proj.hard;
+  if (int3) int3.textContent = proj.good;
+  if (int4) int4.textContent = proj.easy;
+}
+
 export function renderCurrentStudyCard() {
   if (state.currentCardIndex >= state.studySessionCards.length) {
     finishStudySession();
@@ -146,6 +159,8 @@ export function renderCurrentStudyCard() {
     }
   }
 
+  updateGradeButtonIntervals(card);
+
   if (dom.flashcard) dom.flashcard.className = "flashcard";
   if (dom.studyHintBar) dom.studyHintBar.classList.remove("hidden");
   if (dom.studyGradingBar) dom.studyGradingBar.classList.add("hidden");
@@ -172,10 +187,10 @@ export async function submitCardGrade(grade) {
   isGradingInProgress = true;
 
   let fsrsRating = Rating.Good;
-  if (grade <= 1) fsrsRating = Rating.Again;
-  else if (grade <= 3) fsrsRating = Rating.Hard;
-  else if (grade === 4) fsrsRating = Rating.Good;
-  else if (grade === 5) fsrsRating = Rating.Easy;
+  if (grade === 1) fsrsRating = Rating.Again;
+  else if (grade === 2) fsrsRating = Rating.Hard;
+  else if (grade === 3) fsrsRating = Rating.Good;
+  else if (grade === 4) fsrsRating = Rating.Easy;
 
   const updated = calculateFSRS5(card, fsrsRating);
 
@@ -188,12 +203,12 @@ export async function submitCardGrade(grade) {
   try {
     await db.saveCard(updated);
     recordDailyReview();
-    if (grade < 3) {
+    if (fsrsRating === Rating.Again) {
       state.studySessionCards.push(updated);
     }
     onSyncRequest(2500);
 
-    const anim = grade >= 3 ? "slide-out-right-anim" : "slide-out-left-anim";
+    const anim = fsrsRating >= Rating.Good ? "slide-out-right-anim" : "slide-out-left-anim";
     if (dom.flashcard) dom.flashcard.classList.add(anim);
 
     setTimeout(() => {
@@ -229,17 +244,11 @@ function finishStudySession() {
     `Great job! You finished all ${count} cards in ${deckName}. Would you like to review this deck again or return to dashboard?`,
     () => {
       restartStudySession();
+    },
+    () => {
+      exitStudySession();
     }
   );
-
-  const cancelBtn = dom.modalBtnCancel;
-  if (cancelBtn) {
-    const handleCancel = () => {
-      exitStudySession();
-      cancelBtn.removeEventListener("click", handleCancel);
-    };
-    cancelBtn.addEventListener("click", handleCancel, { once: true });
-  }
 }
 
 function renderCardContent(text, isBack = false) {
@@ -303,7 +312,7 @@ export function initTouchGestures() {
     state.isSwipeActive = false;
     dom.flashcard.style.transition = ""; dom.flashcard.style.borderColor = "";
     const threshold = 120;
-    if (state.touchMoveX > threshold) { dom.flashcard.style.transform = ""; submitCardGrade(5); }
+    if (state.touchMoveX > threshold) { dom.flashcard.style.transform = ""; submitCardGrade(4); }
     else if (state.touchMoveX < -threshold) { dom.flashcard.style.transform = ""; submitCardGrade(1); }
     else dom.flashcard.style.transform = "rotateY(180deg)";
     state.touchMoveX = 0; state.touchMoveY = 0;
@@ -317,7 +326,7 @@ export function initKeyboardShortcuts() {
     if (e.code === "Space") {
       e.preventDefault();
       flipCard();
-    } else if (state.isFlipped && e.key >= "0" && e.key <= "5") {
+    } else if (state.isFlipped && e.key >= "1" && e.key <= "4") {
       submitCardGrade(parseInt(e.key, 10));
     } else if (e.key === "r" || e.key === "R") {
       const card = state.studySessionCards[state.currentCardIndex];
@@ -345,12 +354,19 @@ export function initStudyEventListeners() {
       flipCard();
     });
   }
-  dom.gradeButtons.forEach(btn => {
-    btn.addEventListener("click", e => {
+  
+  // Grade button clicks: delegate on grading bar or per button
+  const gradingBar = document.getElementById("study-grading-bar");
+  if (gradingBar) {
+    gradingBar.addEventListener("click", e => {
+      const btn = e.target.closest(".btn-grade");
+      if (!btn) return;
       e.stopPropagation();
-      submitCardGrade(parseInt(btn.getAttribute("data-grade"), 10));
+      const grade = parseInt(btn.getAttribute("data-grade"), 10);
+      if (!isNaN(grade)) submitCardGrade(grade);
     });
-  });
+  }
+
   if (dom.btnTtsSpeak) {
     dom.btnTtsSpeak.addEventListener("click", e => {
       e.stopPropagation();
@@ -359,4 +375,5 @@ export function initStudyEventListeners() {
     });
   }
 }
+
 

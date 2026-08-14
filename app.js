@@ -5,11 +5,11 @@
  * Business logic lives in js/ modules.
  */
 
-import { dom, switchView, initTheme, initModalListeners, showToast, scrollToElement } from "./js/ui.js";
+import { dom, switchView, initTheme, initModalListeners, showModal, showToast, scrollToElement } from "./js/ui.js";
 import { loadCardsFromDB, onCardsRefreshed } from "./js/cards.js";
 import { calculateStats, updateUIStats, setActiveDeckSelection, handleQuickAddCard, initDashboardPickerButton, onSyncNeeded as dashOnSync, refreshDashboard } from "./js/dashboard.js";
 
-import { initStudyEventListeners, initTouchGestures, initKeyboardShortcuts, onSyncNeeded as studyOnSync } from "./js/study.js";
+import { initStudyEventListeners, initTouchGestures, initKeyboardShortcuts, exitStudySession, onSyncNeeded as studyOnSync } from "./js/study.js";
 import { initImportEventListeners, onSyncNeeded as importOnSync, refreshImport } from "./js/import.js";
 import { initSettingsForm, initSettingsEventListeners, performBackgroundSync, requestDebouncedSync, onSyncNeeded as settingsOnSync } from "./js/settings.js";
 import { initCardBrowser, onSyncNeeded as browserOnSync, refreshBrowser } from "./js/browser.js";
@@ -44,13 +44,9 @@ function initRouting() {
 
     const studyActive = dom.subviewStudy?.classList.contains("active");
     if (studyActive && targetView !== "view-review") {
-      import("./js/ui.js").then(({ showModal }) => {
-        import("./js/study.js").then(({ exitStudySession }) => {
-          showModal("Exit Study Session?", "Your session progress will be saved.", () => {
-            exitStudySession();
-            switchView(targetView);
-          });
-        });
+      showModal("Exit Study Session?", "Your session progress will be saved.", () => {
+        exitStudySession();
+        switchView(targetView);
       });
     } else {
       switchView(targetView);
@@ -60,13 +56,9 @@ function initRouting() {
   const handleLogoClick = () => {
     const studyActive = dom.subviewStudy?.classList.contains("active");
     if (studyActive) {
-      import("./js/ui.js").then(({ showModal }) => {
-        import("./js/study.js").then(({ exitStudySession }) => {
-          showModal("Exit Study Session?", "Return to dashboard?", () => {
-            exitStudySession();
-            switchView("view-review");
-          });
-        });
+      showModal("Exit Study Session?", "Return to dashboard?", () => {
+        exitStudySession();
+        switchView("view-review");
       });
     } else {
       switchView("view-review");

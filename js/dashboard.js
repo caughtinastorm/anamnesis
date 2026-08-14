@@ -1,6 +1,7 @@
 import { state } from "./state.js";
 import { dom, showToast, showModal, switchView } from "./ui.js";
 import { getCardFolder, getCardDeck, getCardFullHierarchy, matchesDeckSelection, formatDeckSelectionLabel, escapeHTML, generateUUID } from "./utils.js";
+import { isCardDue, isCardNew, createDefaultFSRSStats } from "../fsrs.js";
 import * as db from "../db.js";
 import { loadCardsFromDB } from "./cards.js";
 import { openCollectionPicker } from "./picker.js";
@@ -127,8 +128,8 @@ export function filterCards(customSelected = null) {
 export function calculateStats() {
   const now = Date.now();
   const filtered = filterCards();
-  state.dueCards = filtered.filter(c => (c.sm2_stats?.next_review || 0) <= now);
-  state.newCards = filtered.filter(c => !c.sm2_stats || c.sm2_stats.repetitions === 0);
+  state.dueCards = filtered.filter(c => isCardDue(c, now));
+  state.newCards = filtered.filter(c => isCardNew(c));
 }
 
 export function updateUIStats() {
@@ -141,7 +142,7 @@ export function updateUIStats() {
   if (dom.statNewCount) dom.statNewCount.textContent = newCount;
   if (dom.statTotalCount) dom.statTotalCount.textContent = filteredTotal;
 
-  const overallDue = state.allCards.filter(c => !c.deleted && (c.sm2_stats?.next_review || 0) <= now).length;
+  const overallDue = state.allCards.filter(c => isCardDue(c, now)).length;
   if (dom.navDueBadge) {
     dom.navDueBadge.textContent = overallDue;
     dom.navDueBadge.classList.toggle("hidden", overallDue === 0);
@@ -278,7 +279,7 @@ export function renderFoldersTree() {
     if (card.deleted) return;
     const folder = getCardFolder(card);
     const deck = getCardDeck(card);
-    const isDue = (card.sm2_stats?.next_review || 0) <= now;
+    const isDue = isCardDue(card, now);
     if (folder) {
       if (!folderMap.has(folder)) folderMap.set(folder, new Map());
       const dm = folderMap.get(folder);
@@ -631,6 +632,7 @@ export async function handleQuickAddCard() {
     description: dom.quickDescription?.value.trim() || undefined,
     folder: dom.quickFolder?.value.trim() || undefined,
     deck: dom.quickDeck?.value.trim() || "Default",
+    fsrs_stats: createDefaultFSRSStats(),
     sm2_stats: { ease_factor: 2.5, interval: 0, repetitions: 0, next_review: 0 },
     last_modified: now
   };

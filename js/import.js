@@ -14,6 +14,7 @@ import { state } from "./state.js";
 import { dom, showToast, scrollToElement, switchView } from "./ui.js";
 import { generateUUID, escapeHTML } from "./utils.js";
 import { parseAnkiApkg, parseAnkiText, normalizeAnkiDeck, expandClozeCards, cleanHtmlTags } from "../anki.js";
+import { createDefaultFSRSStats } from "../fsrs.js";
 import * as db from "../db.js";
 import { loadCardsFromDB } from "./cards.js";
 import { openCollectionPicker } from "./picker.js";
@@ -556,6 +557,7 @@ async function commitImportedCards() {
     description: c.description || undefined,
     folder: c.folder || undefined,
     deck: c.deck || "Default",
+    fsrs_stats: createDefaultFSRSStats(),
     sm2_stats: { ease_factor: 2.5, interval: 0, repetitions: 0, next_review: 0 },
     last_modified: now
   }));

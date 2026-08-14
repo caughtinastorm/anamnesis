@@ -208,11 +208,11 @@ async function updateGist(pat, gistId, cards) {
  */
 export function getCardTimestamp(card) {
   if (!card) return 0;
-  return card.updated_at || card.last_modified || card.sm2_stats?.last_reviewed || card.fsrs_stats?.last_review || card.created_at || 0;
+  return card.last_modified || card.updated_at || card.fsrs_stats?.last_review || card.sm2_stats?.last_reviewed || card.created_at || 0;
 }
 
 /**
- * Check if two cards lists have structural or content differences
+ * Check if two cards lists have structural, content, or scheduling differences
  */
 export function cardsDiffer(a = [], b = []) {
   if (a.length !== b.length) return true;
@@ -225,7 +225,32 @@ export function cardsDiffer(a = [], b = []) {
     if (!cardB) return true;
     if (Boolean(cardA.deleted) !== Boolean(cardB.deleted)) return true;
     if (getCardTimestamp(cardA) !== getCardTimestamp(cardB)) return true;
-    if (cardA.front !== cardB.front || cardA.back !== cardB.back || cardA.deck !== cardB.deck || cardA.folder !== cardB.folder) return true;
+    if (
+      (cardA.front || "") !== (cardB.front || "") ||
+      (cardA.back || "") !== (cardB.back || "") ||
+      (cardA.deck || "") !== (cardB.deck || "") ||
+      (cardA.folder || "") !== (cardB.folder || "") ||
+      (cardA.sub || "") !== (cardB.sub || "") ||
+      (cardA.description || "") !== (cardB.description || "")
+    ) {
+      return true;
+    }
+
+    const fa = cardA.fsrs_stats;
+    const fb = cardB.fsrs_stats;
+    if (Boolean(fa) !== Boolean(fb)) return true;
+    if (fa && fb) {
+      if (
+        fa.repetitions !== fb.repetitions ||
+        fa.next_review !== fb.next_review ||
+        fa.stability !== fb.stability ||
+        fa.difficulty !== fb.difficulty ||
+        fa.state !== fb.state ||
+        fa.lapses !== fb.lapses
+      ) {
+        return true;
+      }
+    }
   }
   return false;
 }
@@ -300,7 +325,7 @@ export async function syncCards(localCards = []) {
 
       // Local has changes that remote lacks: push to remote
       const { data: updatedGist, etag: newEtag } = await updateGist(pat, gistId, localCards);
-      const newSyncTime = new Date(updatedGist.updated_at).getTime();
+      const newSyncTime = Math.max(Date.now(), new Date(updatedGist.updated_at).getTime());
       saveLastSyncTime(newSyncTime);
       saveLastSyncEtag(newEtag);
       return { cards: localCards, status: 'pushed_to_remote', changed: false };
@@ -341,13 +366,13 @@ export async function syncCards(localCards = []) {
     if (remoteNeedsUpdate) {
       // Push merged cards to Gist
       const { data: updatedGist, etag: updatedEtag } = await updateGist(pat, gistId, merged);
-      const newSyncTime = new Date(updatedGist.updated_at).getTime();
+      const newSyncTime = Math.max(Date.now(), new Date(updatedGist.updated_at).getTime());
       saveLastSyncTime(newSyncTime);
       saveLastSyncEtag(updatedEtag);
       return { cards: merged, status: 'merged_with_remote', changed: localNeedsUpdate };
     } else {
       // Remote already had everything; save current ETag & timestamp
-      const newSyncTime = new Date(gist.updated_at).getTime();
+      const newSyncTime = Math.max(Date.now(), new Date(gist.updated_at).getTime());
       saveLastSyncTime(newSyncTime);
       saveLastSyncEtag(etag);
       return { cards: merged, status: localNeedsUpdate ? 'pulled_from_remote' : 'no_change', changed: localNeedsUpdate };

@@ -13,6 +13,7 @@
 
 import { state } from "./state.js";
 import { getCardFolder, getCardDeck, getCardFullHierarchy, escapeHTML } from "./utils.js";
+import { isCardDue } from "../fsrs.js";
 import { showToast } from "./ui.js";
 
 export const pickerState = {
@@ -239,7 +240,7 @@ function getPickerData() {
     if (card.deleted) return;
     const folder = getCardFolder(card);
     const deck = getCardDeck(card);
-    const isDue = (card.sm2_stats?.next_review || 0) <= now;
+    const isDue = isCardDue(card, now);
 
     if (folder) {
       if (!folderMap.has(folder)) folderMap.set(folder, new Map());

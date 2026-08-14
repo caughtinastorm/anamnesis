@@ -274,29 +274,25 @@
             
             <div id="study-grading-bar" class="study-grading-bar hidden">
               <div class="grading-title">Recall Quality</div>
-              <div class="grading-buttons">
-                <button class="btn-grade" data-grade="0">
-                  <span class="grade-num">0</span>
-                  <span class="grade-label">Forgot</span>
-                </button>
-                <button class="btn-grade" data-grade="1">
+              <div class="grading-buttons fsrs-4-buttons">
+                <button class="btn-grade grade-again" data-grade="1" title="Incorrect recall / Lapse (Key: 1)">
+                  <span class="grade-interval" id="grade-interval-1">&lt;10m</span>
                   <span class="grade-num">1</span>
-                  <span class="grade-label">Wrong</span>
+                  <span class="grade-label">Again</span>
                 </button>
-                <button class="btn-grade" data-grade="2">
+                <button class="btn-grade grade-hard" data-grade="2" title="Difficult recall (Key: 2)">
+                  <span class="grade-interval" id="grade-interval-2">1d</span>
                   <span class="grade-num">2</span>
-                  <span class="grade-label">Almost</span>
-                </button>
-                <button class="btn-grade" data-grade="3">
-                  <span class="grade-num">3</span>
                   <span class="grade-label">Hard</span>
                 </button>
-                <button class="btn-grade" data-grade="4">
-                  <span class="grade-num">4</span>
+                <button class="btn-grade grade-good" data-grade="3" title="Correct recall with effort (Key: 3)">
+                  <span class="grade-interval" id="grade-interval-3">3d</span>
+                  <span class="grade-num">3</span>
                   <span class="grade-label">Good</span>
                 </button>
-                <button class="btn-grade" data-grade="5">
-                  <span class="grade-num">5</span>
+                <button class="btn-grade grade-easy" data-grade="4" title="Instant, effortless recall (Key: 4)">
+                  <span class="grade-interval" id="grade-interval-4">7d</span>
+                  <span class="grade-num">4</span>
                   <span class="grade-label">Easy</span>
                 </button>
               </div>
@@ -306,7 +302,7 @@
           <!-- Desktop Keyboard Shortcuts Guide -->
           <div class="study-shortcuts-guide">
             <span class="shortcut-badge"><kbd>Space</kbd> Flip Card</span>
-            <span class="shortcut-badge"><kbd>0</kbd>–<kbd>5</kbd> Grade</span>
+            <span class="shortcut-badge"><kbd>1</kbd>–<kbd>4</kbd> Grade</span>
             <span class="shortcut-badge"><kbd>Esc</kbd> Exit</span>
           </div>
         </div>
@@ -798,7 +794,7 @@ Gracias,Thank you,greeting,Common polite phrase
       <div class="modal-content card-panel edit-card-modal-content">
         <div class="edit-modal-header">
           <h3>Edit Flashcard</h3>
-          <button id="btn-close-edit-modal" class="btn-text">?</button>
+          <button id="btn-close-edit-modal" class="btn-text" title="Close">✕</button>
         </div>
         <div class="edit-modal-body">
           <input type="hidden" id="edit-card-id">
