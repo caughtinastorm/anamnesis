@@ -594,12 +594,13 @@ textarea {
 }
 
 /* ==========================================================================
- * DASHBOARD & REVIEW VIEW (FIT-TO-SCREEN NO-SCROLL)
+ * DASHBOARD & REVIEW VIEW
  * ========================================================================== */
 #view-review.active {
-  overflow: hidden !important;
-  padding: 10px 14px calc(var(--safe-bottom) + 64px) 14px;
-  gap: 10px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 14px 16px calc(var(--safe-bottom) + 80px) 16px;
+  gap: 14px;
   height: 100%;
   box-sizing: border-box;
   display: flex;
@@ -608,15 +609,25 @@ textarea {
 
 #subview-dashboard {
   flex: 1;
-  min-height: 0;
-  overflow: hidden !important;
   display: none;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 14px;
 }
 
 #subview-dashboard.active {
+  display: flex;
+}
+
+#subview-study {
+  flex: 1;
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  height: 100%;
+}
+
+#subview-study.active {
   display: flex;
 }
 

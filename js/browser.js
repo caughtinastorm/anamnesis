@@ -41,7 +41,7 @@ export function initCardBrowser() {
   browserCardsTbody = document.getElementById("browser-cards-tbody");
   browserTotalCount = document.getElementById("browser-total-count");
 
-  editModalContainer = document.getElementById("edit-card-modal");
+  editModalContainer = document.getElementById("edit-modal-container");
   editCardId = document.getElementById("edit-card-id");
   editCardFolder = document.getElementById("edit-card-folder");
   editCardDeck = document.getElementById("edit-card-deck");

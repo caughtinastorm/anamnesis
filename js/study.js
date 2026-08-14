@@ -192,7 +192,12 @@ export async function submitCardGrade(grade) {
   else if (grade === 3) fsrsRating = Rating.Good;
   else if (grade === 4) fsrsRating = Rating.Easy;
 
-  const updated = calculateFSRS5(card, fsrsRating);
+  let updated = card;
+  try {
+    updated = calculateFSRS5(card, fsrsRating);
+  } catch (err) {
+    console.error("FSRS calculation error:", err);
+  }
 
   // Update in-memory allCards immediately
   const allIdx = state.allCards.findIndex(c => c.id === card.id);
@@ -202,31 +207,35 @@ export async function submitCardGrade(grade) {
 
   try {
     await db.saveCard(updated);
-    recordDailyReview();
-    if (fsrsRating === Rating.Again) {
-      state.studySessionCards.push(updated);
-    }
-    onSyncRequest(2500);
-
-    const anim = fsrsRating >= Rating.Good ? "slide-out-right-anim" : "slide-out-left-anim";
-    if (dom.flashcard) dom.flashcard.classList.add(anim);
-
-    setTimeout(() => {
-      if (dom.flashcard) dom.flashcard.classList.remove(anim);
-      state.currentCardIndex++;
-      isGradingInProgress = false;
-      renderCurrentStudyCard();
-    }, 220);
   } catch (e) {
     console.error("Error saving graded card:", e);
-    showToast("Error saving progress locally", "error");
-    isGradingInProgress = false;
   }
+
+  try {
+    recordDailyReview();
+  } catch (e) {}
+
+  if (fsrsRating === Rating.Again) {
+    state.studySessionCards.push(updated);
+  }
+  onSyncRequest(2500);
+
+  const anim = fsrsRating >= Rating.Good ? "slide-out-right-anim" : "slide-out-left-anim";
+  if (dom.flashcard) dom.flashcard.classList.add(anim);
+
+  setTimeout(() => {
+    if (dom.flashcard) dom.flashcard.classList.remove(anim);
+    state.currentCardIndex++;
+    isGradingInProgress = false;
+    renderCurrentStudyCard();
+  }, 220);
 }
 
 export function exitStudySession() {
-  if (dom.subviewStudy) dom.subviewStudy.classList.remove("active");
-  if (dom.subviewDashboard) dom.subviewDashboard.classList.add("active");
+  const subStudy = document.getElementById("subview-study") || dom.subviewStudy;
+  const subDash = document.getElementById("subview-dashboard") || dom.subviewDashboard;
+  if (subStudy) subStudy.classList.remove("active");
+  if (subDash) subDash.classList.add("active");
   isGradingInProgress = false;
   loadCardsFromDB();
   onSyncRequest(500);
@@ -320,11 +329,12 @@ export function initTouchGestures() {
 }
 
 export function initKeyboardShortcuts() {
-  document.addEventListener("keydown", e => {
-    if (!dom.subviewStudy?.classList.contains("active")) return;
+  window.addEventListener("keydown", e => {
+    const studyView = document.getElementById("subview-study");
+    if (!studyView || !studyView.classList.contains("active")) return;
     if (["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName)) return;
 
-    if (e.code === "Space" || e.code === "Enter") {
+    if (e.code === "Space" || e.code === "Enter" || e.key === " ") {
       e.preventDefault();
       flipCard();
       return;
@@ -348,7 +358,7 @@ export function initKeyboardShortcuts() {
     if (e.key === "r" || e.key === "R" || e.code === "KeyR") {
       const card = state.studySessionCards[state.currentCardIndex];
       if (card) speakCardText(state.isFlipped ? card.back : card.front);
-    } else if (e.code === "Escape") {
+    } else if (e.code === "Escape" || e.key === "Escape") {
       exitStudySession();
     }
   });
@@ -362,7 +372,16 @@ export function initStudyEventListeners() {
       restartStudySession();
     });
   });
-  if (dom.btnCancelStudy) dom.btnCancelStudy.addEventListener("click", () => exitStudySession());
+
+  const exitBtn = document.getElementById("btn-cancel-study");
+  if (exitBtn) {
+    exitBtn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      exitStudySession();
+    };
+  }
+
   if (dom.flashcard) {
     dom.flashcard.addEventListener("click", e => {
       if (e.target.closest(".btn-grade") || state.isSwipeActive) return;
@@ -370,7 +389,7 @@ export function initStudyEventListeners() {
     });
   }
   
-  // Grade button clicks: delegate on grading bar or per button
+  // Grade button clicks: delegate on grading bar
   const gradingBar = document.getElementById("study-grading-bar");
   if (gradingBar) {
     gradingBar.addEventListener("click", e => {
