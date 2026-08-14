@@ -205,8 +205,8 @@
                   <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
                 </svg>
               </div>
-              <h3>No Cards Due</h3>
-              <p>You're all caught up! Add cards or import decks to continue.</p>
+              <h3>There are no cards available</h3>
+              <p>Your collection is empty. Use Quick Add or the Import tab to create flashcards.</p>
             </div>
 
           </div>
@@ -218,9 +218,9 @@
             <button id="btn-cancel-study" class="btn-text">Exit</button>
             <div class="study-deck-badge" id="study-deck-badge" title="Active Study Collection">📁 All Collections</div>
             <div class="study-progress">
-              <span id="study-progress-text">Card 1 of 10</span>
+              <span id="study-progress-text"></span>
               <div class="progress-bar-bg">
-                <div class="progress-bar-fill" id="study-progress-bar" style="width: 10%;"></div>
+                <div class="progress-bar-fill" id="study-progress-bar" style="width: 0%;"></div>
               </div>
             </div>
 
@@ -248,7 +248,7 @@
                 <div class="card-tag">QUESTION</div>
                 <div class="card-text-wrapper scrollable-y">
                   <div class="card-subtext" id="card-front-sub"></div>
-                  <div class="card-content" id="card-front-content">Front of the card</div>
+                  <div class="card-content" id="card-front-content">There are no cards available</div>
                 </div>
                 <div class="card-hint">Tap card to flip</div>
               </div>
@@ -257,9 +257,9 @@
                 <div class="card-tag">ANSWER</div>
                 <div class="card-text-wrapper scrollable-y">
                   <div class="card-subtext" id="card-back-sub"></div>
-                  <div class="card-content" id="card-back-content">Back of the card</div>
+                  <div class="card-content" id="card-back-content">There are no cards available</div>
                   <hr class="card-divider hidden" id="card-back-divider">
-                  <div class="card-description hidden" id="card-back-description">Description text</div>
+                  <div class="card-description hidden" id="card-back-description"></div>
                 </div>
                 <div class="card-hint">Tap card to flip back</div>
               </div>

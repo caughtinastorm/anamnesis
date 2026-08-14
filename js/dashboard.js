@@ -169,10 +169,16 @@ export function updateUIStats() {
 
   // Empty State Display
   if (dom.dashboardEmptyState) {
-    if (filteredTotal === 0 && state.allCards.filter(c => !c.deleted).length === 0) {
+    if (filteredTotal === 0) {
       dom.dashboardEmptyState.classList.remove("hidden");
-      dom.dashboardEmptyState.querySelector("h3").textContent = "No Cards Yet";
-      dom.dashboardEmptyState.querySelector("p").textContent = "Add cards in the Import tab or Quick Add form to get started.";
+      const isLibraryEmpty = state.allCards.filter(c => !c.deleted).length === 0;
+      if (isLibraryEmpty) {
+        dom.dashboardEmptyState.querySelector("h3").textContent = "There are no cards available";
+        dom.dashboardEmptyState.querySelector("p").textContent = "Your collection is empty. Use Quick Add or the Import tab to create flashcards.";
+      } else {
+        dom.dashboardEmptyState.querySelector("h3").textContent = "There are no cards available in this collection";
+        dom.dashboardEmptyState.querySelector("p").textContent = "Pick another collection with the browser above or add cards to this deck.";
+      }
     } else {
       dom.dashboardEmptyState.classList.add("hidden");
     }
