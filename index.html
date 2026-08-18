@@ -225,6 +225,12 @@
             </div>
 
             <div class="study-header-actions">
+              <button id="btn-undo-study" class="btn-tts" title="Undo Last Review (Ctrl+Z)" disabled>
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 14L4 9l5-5"/>
+                  <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/>
+                </svg>
+              </button>
               <button id="btn-restart-study" class="btn-tts" title="Restart / Review Again">
                 <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
@@ -447,9 +453,27 @@
             <label for="quick-back" class="input-label">Back (Answer / English)</label>
             <input type="text" id="quick-back" placeholder="e.g. Chinese characters or Answer text">
           </div>
-          <div class="form-group">
-            <label for="quick-description" class="input-label">Description (Optional detailed notes)</label>
-            <input type="text" id="quick-description" placeholder="e.g. Example sentence or detailed explanation">
+          <div class="form-grid-two-col">
+            <div class="form-group">
+              <label for="quick-description" class="input-label">Description (Optional detailed notes)</label>
+              <input type="text" id="quick-description" placeholder="e.g. Example sentence or detailed explanation">
+            </div>
+            <div class="form-group">
+              <label for="quick-lang" class="input-label">Audio Speech Language</label>
+              <select id="quick-lang" class="select-input">
+                <option value="">Auto-Detect / Global Default</option>
+                <option value="en-US">English (en-US)</option>
+                <option value="es-ES">Spanish (es-ES)</option>
+                <option value="ja-JP">Japanese (ja-JP)</option>
+                <option value="fr-FR">French (fr-FR)</option>
+                <option value="de-DE">German (de-DE)</option>
+                <option value="ru-RU">Russian (ru-RU)</option>
+                <option value="zh-CN">Chinese (zh-CN)</option>
+                <option value="it-IT">Italian (it-IT)</option>
+                <option value="pt-BR">Portuguese (pt-BR)</option>
+                <option value="ko-KR">Korean (ko-KR)</option>
+              </select>
+            </div>
           </div>
           <button id="btn-quick-add" class="btn btn-primary btn-full">Add Card</button>
         </div>
@@ -481,19 +505,44 @@
             </select>
           </div>
 
-          <div class="browser-table-container table-container">
+          <!-- Floating / Sticky Bulk Actions Toolbar -->
+          <div id="browser-bulk-toolbar" class="browser-bulk-toolbar hidden">
+            <div class="bulk-toolbar-info">
+              <span id="bulk-selected-count" class="bulk-count-pill">0 selected</span>
+            </div>
+            <div class="bulk-toolbar-actions">
+              <button id="btn-bulk-move" class="btn btn-secondary btn-sm" title="Move selected cards to another collection">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                Move...
+              </button>
+              <button id="btn-bulk-reset" class="btn btn-secondary btn-sm" title="Reset FSRS scheduling progress to new">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                Reset FSRS
+              </button>
+              <button id="btn-bulk-delete" class="btn btn-danger btn-sm" title="Delete selected cards">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                Delete
+              </button>
+              <button id="btn-bulk-deselect" class="btn btn-secondary btn-sm" title="Clear selection">✕</button>
+            </div>
+          </div>
+
+          <div class="browser-table-container table-container" id="browser-table-scroll-container">
             <table class="preview-table browser-table">
               <thead>
                 <tr>
-                  <th style="width: 22%;">Collection</th>
-                  <th style="width: 32%;">Front</th>
-                  <th style="width: 28%;">Back</th>
+                  <th style="width: 5%; text-align: center;">
+                    <input type="checkbox" id="browser-select-all" title="Select all cards in current view" class="table-checkbox">
+                  </th>
+                  <th style="width: 20%;">Collection</th>
+                  <th style="width: 30%;">Front</th>
+                  <th style="width: 27%;">Back</th>
                   <th style="width: 10%;">Status</th>
                   <th style="width: 8%; text-align: right;">Actions</th>
                 </tr>
               </thead>
               <tbody id="browser-cards-tbody">
-                <!-- Dynamically rendered -->
+                <!-- Dynamically rendered via virtual/infinite scroll -->
               </tbody>
             </table>
           </div>
@@ -682,6 +731,17 @@ Gracias,Thank you,greeting,Common polite phrase
           </div>
 
           <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <label for="settings-target-retention" class="input-label" style="margin-bottom: 0;">FSRS-5 Target Retention Rate</label>
+              <span id="target-retention-badge" class="badge-pill" style="font-weight: 700; color: var(--accent-color);">90%</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <input type="range" id="settings-target-retention" min="70" max="97" step="1" value="90" style="flex: 1; accent-color: var(--accent-color); cursor: pointer;">
+            </div>
+            <small class="help-text">Standard recommendation is 90%. Lower rates (e.g. 85%) reduce daily review volume; higher rates (e.g. 95%) improve recall accuracy at the cost of more frequent reviews.</small>
+          </div>
+
+          <div class="form-group">
             <label for="settings-review-cap" class="input-label">Vacation / Catch-Up Mode (Daily Review Cap)</label>
             <select id="settings-review-cap" class="select-input">
               <option value="0">Off (Review All Due Cards)</option>
@@ -704,6 +764,23 @@ Gracias,Thank you,greeting,Common polite phrase
           <div class="admin-actions-grid">
             <button id="btn-export-csv" class="btn btn-secondary btn-full">Export All Collections to CSV</button>
             <button id="btn-clear-db" class="btn btn-danger btn-full">Delete All Local Data</button>
+          </div>
+        </div>
+
+        <!-- Local Database Backups Panel -->
+        <div class="card-panel">
+          <div class="panel-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <h3>Local Database Backups</h3>
+              <p>Rolling historical snapshots stored safely in local IndexedDB storage.</p>
+            </div>
+            <button id="btn-create-backup-now" class="btn btn-secondary btn-sm" title="Take a local snapshot right now">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              Create Snapshot
+            </button>
+          </div>
+          <div id="backups-list-container" class="backups-list-container">
+            <!-- Dynamically populated -->
           </div>
         </div>
 
@@ -820,9 +897,27 @@ Gracias,Thank you,greeting,Common polite phrase
             <label for="edit-card-back" class="input-label">Back (Answer)</label>
             <input type="text" id="edit-card-back">
           </div>
-          <div class="form-group">
-            <label for="edit-card-description" class="input-label">Description / Extra Notes</label>
-            <input type="text" id="edit-card-description" placeholder="Optional notes or context">
+          <div class="form-grid-two-col">
+            <div class="form-group">
+              <label for="edit-card-description" class="input-label">Description / Extra Notes</label>
+              <input type="text" id="edit-card-description" placeholder="Optional notes or context">
+            </div>
+            <div class="form-group">
+              <label for="edit-card-lang" class="input-label">Audio Speech Language</label>
+              <select id="edit-card-lang" class="select-input">
+                <option value="">Auto-Detect / Global Default</option>
+                <option value="en-US">English (en-US)</option>
+                <option value="es-ES">Spanish (es-ES)</option>
+                <option value="ja-JP">Japanese (ja-JP)</option>
+                <option value="fr-FR">French (fr-FR)</option>
+                <option value="de-DE">German (de-DE)</option>
+                <option value="ru-RU">Russian (ru-RU)</option>
+                <option value="zh-CN">Chinese (zh-CN)</option>
+                <option value="it-IT">Italian (it-IT)</option>
+                <option value="pt-BR">Portuguese (pt-BR)</option>
+                <option value="ko-KR">Korean (ko-KR)</option>
+              </select>
+            </div>
           </div>
         </div>
         <div class="modal-buttons" style="margin-top: 14px;">

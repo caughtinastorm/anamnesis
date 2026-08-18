@@ -1,7 +1,7 @@
 import { state } from "./state.js";
 import { dom, showToast, showModal, switchView } from "./ui.js";
 import { sanitizeHTML, shuffle, formatDeckSelectionLabel } from "./utils.js";
-import { calculateFSRS5, Rating, calculateProjectedIntervals } from "../fsrs.js";
+import { calculateFSRS5, Rating, calculateProjectedIntervals, getTargetRetention } from "../fsrs.js";
 import * as db from "../db.js";
 import { loadCardsFromDB } from "./cards.js";
 import { recordDailyReview, filterCards } from "./dashboard.js";
@@ -12,10 +12,20 @@ export function onSyncNeeded(cb) { onSyncRequest = cb; }
 let currentSessionPool = [];
 let currentSessionIsForce = false;
 let isGradingInProgress = false;
+let studyUndoStack = [];
+
+function updateUndoButtonState() {
+  const undoBtn = document.getElementById("btn-undo-study") || dom.btnUndoStudy;
+  if (undoBtn) {
+    undoBtn.disabled = (studyUndoStack.length === 0);
+  }
+}
 
 export function startStudySession(force = false, customCards = null, sessionTitle = null) {
   let pool = [];
   currentSessionIsForce = force;
+  studyUndoStack = [];
+  updateUndoButtonState();
 
   if (customCards && Array.isArray(customCards)) {
     pool = customCards.filter(c => !c.deleted);
@@ -67,6 +77,9 @@ export function startStudySession(force = false, customCards = null, sessionTitl
   state.studySessionCards = shuffle([...pool]);
   state.currentCardIndex = 0;
   state.isFlipped = false;
+  state.isSwipeActive = false;
+  state.touchMoveX = 0;
+  state.touchMoveY = 0;
   isGradingInProgress = false;
 
   if (dom.subviewDashboard) dom.subviewDashboard.classList.remove("active");
@@ -81,9 +94,15 @@ export function restartStudySession() {
     exitStudySession();
     return;
   }
+  studyUndoStack = [];
+  updateUndoButtonState();
+
   state.studySessionCards = shuffle([...pool]);
   state.currentCardIndex = 0;
   state.isFlipped = false;
+  state.isSwipeActive = false;
+  state.touchMoveX = 0;
+  state.touchMoveY = 0;
   isGradingInProgress = false;
 
   if (dom.studyDeckBadge && state.studySessionInfo?.name) {
@@ -108,6 +127,8 @@ function updateGradeButtonIntervals(card) {
 }
 
 export function renderCurrentStudyCard() {
+  updateUndoButtonState();
+
   if (state.currentCardIndex >= state.studySessionCards.length) {
     finishStudySession();
     return;
@@ -119,6 +140,9 @@ export function renderCurrentStudyCard() {
   }
 
   state.isFlipped = false;
+  state.isSwipeActive = false;
+  state.touchMoveX = 0;
+  state.touchMoveY = 0;
   isGradingInProgress = false;
 
   if (dom.studyProgressText) {
@@ -161,7 +185,12 @@ export function renderCurrentStudyCard() {
 
   updateGradeButtonIntervals(card);
 
-  if (dom.flashcard) dom.flashcard.className = "flashcard";
+  if (dom.flashcard) {
+    dom.flashcard.className = "flashcard";
+    dom.flashcard.style.transform = "";
+    dom.flashcard.style.transition = "";
+    dom.flashcard.style.borderColor = "";
+  }
   if (dom.studyHintBar) dom.studyHintBar.classList.remove("hidden");
   if (dom.studyGradingBar) dom.studyGradingBar.classList.add("hidden");
 
@@ -192,11 +221,47 @@ export async function submitCardGrade(grade) {
   else if (grade === 3) fsrsRating = Rating.Good;
   else if (grade === 4) fsrsRating = Rating.Easy;
 
+  const now = Date.now();
+  const cardBefore = JSON.parse(JSON.stringify(card));
+  const logId = 'log_' + now + '_' + Math.random().toString(36).slice(2, 6);
+
   let updated = card;
   try {
-    updated = calculateFSRS5(card, fsrsRating);
+    updated = calculateFSRS5(card, fsrsRating, now);
   } catch (err) {
     console.error("FSRS calculation error:", err);
+  }
+
+  // Push to Undo Stack
+  studyUndoStack.push({
+    cardBefore,
+    cardIndex: state.currentCardIndex,
+    wasPushedAgain: (fsrsRating === Rating.Again),
+    logId
+  });
+  updateUndoButtonState();
+
+  // Record historical review log
+  try {
+    const daysElapsed = (cardBefore.fsrs_stats?.last_review > 0)
+      ? Math.max(0, (now - cardBefore.fsrs_stats.last_review) / (1000 * 60 * 60 * 24))
+      : 0;
+    db.saveReviewLog({
+      id: logId,
+      card_id: card.id,
+      timestamp: now,
+      grade: fsrsRating,
+      elapsed_days: Math.round(daysElapsed * 100) / 100,
+      stability_before: cardBefore.fsrs_stats?.stability || 0,
+      stability_after: updated.fsrs_stats?.stability || 0,
+      difficulty_before: cardBefore.fsrs_stats?.difficulty || 0,
+      difficulty_after: updated.fsrs_stats?.difficulty || 0,
+      interval: updated.fsrs_stats?.interval || 0,
+      state_before: cardBefore.fsrs_stats?.state ?? 0,
+      state_after: updated.fsrs_stats?.state ?? 0
+    });
+  } catch (e) {
+    console.warn("Failed to log review history:", e);
   }
 
   // Update in-memory allCards immediately
@@ -221,7 +286,10 @@ export async function submitCardGrade(grade) {
   onSyncRequest(2500);
 
   const anim = fsrsRating >= Rating.Good ? "slide-out-right-anim" : "slide-out-left-anim";
-  if (dom.flashcard) dom.flashcard.classList.add(anim);
+  if (dom.flashcard) {
+    dom.flashcard.style.transform = "";
+    dom.flashcard.classList.add(anim);
+  }
 
   setTimeout(() => {
     if (dom.flashcard) dom.flashcard.classList.remove(anim);
@@ -231,12 +299,68 @@ export async function submitCardGrade(grade) {
   }, 220);
 }
 
+/**
+ * Undo last review action (Ctrl+Z or Return button)
+ */
+export async function undoLastStudyCard() {
+  if (isGradingInProgress || studyUndoStack.length === 0) return;
+
+  const last = studyUndoStack.pop();
+  updateUndoButtonState();
+
+  if (!last || !last.cardBefore) return;
+
+  // If card was re-appended for 'Again', remove the appended instance from pool
+  if (last.wasPushedAgain && state.studySessionCards.length > last.cardIndex + 1) {
+    const lastItem = state.studySessionCards[state.studySessionCards.length - 1];
+    if (lastItem && lastItem.id === last.cardBefore.id) {
+      state.studySessionCards.pop();
+    }
+  }
+
+  // Restore session card and in-memory allCards
+  state.studySessionCards[last.cardIndex] = last.cardBefore;
+  const allIdx = state.allCards.findIndex(c => c.id === last.cardBefore.id);
+  if (allIdx !== -1) {
+    state.allCards[allIdx] = { ...last.cardBefore };
+  }
+
+  // Revert in IndexedDB and prune review log
+  try {
+    await db.saveCard(last.cardBefore);
+    if (last.logId) {
+      await db.deleteReviewLog(last.logId);
+    }
+  } catch (e) {
+    console.error("Error saving reverted card during undo:", e);
+  }
+
+  state.currentCardIndex = last.cardIndex;
+  state.isFlipped = false;
+  isGradingInProgress = false;
+  renderCurrentStudyCard();
+  showToast("Reverted last review", "info");
+}
+
 export function exitStudySession() {
   const subStudy = document.getElementById("subview-study") || dom.subviewStudy;
   const subDash = document.getElementById("subview-dashboard") || dom.subviewDashboard;
   if (subStudy) subStudy.classList.remove("active");
   if (subDash) subDash.classList.add("active");
   isGradingInProgress = false;
+  state.isSwipeActive = false;
+  state.isFlipped = false;
+  state.touchMoveX = 0;
+  state.touchMoveY = 0;
+  studyUndoStack = [];
+  updateUndoButtonState();
+
+  if (dom.flashcard) {
+    dom.flashcard.className = "flashcard";
+    dom.flashcard.style.transform = "";
+    dom.flashcard.style.transition = "";
+    dom.flashcard.style.borderColor = "";
+  }
   loadCardsFromDB();
   onSyncRequest(500);
 }
@@ -277,20 +401,24 @@ function renderCardContent(text, isBack = false) {
   return sanitizeHTML(text);
 }
 
-export function speakCardText(text) {
+export function speakCardText(text, card = null) {
   if (!("speechSynthesis" in window)) { showToast("Speech not supported", "info"); return; }
   window.speechSynthesis.cancel();
   const clean = text.replace(/<[^>]+>/g, "").replace(/\[([^\]]+)\]/g, "$1").replace(/\{\{c\d+::([^}]+)\}\}/g, "$1").trim();
   if (!clean) return;
   const u = new SpeechSynthesisUtterance(clean);
-  const lang = localStorage.getItem("app-speech-lang") || "auto";
-  if (lang !== "auto") { u.lang = lang; }
-  else {
+  const explicitLang = card?.lang || localStorage.getItem("app-speech-lang") || "auto";
+  if (explicitLang && explicitLang !== "auto") {
+    u.lang = explicitLang;
+  } else {
     if (/[áéíóúüñ¿¡]/i.test(clean)) u.lang = "es-ES";
     else if (/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(clean)) u.lang = "ja-JP";
     else if (/[а-яА-ЯёЁ]/.test(clean)) u.lang = "ru-RU";
     else if (/[äöüß]/i.test(clean)) u.lang = "de-DE";
     else if (/[éàèùâêîôûëïç]/i.test(clean)) u.lang = "fr-FR";
+    else if (/[\u4e00-\u9fa5]/.test(clean)) u.lang = "zh-CN";
+    else if (/[\uac00-\ud7af]/.test(clean)) u.lang = "ko-KR";
+    else if (/[àèìòù]/i.test(clean)) u.lang = "it-IT";
   }
   window.speechSynthesis.speak(u);
 }
@@ -300,7 +428,10 @@ export function initTouchGestures() {
   dom.flashcard.addEventListener("touchstart", e => {
     if (e.touches.length !== 1 || !state.isFlipped || isGradingInProgress) return;
     const t = e.touches[0];
-    state.touchStartX = t.clientX; state.touchStartY = t.clientY;
+    state.touchStartX = t.clientX;
+    state.touchStartY = t.clientY;
+    state.touchMoveX = 0;
+    state.touchMoveY = 0;
     state.isSwipeActive = true;
     dom.flashcard.style.transition = "none";
   }, { passive: true });
@@ -316,16 +447,25 @@ export function initTouchGestures() {
     dom.flashcard.style.borderColor = state.touchMoveX > 40 ? "var(--accent-color)" : state.touchMoveX < -40 ? "var(--danger-color)" : "var(--panel-border)";
   }, { passive: false });
 
-  dom.flashcard.addEventListener("touchend", () => {
+  const endSwipe = () => {
     if (!state.isSwipeActive) return;
     state.isSwipeActive = false;
-    dom.flashcard.style.transition = ""; dom.flashcard.style.borderColor = "";
+    dom.flashcard.style.transition = "";
+    dom.flashcard.style.borderColor = "";
+    dom.flashcard.style.transform = "";
     const threshold = 120;
-    if (state.touchMoveX > threshold) { dom.flashcard.style.transform = ""; submitCardGrade(4); }
-    else if (state.touchMoveX < -threshold) { dom.flashcard.style.transform = ""; submitCardGrade(1); }
-    else dom.flashcard.style.transform = "rotateY(180deg)";
-    state.touchMoveX = 0; state.touchMoveY = 0;
-  });
+    const moveX = state.touchMoveX;
+    state.touchMoveX = 0;
+    state.touchMoveY = 0;
+    if (moveX > threshold) {
+      submitCardGrade(4);
+    } else if (moveX < -threshold) {
+      submitCardGrade(1);
+    }
+  };
+
+  dom.flashcard.addEventListener("touchend", endSwipe);
+  dom.flashcard.addEventListener("touchcancel", endSwipe);
 }
 
 export function initKeyboardShortcuts() {
@@ -333,6 +473,13 @@ export function initKeyboardShortcuts() {
     const studyView = document.getElementById("subview-study");
     if (!studyView || !studyView.classList.contains("active")) return;
     if (["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName)) return;
+
+    // Ctrl+Z or Cmd+Z for Undo
+    if ((e.ctrlKey || e.metaKey) && (e.key === "z" || e.key === "Z" || e.code === "KeyZ")) {
+      e.preventDefault();
+      undoLastStudyCard();
+      return;
+    }
 
     if (e.code === "Space" || e.code === "Enter" || e.key === " ") {
       e.preventDefault();
@@ -357,7 +504,7 @@ export function initKeyboardShortcuts() {
 
     if (e.key === "r" || e.key === "R" || e.code === "KeyR") {
       const card = state.studySessionCards[state.currentCardIndex];
-      if (card) speakCardText(state.isFlipped ? card.back : card.front);
+      if (card) speakCardText(state.isFlipped ? card.back : card.front, card);
     } else if (e.code === "Escape" || e.key === "Escape") {
       exitStudySession();
     }
@@ -372,6 +519,15 @@ export function initStudyEventListeners() {
       restartStudySession();
     });
   });
+
+  const undoBtn = document.getElementById("btn-undo-study") || dom.btnUndoStudy;
+  if (undoBtn) {
+    undoBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      undoLastStudyCard();
+    });
+  }
 
   const exitBtn = document.getElementById("btn-cancel-study");
   if (exitBtn) {
@@ -405,9 +561,10 @@ export function initStudyEventListeners() {
     dom.btnTtsSpeak.addEventListener("click", e => {
       e.stopPropagation();
       const card = state.studySessionCards[state.currentCardIndex];
-      if (card) speakCardText(state.isFlipped ? card.back : card.front);
+      if (card) speakCardText(state.isFlipped ? card.back : card.front, card);
     });
   }
 }
+
 
 

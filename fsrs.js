@@ -16,7 +16,36 @@ export const DEFAULT_FSRS_WEIGHTS = [
   2.9898, 0.51655, 0.6621
 ];
 
-export const DESIRED_RETENTION = 0.90; // 90% Target Retention
+export const DEFAULT_TARGET_RETENTION = 0.90; // 90% Standard Default
+
+/**
+ * Get active user configured target retention rate (0.70 - 0.98)
+ */
+export function getTargetRetention() {
+  try {
+    const stored = localStorage.getItem("app-target-retention");
+    if (stored) {
+      const val = parseFloat(stored);
+      if (!isNaN(val) && val >= 0.70 && val <= 0.98) return val;
+    }
+  } catch (e) {}
+  return DEFAULT_TARGET_RETENTION;
+}
+
+/**
+ * Update user configured target retention rate
+ */
+export function setTargetRetention(rate) {
+  const val = Math.min(0.98, Math.max(0.70, parseFloat(rate) || DEFAULT_TARGET_RETENTION));
+  try {
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem("app-target-retention", val.toFixed(2));
+    }
+  } catch (e) {}
+  return val;
+}
+
+export const DESIRED_RETENTION = getTargetRetention();
 
 // Rating Enum
 export const Rating = {
@@ -50,10 +79,10 @@ export function calculateRetrievability(daysElapsed, stability) {
 /**
  * Calculates optimal interval given target stability and desired retention
  * @param {number} stability Memory stability in days
- * @param {number} requestRetention Target retention probability (default 0.90)
+ * @param {number} requestRetention Target retention probability (default getTargetRetention())
  * @returns {number} Interval in days
  */
-export function calculateInterval(stability, requestRetention = DESIRED_RETENTION) {
+export function calculateInterval(stability, requestRetention = getTargetRetention()) {
   if (stability <= 0) return 1;
   const factor = 19 / 81;
   // Formula: I = S / factor * (R^(-2) - 1)
@@ -121,7 +150,7 @@ function nextForgetStability(difficulty, stability, retrievability, w = DEFAULT_
  * @param {number} now Current timestamp in milliseconds (defaults to Date.now())
  * @returns {Object} Updated card object with FSRS-5 statistics
  */
-export function calculateFSRS5(card, grade, now = Date.now()) {
+export function calculateFSRS5(card, grade, now = Date.now(), requestRetention = getTargetRetention()) {
   const w = DEFAULT_FSRS_WEIGHTS;
   
   // Extract or initialize FSRS metadata with SM-2 backwards-compatibility fallback
@@ -154,7 +183,7 @@ export function calculateFSRS5(card, grade, now = Date.now()) {
       lapses++;
     } else {
       state = State.Review;
-      nextInterval = calculateInterval(stability);
+      nextInterval = calculateInterval(stability, requestRetention);
       reps++;
     }
   } else {
@@ -169,15 +198,20 @@ export function calculateFSRS5(card, grade, now = Date.now()) {
     } else {
       state = State.Review;
       stability = nextRecallStability(difficulty, stability, retrievability, grade, w);
-      nextInterval = calculateInterval(stability);
+      nextInterval = calculateInterval(stability, requestRetention);
       reps++;
     }
   }
 
-  // Target 4:00 AM target boundary scheduling
-  const targetDate = new Date(now + nextInterval * 24 * 60 * 60 * 1000);
-  targetDate.setHours(4, 0, 0, 0);
-  const nextReviewTimestamp = targetDate.getTime();
+  // Target 4:00 AM target boundary scheduling for daily reviews
+  let nextReviewTimestamp;
+  if (nextInterval === 0) {
+    nextReviewTimestamp = now;
+  } else {
+    const targetDate = new Date(now + nextInterval * 24 * 60 * 60 * 1000);
+    targetDate.setHours(4, 0, 0, 0);
+    nextReviewTimestamp = targetDate.getTime();
+  }
 
   return {
     ...card,
@@ -244,7 +278,9 @@ export function isCardDue(card, now = Date.now()) {
 export function isCardNew(card) {
   if (!card || card.deleted) return false;
   if (card.fsrs_stats) {
-    return card.fsrs_stats.repetitions === 0 && card.fsrs_stats.state === State.New;
+    const isZeroReps = (card.fsrs_stats.repetitions === 0 || card.fsrs_stats.repetitions === undefined);
+    const isNewState = (card.fsrs_stats.state === State.New || card.fsrs_stats.state === 0 || card.fsrs_stats.state === undefined);
+    return isZeroReps && isNewState;
   }
   if (card.sm2_stats) {
     return card.sm2_stats.repetitions === 0;
@@ -270,9 +306,9 @@ export function formatIntervalLabel(days) {
 /**
  * Calculates projected intervals for all 4 ratings (Again, Hard, Good, Easy) for UI display.
  */
-export function calculateProjectedIntervals(card, now = Date.now()) {
+export function calculateProjectedIntervals(card, now = Date.now(), requestRetention = getTargetRetention()) {
   const previewForGrade = (grade) => {
-    const res = calculateFSRS5(card, grade, now);
+    const res = calculateFSRS5(card, grade, now, requestRetention);
     return res.fsrs_stats.interval;
   };
 

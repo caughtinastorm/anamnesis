@@ -495,14 +495,24 @@ function detectHeaderMapping(headers) {
   return map;
 }
 
-function renderImportPreview(cards) {
-  if (!dom.previewTableBody) return;
-  dom.previewTableBody.innerHTML = "";
-  if (dom.previewCount) dom.previewCount.textContent = cards.length;
+let importPreviewCards = [];
+let importRenderedCount = 0;
+const IMPORT_CHUNK_SIZE = 50;
 
-  // Render max 100 cards in preview table for instant performance
-  const previewSlice = cards.slice(0, 100);
-  previewSlice.forEach(card => {
+function handleImportTableScroll(e) {
+  const container = e.target;
+  if (container.scrollTop + container.clientHeight >= container.scrollHeight - 150) {
+    renderNextImportChunk();
+  }
+}
+
+function renderNextImportChunk() {
+  if (!dom.previewTableBody || importRenderedCount >= importPreviewCards.length) return;
+
+  const nextSlice = importPreviewCards.slice(importRenderedCount, importRenderedCount + IMPORT_CHUNK_SIZE);
+  const fragment = document.createDocumentFragment();
+
+  nextSlice.forEach(card => {
     const row = document.createElement("tr");
     [
       card.folder ? `📁 ${escapeHTML(card.folder)}` : "-",
@@ -513,23 +523,31 @@ function renderImportPreview(cards) {
       card.description ? escapeHTML(card.description) : "-"
     ].forEach(text => {
       const td = document.createElement("td");
-      td.innerHTML = text; // Allow formatted <br> and cloze tags
+      td.innerHTML = text;
       row.appendChild(td);
     });
-    dom.previewTableBody.appendChild(row);
+    fragment.appendChild(row);
   });
 
-  if (cards.length > 100) {
-    const infoRow = document.createElement("tr");
-    const infoTd = document.createElement("td");
-    infoTd.colSpan = 6;
-    infoTd.style.textAlign = "center";
-    infoTd.style.fontStyle = "italic";
-    infoTd.style.color = "var(--text-secondary)";
-    infoTd.textContent = `... and ${cards.length - 100} more cards ready to import.`;
-    infoRow.appendChild(infoTd);
-    dom.previewTableBody.appendChild(infoRow);
+  dom.previewTableBody.appendChild(fragment);
+  importRenderedCount += nextSlice.length;
+}
+
+function renderImportPreview(cards) {
+  if (!dom.previewTableBody) return;
+  dom.previewTableBody.innerHTML = "";
+  importPreviewCards = cards || [];
+  importRenderedCount = 0;
+
+  if (dom.previewCount) dom.previewCount.textContent = importPreviewCards.length;
+
+  const scrollContainer = dom.previewTableBody.closest(".table-container");
+  if (scrollContainer && !scrollContainer._hasScrollHandler) {
+    scrollContainer.addEventListener("scroll", handleImportTableScroll, { passive: true });
+    scrollContainer._hasScrollHandler = true;
   }
+
+  renderNextImportChunk();
 
   if (dom.importPreviewSection) {
     dom.importPreviewSection.classList.remove("hidden");
@@ -539,6 +557,8 @@ function renderImportPreview(cards) {
 
 function clearImportPreview() {
   state.tempParsedCards = [];
+  importPreviewCards = [];
+  importRenderedCount = 0;
   if (dom.previewTableBody) dom.previewTableBody.innerHTML = "";
   if (dom.importPreviewSection) dom.importPreviewSection.classList.add("hidden");
   if (dom.importText) dom.importText.value = "";
@@ -548,6 +568,16 @@ function clearImportPreview() {
 
 async function commitImportedCards() {
   if (!state.tempParsedCards || !state.tempParsedCards.length) return;
+
+  // Auto-backup current state before importing
+  if (state.allCards && state.allCards.length > 0) {
+    try {
+      await db.createLocalBackup(`Pre-Import (${state.tempParsedCards.length} cards)`, state.allCards);
+    } catch (e) {
+      console.warn("Failed to create pre-import backup:", e);
+    }
+  }
+
   const now = Date.now();
   const prepared = state.tempParsedCards.map(c => ({
     id: generateUUID(),
@@ -558,7 +588,6 @@ async function commitImportedCards() {
     folder: c.folder || undefined,
     deck: c.deck || "Default",
     fsrs_stats: createDefaultFSRSStats(),
-    sm2_stats: { ease_factor: 2.5, interval: 0, repetitions: 0, next_review: 0 },
     last_modified: now
   }));
 

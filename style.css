@@ -3832,4 +3832,156 @@ html[data-theme="light"] .picker-sidebar {
   }
 }
 
+/* ==========================================================================
+   Study Undo Button & States
+   ========================================================================== */
+.btn-tts:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 
+/* ==========================================================================
+   Browser Bulk Actions Toolbar & Checkboxes
+   ========================================================================== */
+.browser-bulk-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  background: rgba(20, 20, 24, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  animation: slideDownFade 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideDownFade {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.bulk-toolbar-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bulk-count-pill {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--accent-color);
+  background: rgba(96, 165, 250, 0.12);
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(96, 165, 250, 0.25);
+}
+
+.bulk-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.table-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-color);
+  cursor: pointer;
+  border-radius: 4px;
+  vertical-align: middle;
+}
+
+.browser-card-row.selected {
+  background: rgba(96, 165, 250, 0.08) !important;
+}
+
+/* ==========================================================================
+   Local Database Backups List
+   ========================================================================== */
+.backups-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.backup-item-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.backup-item-card:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.backup-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.backup-item-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.backup-item-meta {
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+}
+
+.backup-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.badge-pill {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--panel-border);
+}
+
+@media (max-width: 600px) {
+  .browser-bulk-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .bulk-toolbar-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .bulk-toolbar-actions #btn-bulk-deselect {
+    grid-column: span 2;
+  }
+  .backup-item-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .backup-item-actions {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+}

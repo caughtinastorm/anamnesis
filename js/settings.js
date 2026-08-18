@@ -1,6 +1,7 @@
 import { state } from "./state.js";
 import { dom, showToast, showModal } from "./ui.js";
-import { getCardFolder, getCardDeck, escapeCSVField } from "./utils.js";
+import { getCardFolder, getCardDeck, escapeCSVField, escapeHTML } from "./utils.js";
+import { getTargetRetention, setTargetRetention } from "../fsrs.js";
 import * as sync from "../sync.js";
 import * as db from "../db.js";
 import { loadCardsFromDB } from "./cards.js";
@@ -16,6 +17,19 @@ export function initSettingsEventListeners() {
   if (dom.btnForceSync) dom.btnForceSync.addEventListener("click", triggerManualSync);
   if (dom.btnExportCsv) dom.btnExportCsv.addEventListener("click", exportDatabaseToCSV);
   if (dom.btnClearDb) dom.btnClearDb.addEventListener("click", resetLocalDatabase);
+
+  if (dom.btnCreateBackupNow) {
+    dom.btnCreateBackupNow.addEventListener("click", async () => {
+      try {
+        await db.createLocalBackup(`Manual Snapshot (${state.allCards.filter(c => !c.deleted).length} cards)`, state.allCards);
+        showToast("Created local database backup snapshot!", "success");
+        renderBackupsList();
+      } catch (e) {
+        console.error("Backup creation failed:", e);
+        showToast("Failed to create local backup", "error");
+      }
+    });
+  }
 }
 
 export function initSettingsForm() {
@@ -30,6 +44,25 @@ export function initSettingsForm() {
     });
   }
 
+  // FSRS-5 Target Retention Slider
+  if (dom.settingsTargetRetention) {
+    const currentRate = Math.round(getTargetRetention() * 100);
+    dom.settingsTargetRetention.value = currentRate;
+    if (dom.targetRetentionBadge) dom.targetRetentionBadge.textContent = `${currentRate}%`;
+
+    dom.settingsTargetRetention.addEventListener("input", (e) => {
+      const val = parseInt(e.target.value, 10);
+      if (dom.targetRetentionBadge) dom.targetRetentionBadge.textContent = `${val}%`;
+      setTargetRetention(val / 100);
+    });
+
+    dom.settingsTargetRetention.addEventListener("change", (e) => {
+      const val = parseInt(e.target.value, 10);
+      setTargetRetention(val / 100);
+      showToast(`Target retention set to ${val}%`, "success");
+    });
+  }
+
   if (dom.settingsReviewCap) {
     dom.settingsReviewCap.value = localStorage.getItem("app-review-cap") || "0";
     dom.settingsReviewCap.addEventListener("change", () => {
@@ -41,6 +74,113 @@ export function initSettingsForm() {
   }
 
   updateSyncUIState();
+  renderBackupsList();
+}
+
+/**
+ * Render Local Database Backups List
+ */
+export async function renderBackupsList() {
+  if (!dom.backupsListContainer) return;
+  dom.backupsListContainer.innerHTML = "";
+
+  try {
+    const backups = await db.getLocalBackups();
+    if (backups.length === 0) {
+      dom.backupsListContainer.innerHTML = `
+        <div style="padding: 14px; text-align: center; color: var(--text-secondary); font-size: 0.82rem;">
+          No local backups saved yet. Click "Create Snapshot" or import new cards to auto-create backups.
+        </div>`;
+      return;
+    }
+
+    backups.forEach(backup => {
+      const card = document.createElement("div");
+      card.className = "backup-item-card";
+
+      const info = document.createElement("div");
+      info.className = "backup-item-info";
+      const dt = new Date(backup.created_at).toLocaleString();
+      info.innerHTML = `
+        <div class="backup-item-label">${escapeHTML(backup.label || "Snapshot")}</div>
+        <div class="backup-item-meta">${backup.card_count || (backup.cards ? backup.cards.length : 0)} flashcards • ${dt}</div>
+      `;
+
+      const actions = document.createElement("div");
+      actions.className = "backup-item-actions";
+
+      // Restore Button
+      const btnRestore = document.createElement("button");
+      btnRestore.className = "btn btn-secondary btn-sm";
+      btnRestore.textContent = "Restore";
+      btnRestore.title = "Restore flashcards from this snapshot";
+      btnRestore.addEventListener("click", () => {
+        showModal(
+          "Restore Local Backup?",
+          `Restoring "${backup.label}" will replace your current flashcard database with ${backup.card_count} cards from ${dt}. Proceed?`,
+          async () => {
+            try {
+              await db.restoreLocalBackup(backup.id);
+              showToast("Database restored successfully!", "success");
+              await loadCardsFromDB();
+              renderBackupsList();
+              onSyncRequest();
+            } catch (err) {
+              console.error("Restore failed:", err);
+              showToast("Failed to restore backup", "error");
+            }
+          }
+        );
+      });
+
+      // Export JSON Button
+      const btnExport = document.createElement("button");
+      btnExport.className = "btn btn-secondary btn-sm";
+      btnExport.textContent = "Export";
+      btnExport.title = "Download snapshot as JSON";
+      btnExport.addEventListener("click", () => {
+        try {
+          const json = JSON.stringify(backup.cards || [], null, 2);
+          const blob = new Blob([json], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `anamnesis_backup_${backup.created_at}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } catch (e) {
+          showToast("Failed to export backup", "error");
+        }
+      });
+
+      // Delete Button
+      const btnDelete = document.createElement("button");
+      btnDelete.className = "btn btn-danger btn-sm";
+      btnDelete.textContent = "✕";
+      btnDelete.title = "Delete this backup snapshot";
+      btnDelete.addEventListener("click", async () => {
+        try {
+          await db.deleteLocalBackup(backup.id);
+          showToast("Backup deleted", "info");
+          renderBackupsList();
+        } catch (e) {
+          showToast("Failed to delete backup", "error");
+        }
+      });
+
+      actions.appendChild(btnRestore);
+      actions.appendChild(btnExport);
+      actions.appendChild(btnDelete);
+
+      card.appendChild(info);
+      card.appendChild(actions);
+      dom.backupsListContainer.appendChild(card);
+    });
+  } catch (err) {
+    console.error("Failed to load backups:", err);
+  }
 }
 
 function logToConsole(text, isError = false) {
@@ -259,14 +399,18 @@ function updateSyncUIState() {
 async function exportDatabaseToCSV() {
   const active = state.allCards.filter(c => !c.deleted);
   if (!active.length) { showToast("No cards to export", "error"); return; }
-  let csv = "Folder,Deck,Front,Back,Sub-text,Description,EaseFactor,Interval,Reps,NextReview\n";
+  let csv = "Folder,Deck,Front,Back,Sub-text,Description,Stability,Difficulty,State,Lapses,Interval,Reps,NextReview\n";
   active.forEach(c => {
+    const f = c.fsrs_stats || {};
     csv += [
       escapeCSVField(getCardFolder(c)), escapeCSVField(getCardDeck(c)),
       escapeCSVField(c.front), escapeCSVField(c.back),
       escapeCSVField(c.sub || ""), escapeCSVField(c.description || ""),
-      c.sm2_stats?.ease_factor || 2.5, c.sm2_stats?.interval || 0,
-      c.sm2_stats?.repetitions || 0, c.sm2_stats?.next_review || 0
+      f.stability || 0, f.difficulty || 0,
+      f.state ?? 0, f.lapses || 0,
+      f.interval ?? 0,
+      f.repetitions ?? 0,
+      f.next_review || 0
     ].join(",") + "\n";
   });
   try {
@@ -298,4 +442,5 @@ function resetLocalDatabase() {
     }
   );
 }
+
 

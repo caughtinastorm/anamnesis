@@ -14,6 +14,7 @@ export function onSyncNeeded(cb) { onSyncRequest = cb; }
  * Registered in app.js via onCardsRefreshed(refreshDashboard).
  */
 export function refreshDashboard() {
+  invalidateStatsCache();
   populateDeckDropdown();
   calculateStats();
   updateUIStats();
@@ -123,9 +124,22 @@ export function populateDeckDropdown() {
   }
 }
 
+// Memoized stats cache
+let statsCache = new Map();
+
+export function invalidateStatsCache() {
+  statsCache.clear();
+}
+
 export function filterCards(customSelected = null) {
   const selected = customSelected !== null ? customSelected : (state.selectedDeck || "all");
-  return state.allCards.filter(card => matchesDeckSelection(card, selected));
+  const cacheKey = `filter_${selected}_${state.allCards.length}`;
+  if (statsCache.has(cacheKey)) {
+    return statsCache.get(cacheKey);
+  }
+  const result = state.allCards.filter(card => matchesDeckSelection(card, selected));
+  statsCache.set(cacheKey, result);
+  return result;
 }
 
 export function calculateStats() {
@@ -644,8 +658,8 @@ export async function handleQuickAddCard() {
     description: dom.quickDescription?.value.trim() || undefined,
     folder: dom.quickFolder?.value.trim() || undefined,
     deck: dom.quickDeck?.value.trim() || "Default",
+    lang: dom.quickLang?.value || undefined,
     fsrs_stats: createDefaultFSRSStats(),
-    sm2_stats: { ease_factor: 2.5, interval: 0, repetitions: 0, next_review: 0 },
     last_modified: now
   };
 

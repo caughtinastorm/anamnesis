@@ -208,7 +208,7 @@ async function updateGist(pat, gistId, cards) {
  */
 export function getCardTimestamp(card) {
   if (!card) return 0;
-  return card.last_modified || card.updated_at || card.fsrs_stats?.last_review || card.sm2_stats?.last_reviewed || card.created_at || 0;
+  return card.last_modified || card.updated_at || card.fsrs_stats?.last_review || card.created_at || 0;
 }
 
 /**
@@ -231,7 +231,8 @@ export function cardsDiffer(a = [], b = []) {
       (cardA.deck || "") !== (cardB.deck || "") ||
       (cardA.folder || "") !== (cardB.folder || "") ||
       (cardA.sub || "") !== (cardB.sub || "") ||
-      (cardA.description || "") !== (cardB.description || "")
+      (cardA.description || "") !== (cardB.description || "") ||
+      (cardA.lang || "") !== (cardB.lang || "")
     ) {
       return true;
     }
