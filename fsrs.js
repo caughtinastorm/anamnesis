@@ -144,6 +144,40 @@ function nextForgetStability(difficulty, stability, retrievability, w = DEFAULT_
 }
 
 /**
+ * Calculates the next review timestamp based on days interval and logical rollover hour (default 4:00 AM).
+ * Prevents midnight jumping and ensures proper spacing across time of day.
+ * @param {number} nextInterval Interval in days
+ * @param {number} now Current timestamp in ms
+ * @param {number} rolloverHour Hour of day (0-23) when new study day begins (default 4 AM)
+ * @returns {number} Target epoch timestamp in ms
+ */
+export function calculateNextReviewTimestamp(nextInterval, now = Date.now(), rolloverHour = 4) {
+  if (nextInterval <= 0) return now;
+
+  const current = new Date(now);
+  const logicalDate = new Date(now);
+
+  // If reviewed between midnight and rolloverHour (e.g. 2:00 AM), we are logically in previous study day
+  if (current.getHours() < rolloverHour) {
+    logicalDate.setDate(logicalDate.getDate() - 1);
+  }
+  logicalDate.setHours(rolloverHour, 0, 0, 0);
+
+  // Advance by nextInterval days
+  logicalDate.setDate(logicalDate.getDate() + nextInterval);
+
+  let targetTimestamp = logicalDate.getTime();
+
+  // Guard: if nextInterval >= 1, ensure at least 12 hours between review time and next review
+  const minSpacingMs = 12 * 60 * 60 * 1000;
+  if (targetTimestamp - now < minSpacingMs && nextInterval >= 1) {
+    targetTimestamp += 24 * 60 * 60 * 1000;
+  }
+
+  return targetTimestamp;
+}
+
+/**
  * Compute the next FSRS-5 state after rating a card.
  * @param {Object} card Flashcard object
  * @param {number} grade Rating (1: Again, 2: Hard, 3: Good, 4: Easy)
@@ -204,14 +238,7 @@ export function calculateFSRS5(card, grade, now = Date.now(), requestRetention =
   }
 
   // Target 4:00 AM target boundary scheduling for daily reviews
-  let nextReviewTimestamp;
-  if (nextInterval === 0) {
-    nextReviewTimestamp = now;
-  } else {
-    const targetDate = new Date(now + nextInterval * 24 * 60 * 60 * 1000);
-    targetDate.setHours(4, 0, 0, 0);
-    nextReviewTimestamp = targetDate.getTime();
-  }
+  const nextReviewTimestamp = calculateNextReviewTimestamp(nextInterval, now, 4);
 
   return {
     ...card,

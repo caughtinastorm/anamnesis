@@ -12,7 +12,7 @@
 
 import { state } from "./state.js";
 import { dom, showToast, switchView } from "./ui.js";
-import { getCardFolder, getCardDeck, escapeHTML } from "./utils.js";
+import { getCardFolder, getCardDeck, escapeHTML, sanitizeHTML } from "./utils.js";
 import { isCardDue, isCardNew, getCardNextReview } from "../fsrs.js";
 import { loadCardsFromDB } from "./cards.js";
 import { calculateStats, updateUIStats, setActiveDeckSelection } from "./dashboard.js";
@@ -825,11 +825,11 @@ function renderDeckDetailCanvas(folder, deck, stats) {
 
       row.innerHTML = `
         <td>
-          <strong>${escapeHTML(c.front)}</strong>
+          <strong>${sanitizeHTML(c.front)}</strong>
           ${c.sub ? `<div class="browser-cell-sub">${escapeHTML(c.sub)}</div>` : ""}
         </td>
         <td>
-          ${escapeHTML(c.back)}
+          ${sanitizeHTML(c.back)}
           ${c.description ? `<div class="browser-cell-desc">${escapeHTML(c.description)}</div>` : ""}
         </td>
         <td>${statusBadge}</td>

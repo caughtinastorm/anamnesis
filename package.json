@@ -1,0 +1,19 @@
+{
+  "name": "anamnesis",
+  "version": "1.0.0",
+  "description": "Offline-First Spaced Repetition System with FSRS-5 & GitHub Gist Sync",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/run-tests.js"
+  },
+  "keywords": [
+    "flashcards",
+    "fsrs",
+    "spaced-repetition",
+    "anki",
+    "pwa"
+  ],
+  "author": "",
+  "license": "MIT"
+}

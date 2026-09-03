@@ -17,7 +17,7 @@
 
 import { explorerState } from "./explorer-state.js";
 import { state } from "./state.js";
-import { dom, showToast, showModal, switchView, scrollToElement } from "./ui.js";
+import { dom, showToast, showModal, showPromptModal, switchView, scrollToElement } from "./ui.js";
 import { getCardFolder, getCardDeck, escapeHTML, escapeCSVField } from "./utils.js";
 import * as db from "../db.js";
 import { calculateStats, updateUIStats, setActiveDeckSelection } from "./dashboard.js";
@@ -230,13 +230,18 @@ export function showItemContextMenu(e, item) {
 // -------------------------------------------------------------
 
 export function promptCreateFolder() {
-  const folderName = prompt("Enter new folder name (e.g. Japanese, Medical, Science):");
-  if (!folderName || !folderName.trim()) return;
-
-  const cleanName = folderName.trim();
-  explorerState.expandedFolders.add(cleanName);
-  _navigateTo([cleanName]);
-  showToast(`Folder "${cleanName}" created!`, "success");
+  showPromptModal(
+    "New Folder",
+    "Enter new folder name (e.g. Japanese, Medical, Science):",
+    "",
+    (folderName) => {
+      if (!folderName) return;
+      const cleanName = folderName.trim();
+      explorerState.expandedFolders.add(cleanName);
+      _navigateTo([cleanName]);
+      showToast(`Folder "${cleanName}" created!`, "success");
+    }
+  );
 }
 
 export function promptCreateDeck() {
@@ -249,13 +254,18 @@ export function promptCreateDeck() {
     }
   }
 
-  const deckName = prompt(`Enter new collection/deck name${defaultFolder ? ` inside folder "${defaultFolder}"` : ""}:`);
-  if (!deckName || !deckName.trim()) return;
-
-  const cleanDeck = deckName.trim();
-  const nextPath = defaultFolder ? [defaultFolder, cleanDeck] : [cleanDeck];
-  _navigateTo(nextPath);
-  showToast(`Collection "${cleanDeck}" created! Ready to import or add cards.`, "success");
+  showPromptModal(
+    "New Collection",
+    `Enter new collection/deck name${defaultFolder ? ` inside folder "${defaultFolder}"` : ""}:`,
+    "",
+    (deckName) => {
+      if (!deckName) return;
+      const cleanDeck = deckName.trim();
+      const nextPath = defaultFolder ? [defaultFolder, cleanDeck] : [cleanDeck];
+      _navigateTo(nextPath);
+      showToast(`Collection "${cleanDeck}" created! Ready to import or add cards.`, "success");
+    }
+  );
 }
 
 // -------------------------------------------------------------
@@ -263,78 +273,88 @@ export function promptCreateDeck() {
 // -------------------------------------------------------------
 
 export function promptRenameFolder(oldFolder) {
-  const newName = prompt(`Rename folder "${oldFolder}" to:`, oldFolder);
-  if (!newName || !newName.trim() || newName.trim() === oldFolder) return;
+  showPromptModal(
+    "Rename Folder",
+    `Rename folder "${oldFolder}" to:`,
+    oldFolder,
+    (newName) => {
+      if (!newName || !newName.trim() || newName.trim() === oldFolder) return;
+      const cleanNew = newName.trim();
+      showModal(
+        `Rename Folder "${oldFolder}"?`,
+        `This will update the parent folder name on all flashcards in "${oldFolder}" to "${cleanNew}".`,
+        async () => {
+          const now = Date.now();
+          const toUpdate = state.allCards
+            .filter(c => !c.deleted && getCardFolder(c).toLowerCase() === oldFolder.toLowerCase())
+            .map(c => ({ ...c, folder: cleanNew, last_modified: now }));
 
-  const cleanNew = newName.trim();
-  showModal(
-    `Rename Folder "${oldFolder}"?`,
-    `This will update the parent folder name on all flashcards in "${oldFolder}" to "${cleanNew}".`,
-    async () => {
-      const now = Date.now();
-      const toUpdate = state.allCards
-        .filter(c => !c.deleted && getCardFolder(c).toLowerCase() === oldFolder.toLowerCase())
-        .map(c => ({ ...c, folder: cleanNew, last_modified: now }));
-
-      if (toUpdate.length > 0) {
-        try {
-          await db.saveCards(toUpdate);
-          showToast(`Renamed folder to "${cleanNew}" (${toUpdate.length} cards updated)`, "success");
-          if (explorerState.currentPath[0] === oldFolder) {
-            explorerState.currentPath[0] = cleanNew;
+          if (toUpdate.length > 0) {
+            try {
+              await db.saveCards(toUpdate);
+              showToast(`Renamed folder to "${cleanNew}" (${toUpdate.length} cards updated)`, "success");
+              if (explorerState.currentPath[0] === oldFolder) {
+                explorerState.currentPath[0] = cleanNew;
+              }
+              await _loadCardsFromDB();
+              _onSyncRequest();
+            } catch (err) {
+              console.error("Rename folder error:", err);
+              showToast("Failed to rename folder", "error");
+            }
+          } else {
+            showToast("No cards were found to rename", "info");
           }
-          await _loadCardsFromDB();
-          _onSyncRequest();
-        } catch (err) {
-          console.error("Rename folder error:", err);
-          showToast("Failed to rename folder", "error");
         }
-      } else {
-        showToast("No cards were found to rename", "info");
-      }
+      );
     }
   );
 }
 
 export function promptRenameDeck(folder, oldDeck) {
   const label = folder ? `${folder} / ${oldDeck}` : oldDeck;
-  const newName = prompt(`Rename collection "${oldDeck}" to:`, oldDeck);
-  if (!newName || !newName.trim() || newName.trim() === oldDeck) return;
+  showPromptModal(
+    "Rename Collection",
+    `Rename collection "${oldDeck}" to:`,
+    oldDeck,
+    (newName) => {
+      if (!newName || !newName.trim() || newName.trim() === oldDeck) return;
+      const cleanNew = newName.trim();
+      showModal(
+        `Rename Collection "${label}"?`,
+        `This will update the collection name to "${cleanNew}".`,
+        async () => {
+          const now = Date.now();
+          const toUpdate = state.allCards
+            .filter(c => {
+              if (c.deleted) return false;
+              if (folder) {
+                return getCardFolder(c).toLowerCase() === folder.toLowerCase() &&
+                       getCardDeck(c).toLowerCase() === oldDeck.toLowerCase();
+              } else {
+                return !getCardFolder(c) && getCardDeck(c).toLowerCase() === oldDeck.toLowerCase();
+              }
+            })
+            .map(c => ({ ...c, deck: cleanNew, last_modified: now }));
 
-  const cleanNew = newName.trim();
-  showModal(
-    `Rename Collection "${label}"?`,
-    `This will update the collection name to "${cleanNew}".`,
-    async () => {
-      const now = Date.now();
-      const toUpdate = state.allCards
-        .filter(c => {
-          if (c.deleted) return false;
-          if (folder) {
-            return getCardFolder(c).toLowerCase() === folder.toLowerCase() &&
-                   getCardDeck(c).toLowerCase() === oldDeck.toLowerCase();
-          } else {
-            return !getCardFolder(c) && getCardDeck(c).toLowerCase() === oldDeck.toLowerCase();
+          if (toUpdate.length > 0) {
+            try {
+              await db.saveCards(toUpdate);
+              showToast(`Renamed collection to "${cleanNew}" (${toUpdate.length} cards updated)`, "success");
+              if (explorerState.currentPath.length === 2 && explorerState.currentPath[1] === oldDeck) {
+                explorerState.currentPath[1] = cleanNew;
+              } else if (explorerState.currentPath.length === 1 && explorerState.currentPath[0] === oldDeck) {
+                explorerState.currentPath[0] = cleanNew;
+              }
+              await _loadCardsFromDB();
+              _onSyncRequest();
+            } catch (err) {
+              console.error("Rename deck error:", err);
+              showToast("Failed to rename collection", "error");
+            }
           }
-        })
-        .map(c => ({ ...c, deck: cleanNew, last_modified: now }));
-
-      if (toUpdate.length > 0) {
-        try {
-          await db.saveCards(toUpdate);
-          showToast(`Renamed collection to "${cleanNew}" (${toUpdate.length} cards updated)`, "success");
-          if (explorerState.currentPath.length === 2 && explorerState.currentPath[1] === oldDeck) {
-            explorerState.currentPath[1] = cleanNew;
-          } else if (explorerState.currentPath.length === 1 && explorerState.currentPath[0] === oldDeck) {
-            explorerState.currentPath[0] = cleanNew;
-          }
-          await _loadCardsFromDB();
-          _onSyncRequest();
-        } catch (err) {
-          console.error("Rename deck error:", err);
-          showToast("Failed to rename collection", "error");
         }
-      }
+      );
     }
   );
 }

@@ -865,6 +865,21 @@ Gracias,Thank you,greeting,Common polite phrase
       </div>
     </div>
 
+    <!-- User Input Prompt Modal Dialog -->
+    <div id="prompt-modal-container" class="modal-overlay hidden">
+      <div class="modal-content card-panel prompt-modal-content">
+        <h3 id="prompt-modal-title">Enter Value</h3>
+        <p id="prompt-modal-message" class="prompt-modal-message"></p>
+        <div class="form-group" style="margin: 12px 0 16px 0;">
+          <input type="text" id="prompt-modal-input" class="prompt-input" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="modal-buttons">
+          <button id="prompt-modal-btn-cancel" class="btn btn-secondary">Cancel</button>
+          <button id="prompt-modal-btn-confirm" class="btn btn-primary">Confirm</button>
+        </div>
+      </div>
+    </div>
+
     
     <!-- Edit Flashcard Modal Dialog -->
     <div id="edit-modal-container" class="modal-overlay hidden">

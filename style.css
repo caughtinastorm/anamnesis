@@ -1561,6 +1561,33 @@ textarea {
   gap: 6px;
 }
 
+.prompt-modal-content {
+  max-width: 360px;
+  text-align: left;
+}
+
+.prompt-modal-message {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.prompt-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg-color);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.prompt-input:focus {
+  border-color: var(--accent-color);
+}
+
 /* TOAST notifications */
 .toast-container {
   position: fixed;

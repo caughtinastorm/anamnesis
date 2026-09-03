@@ -71,9 +71,21 @@ export function formatDeckSelectionLabel(selection = "all") {
 
 
 export function escapeHTML(str) {
-  return String(str || "").replace(/[&<>"'"]/g, m => ({
+  return String(str || "").replace(/[&<>"']/g, m => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
   }[m]));
+}
+
+/**
+ * Format date in local calendar timezone as YYYY-MM-DD.
+ * Prevents UTC timezone drift.
+ */
+export function getLocalDateString(date = new Date()) {
+  const d = date instanceof Date ? date : new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export function shuffle(array) {
@@ -95,11 +107,13 @@ export function generateUUID() {
   });
 }
 
+/**
+ * Escapes unsafe HTML characters while preserving safe formatting tags (b, strong, i, em, code, br).
+ * Environment-agnostic (works in browser and Node.js).
+ */
 export function sanitizeHTML(str) {
   if (str === null || str === undefined) return "";
-  const temp = document.createElement("div");
-  temp.textContent = String(str);
-  let html = temp.innerHTML;
+  let html = escapeHTML(String(str));
   const allowed = ["b", "strong", "i", "em", "code", "br"];
   allowed.forEach(tag => {
     if (tag === "br") {
@@ -110,6 +124,18 @@ export function sanitizeHTML(str) {
     }
   });
   return html;
+}
+
+/**
+ * Strips HTML tags and collapses whitespace for clean plain-text previews.
+ */
+export function plainText(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export function escapeCSVField(field) {

@@ -405,7 +405,7 @@ function renderNextBrowserChunk() {
     // 2. Front
     const tdFront = document.createElement("td");
     tdFront.className = "browser-cell-front";
-    let frontHtml = `<strong>${escapeHTML(card.front)}</strong>`;
+    let frontHtml = `<strong>${sanitizeHTML(card.front)}</strong>`;
     if (card.sub) {
       frontHtml += `<div class="browser-cell-sub">${escapeHTML(card.sub)}</div>`;
     }
@@ -415,7 +415,7 @@ function renderNextBrowserChunk() {
     // 3. Back
     const tdBack = document.createElement("td");
     tdBack.className = "browser-cell-back";
-    let backHtml = `<span>${escapeHTML(card.back)}</span>`;
+    let backHtml = `<span>${sanitizeHTML(card.back)}</span>`;
     if (card.description) {
       backHtml += `<div class="browser-cell-desc">${escapeHTML(card.description)}</div>`;
     }

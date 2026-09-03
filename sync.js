@@ -15,38 +15,47 @@ const LAST_ETAG_KEY = 'flashcard_sync_etag';
 
 export function getSyncCredentials() {
   try {
+    if (typeof localStorage === 'undefined') return { pat: '', gistId: '' };
     const raw = localStorage.getItem(CREDENTIALS_KEY);
     return raw ? JSON.parse(raw) : { pat: '', gistId: '' };
   } catch (e) {
-    console.error('Error reading sync credentials:', e);
     return { pat: '', gistId: '' };
   }
 }
 
 export function saveSyncCredentials(pat, gistId) {
-  localStorage.setItem(CREDENTIALS_KEY, JSON.stringify({ pat, gistId }));
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem(CREDENTIALS_KEY, JSON.stringify({ pat, gistId }));
+  }
 }
 
 export function clearSyncCredentials() {
-  localStorage.removeItem(CREDENTIALS_KEY);
-  localStorage.removeItem(LAST_SYNC_KEY);
-  localStorage.removeItem(LAST_ETAG_KEY);
+  if (typeof localStorage !== 'undefined') {
+    localStorage.removeItem(CREDENTIALS_KEY);
+    localStorage.removeItem(LAST_SYNC_KEY);
+    localStorage.removeItem(LAST_ETAG_KEY);
+  }
 }
 
 export function getLastSyncTime() {
+  if (typeof localStorage === 'undefined') return 0;
   const t = localStorage.getItem(LAST_SYNC_KEY);
   return t ? parseInt(t, 10) : 0;
 }
 
 export function saveLastSyncTime(timestamp) {
-  localStorage.setItem(LAST_SYNC_KEY, timestamp.toString());
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem(LAST_SYNC_KEY, timestamp.toString());
+  }
 }
 
 export function getLastSyncEtag() {
+  if (typeof localStorage === 'undefined') return '';
   return localStorage.getItem(LAST_ETAG_KEY) || '';
 }
 
 export function saveLastSyncEtag(etag) {
+  if (typeof localStorage === 'undefined') return;
   if (etag) {
     localStorage.setItem(LAST_ETAG_KEY, etag);
   } else {
@@ -58,8 +67,9 @@ export function saveLastSyncEtag(etag) {
  * Common Headers for GitHub API request
  */
 function getHeaders(pat, etag = '') {
+  const tokenHeader = (pat.startsWith('ghp_') || pat.startsWith('github_pat_')) ? `Bearer ${pat}` : `token ${pat}`;
   const headers = {
-    'Authorization': `token ${pat}`,
+    'Authorization': tokenHeader,
     'Accept': 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2022-11-28',
     'Content-Type': 'application/json'
@@ -260,12 +270,14 @@ export function cardsDiffer(a = [], b = []) {
  * Merge local and remote cards array using Last-Write-Wins with tombstone support.
  * Retains soft-deleted cards during merge so deletions propagate across devices.
  */
-export function mergeCards(localCards = [], remoteCards = []) {
+export function mergeCards(localCards = [], remoteCards = [], maxTombstoneAgeDays = 30) {
   const cardMap = new Map();
+  const tombstoneCutoff = Date.now() - (maxTombstoneAgeDays * 24 * 60 * 60 * 1000);
 
   // Populate with remote cards first
   remoteCards.forEach(card => {
     if (card && card.id) {
+      if (card.deleted && getCardTimestamp(card) < tombstoneCutoff) return;
       cardMap.set(card.id, card);
     }
   });
@@ -273,6 +285,7 @@ export function mergeCards(localCards = [], remoteCards = []) {
   // Merge local cards
   localCards.forEach(localCard => {
     if (!localCard || !localCard.id) return;
+    if (localCard.deleted && getCardTimestamp(localCard) < tombstoneCutoff) return;
 
     if (cardMap.has(localCard.id)) {
       const remoteCard = cardMap.get(localCard.id);

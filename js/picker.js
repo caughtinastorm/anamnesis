@@ -14,7 +14,7 @@
 import { state } from "./state.js";
 import { getCardFolder, getCardDeck, getCardFullHierarchy, escapeHTML } from "./utils.js";
 import { isCardDue } from "../fsrs.js";
-import { showToast } from "./ui.js";
+import { showToast, showPromptModal } from "./ui.js";
 
 export const pickerState = {
   isOpen: false,
@@ -662,22 +662,32 @@ function renderPickerItemList(items) {
 }
 
 function promptCreateFolderInPicker() {
-  const name = prompt("Enter new folder name (e.g. Japanese, Medical, Spanish):");
-  if (!name || !name.trim()) return;
-
-  const clean = name.trim();
-  pickerState.expandedFolders.add(clean);
-  selectFolderAsTarget(clean);
-  navigatePickerTo([clean]);
-  showToast(`Folder "${clean}" selected`, "success");
+  showPromptModal(
+    "New Folder",
+    "Enter new folder name (e.g. Japanese, Medical, Spanish):",
+    "",
+    (name) => {
+      if (!name || !name.trim()) return;
+      const clean = name.trim();
+      pickerState.expandedFolders.add(clean);
+      selectFolderAsTarget(clean);
+      navigatePickerTo([clean]);
+      showToast(`Folder "${clean}" selected`, "success");
+    }
+  );
 }
 
 function promptCreateDeckInPicker() {
   const currentFolder = pickerState.currentPath[0] || pickerState.selectedFolder;
-  const name = prompt(`Enter new collection name${currentFolder ? ` inside "${currentFolder}"` : ""}:`);
-  if (!name || !name.trim()) return;
-
-  const clean = name.trim();
-  selectDeck(currentFolder, clean);
-  showToast(`Selected "${clean}"! Click "Select This Destination" to confirm.`, "success");
+  showPromptModal(
+    "New Collection",
+    `Enter new collection name${currentFolder ? ` inside "${currentFolder}"` : ""}:`,
+    "",
+    (name) => {
+      if (!name || !name.trim()) return;
+      const clean = name.trim();
+      selectDeck(currentFolder, clean);
+      showToast(`Selected "${clean}"! Click "Select This Destination" to confirm.`, "success");
+    }
+  );
 }

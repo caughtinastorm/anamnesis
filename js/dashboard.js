@@ -1,6 +1,6 @@
 import { state } from "./state.js";
 import { dom, showToast, showModal, switchView } from "./ui.js";
-import { getCardFolder, getCardDeck, getCardFullHierarchy, matchesDeckSelection, formatDeckSelectionLabel, escapeHTML, generateUUID } from "./utils.js";
+import { getCardFolder, getCardDeck, getCardFullHierarchy, matchesDeckSelection, formatDeckSelectionLabel, escapeHTML, generateUUID, getLocalDateString } from "./utils.js";
 import { isCardDue, isCardNew, createDefaultFSRSStats } from "../fsrs.js";
 import * as db from "../db.js";
 import { loadCardsFromDB } from "./cards.js";
@@ -126,14 +126,16 @@ export function populateDeckDropdown() {
 
 // Memoized stats cache
 let statsCache = new Map();
+let cardsRevision = 0;
 
 export function invalidateStatsCache() {
+  cardsRevision++;
   statsCache.clear();
 }
 
 export function filterCards(customSelected = null) {
   const selected = customSelected !== null ? customSelected : (state.selectedDeck || "all");
-  const cacheKey = `filter_${selected}_${state.allCards.length}`;
+  const cacheKey = `${selected}_rev${cardsRevision}_n${state.allCards.length}`;
   if (statsCache.has(cacheKey)) {
     return statsCache.get(cacheKey);
   }
@@ -596,7 +598,7 @@ export function deleteFolder(folderName, count) {
 }
 
 export function recordDailyReview() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getLocalDateString(new Date());
   let h = {};
   try { h = JSON.parse(localStorage.getItem("app-review-history") || "{}"); } catch(e) {}
   h[today] = (h[today] || 0) + 1;
@@ -604,20 +606,28 @@ export function recordDailyReview() {
   renderHeatmap();
 }
 
-export function calculateStreak(h) {
+export function calculateStreak(h = {}) {
   let streak = 0;
-  let d = new Date();
-  const todayKey = d.toISOString().slice(0, 10);
-  if (h[todayKey] > 0) { streak++; d.setDate(d.getDate() - 1); }
-  else {
+  const d = new Date();
+  const todayKey = getLocalDateString(d);
+  if (h[todayKey] > 0) {
+    streak++;
     d.setDate(d.getDate() - 1);
-    const yest = d.toISOString().slice(0, 10);
+  } else {
+    d.setDate(d.getDate() - 1);
+    const yest = getLocalDateString(d);
     if (!h[yest] || h[yest] <= 0) return 0;
-    streak++; d.setDate(d.getDate() - 1);
+    streak++;
+    d.setDate(d.getDate() - 1);
   }
-  while (true) {
-    const key = d.toISOString().slice(0, 10);
-    if (h[key] > 0) { streak++; d.setDate(d.getDate() - 1); } else break;
+  for (let limit = 0; limit < 3650; limit++) {
+    const key = getLocalDateString(d);
+    if (h[key] > 0) {
+      streak++;
+      d.setDate(d.getDate() - 1);
+    } else {
+      break;
+    }
   }
   return streak;
 }
@@ -630,10 +640,12 @@ export function renderHeatmap() {
   let total = 0;
   const today = new Date();
   for (let i = 59; i >= 0; i--) {
-    const d = new Date(today); d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
-    const count = h[key] || 0; total += count;
-    const cell = document.createElement("div"); cell.className = "heatmap-cell";
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+    const key = getLocalDateString(d);
+    const count = h[key] || 0;
+    total += count;
+    const cell = document.createElement("div");
+    cell.className = "heatmap-cell";
     cell.title = `${key}: ${count} reviews`;
     cell.classList.add(count === 0 ? "level-0" : count <= 5 ? "level-1" : count <= 15 ? "level-2" : count <= 30 ? "level-3" : "level-4");
     dom.dashboardHeatmapGrid.appendChild(cell);

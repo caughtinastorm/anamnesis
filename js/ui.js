@@ -1,89 +1,98 @@
 import { state } from "./state.js";
 
+const $ = (id) => (typeof document !== "undefined" ? document.getElementById(id) : null);
+const $$ = (sel) => (typeof document !== "undefined" ? document.querySelectorAll(sel) : []);
+
 export const dom = {
-  deckSelect: document.getElementById("deck-select"),
-  statDueCount: document.getElementById("stat-due-count"),
-  statNewCount: document.getElementById("stat-new-count"),
-  statTotalCount: document.getElementById("stat-total-count"),
-  btnStartReview: document.getElementById("btn-start-review"),
-  btnForceReview: document.getElementById("btn-force-review"),
-  dashboardEmptyState: document.getElementById("dashboard-empty-state"),
-  navDueBadge: document.getElementById("nav-due-badge"),
-  btnCancelStudy: document.getElementById("btn-cancel-study"),
-  studyProgressText: document.getElementById("study-progress-text"),
-  studyProgressBar: document.getElementById("study-progress-bar"),
-  flashcard: document.getElementById("flashcard"),
-  cardFrontSub: document.getElementById("card-front-sub"),
-  cardFrontContent: document.getElementById("card-front-content"),
-  cardBackSub: document.getElementById("card-back-sub"),
-  cardBackContent: document.getElementById("card-back-content"),
-  cardBackDivider: document.getElementById("card-back-divider"),
-  cardBackDescription: document.getElementById("card-back-description"),
-  studyHintBar: document.getElementById("study-hint-bar"),
-  studyGradingBar: document.getElementById("study-grading-bar"),
-  gradeButtons: document.querySelectorAll(".btn-grade"),
-  quickFront: document.getElementById("quick-front"),
-  quickSub: document.getElementById("quick-sub"),
-  quickBack: document.getElementById("quick-back"),
-  quickDescription: document.getElementById("quick-description"),
-  quickFolder: document.getElementById("quick-folder"),
-  quickDeck: document.getElementById("quick-deck"),
-  folderSuggestions: document.getElementById("folder-suggestions"),
-  deckSuggestions: document.getElementById("deck-suggestions"),
-  btnQuickAdd: document.getElementById("btn-quick-add"),
-  foldersTreeContainer: document.getElementById("folders-tree-container"),
-  importFile: document.getElementById("import-file"),
-  importFileName: document.getElementById("import-file-name"),
-  importText: document.getElementById("import-text"),
-  btnParseCsv: document.getElementById("btn-parse-csv"),
-  importPreviewSection: document.getElementById("import-preview-section"),
-  previewCount: document.getElementById("preview-count"),
-  previewTableBody: document.getElementById("preview-table-body"),
-  btnCancelImport: document.getElementById("btn-cancel-import"),
-  btnConfirmImport: document.getElementById("btn-confirm-import"),
-  settingsPat: document.getElementById("settings-pat"),
-  settingsGistId: document.getElementById("settings-gist-id"),
-  btnValidateToken: document.getElementById("btn-validate-token"),
-  btnCreateGist: document.getElementById("btn-create-gist"),
-  btnSaveCredentials: document.getElementById("btn-save-credentials"),
-  syncConsoleLog: document.getElementById("sync-console-log"),
-  manualSyncContainer: document.getElementById("manual-sync-container"),
-  btnForceSync: document.getElementById("btn-force-sync"),
-  syncLastTimeLabel: document.getElementById("sync-last-time-label"),
-  headerSyncStatus: document.getElementById("header-sync-status"),
-  syncLabelText: document.getElementById("sync-label-text"),
-  btnExportCsv: document.getElementById("btn-export-csv"),
-  btnClearDb: document.getElementById("btn-clear-db"),
-  themeButtons: document.querySelectorAll(".btn-theme"),
-  settingsVoiceLang: document.getElementById("settings-voice-lang"),
-  settingsReviewCap: document.getElementById("settings-review-cap"),
-  settingsTargetRetention: document.getElementById("settings-target-retention"),
-  targetRetentionBadge: document.getElementById("target-retention-badge"),
-  btnCreateBackupNow: document.getElementById("btn-create-backup-now"),
-  backupsListContainer: document.getElementById("backups-list-container"),
-  btnTtsSpeak: document.getElementById("btn-tts-speak"),
-  btnRestartStudy: document.getElementById("btn-restart-study"),
-  btnUndoStudy: document.getElementById("btn-undo-study"),
-  browserBulkToolbar: document.getElementById("browser-bulk-toolbar"),
-  bulkSelectedCount: document.getElementById("bulk-selected-count"),
-  btnBulkMove: document.getElementById("btn-bulk-move"),
-  btnBulkReset: document.getElementById("btn-bulk-reset"),
-  btnBulkDelete: document.getElementById("btn-bulk-delete"),
-  btnBulkDeselect: document.getElementById("btn-bulk-deselect"),
-  browserSelectAll: document.getElementById("browser-select-all"),
-  quickLang: document.getElementById("quick-lang"),
-  dashboardHeatmapGrid: document.getElementById("dashboard-heatmap-grid"),
-  modalContainer: document.getElementById("modal-container"),
-  modalTitle: document.getElementById("modal-title"),
-  modalBody: document.getElementById("modal-body"),
-  modalBtnCancel: document.getElementById("modal-btn-cancel"),
-  modalBtnConfirm: document.getElementById("modal-btn-confirm"),
-  toastContainer: document.getElementById("toast-container"),
-  subviewDashboard: document.getElementById("subview-dashboard"),
-  subviewStudy: document.getElementById("subview-study"),
-  studyDeckBadge: document.getElementById("study-deck-badge"),
-  btnDashboardResetDeck: document.getElementById("btn-dashboard-reset-deck"),
-  btnDashboardAllDecks: document.getElementById("btn-dashboard-all-decks"),
+  deckSelect: $("deck-select"),
+  statDueCount: $("stat-due-count"),
+  statNewCount: $("stat-new-count"),
+  statTotalCount: $("stat-total-count"),
+  btnStartReview: $("btn-start-review"),
+  btnForceReview: $("btn-force-review"),
+  dashboardEmptyState: $("dashboard-empty-state"),
+  navDueBadge: $("nav-due-badge"),
+  btnCancelStudy: $("btn-cancel-study"),
+  studyProgressText: $("study-progress-text"),
+  studyProgressBar: $("study-progress-bar"),
+  flashcard: $("flashcard"),
+  cardFrontSub: $("card-front-sub"),
+  cardFrontContent: $("card-front-content"),
+  cardBackSub: $("card-back-sub"),
+  cardBackContent: $("card-back-content"),
+  cardBackDivider: $("card-back-divider"),
+  cardBackDescription: $("card-back-description"),
+  studyHintBar: $("study-hint-bar"),
+  studyGradingBar: $("study-grading-bar"),
+  gradeButtons: $$(".btn-grade"),
+  quickFront: $("quick-front"),
+  quickSub: $("quick-sub"),
+  quickBack: $("quick-back"),
+  quickDescription: $("quick-description"),
+  quickFolder: $("quick-folder"),
+  quickDeck: $("quick-deck"),
+  folderSuggestions: $("folder-suggestions"),
+  deckSuggestions: $("deck-suggestions"),
+  btnQuickAdd: $("btn-quick-add"),
+  foldersTreeContainer: $("folders-tree-container"),
+  importFile: $("import-file"),
+  importFileName: $("import-file-name"),
+  importText: $("import-text"),
+  btnParseCsv: $("btn-parse-csv"),
+  importPreviewSection: $("import-preview-section"),
+  previewCount: $("preview-count"),
+  previewTableBody: $("preview-table-body"),
+  btnCancelImport: $("btn-cancel-import"),
+  btnConfirmImport: $("btn-confirm-import"),
+  settingsPat: $("settings-pat"),
+  settingsGistId: $("settings-gist-id"),
+  btnValidateToken: $("btn-validate-token"),
+  btnCreateGist: $("btn-create-gist"),
+  btnSaveCredentials: $("btn-save-credentials"),
+  syncConsoleLog: $("sync-console-log"),
+  manualSyncContainer: $("manual-sync-container"),
+  btnForceSync: $("btn-force-sync"),
+  syncLastTimeLabel: $("sync-last-time-label"),
+  headerSyncStatus: $("header-sync-status"),
+  syncLabelText: $("sync-label-text"),
+  btnExportCsv: $("btn-export-csv"),
+  btnClearDb: $("btn-clear-db"),
+  themeButtons: $$(".btn-theme"),
+  settingsVoiceLang: $("settings-voice-lang"),
+  settingsReviewCap: $("settings-review-cap"),
+  settingsTargetRetention: $("settings-target-retention"),
+  targetRetentionBadge: $("target-retention-badge"),
+  btnCreateBackupNow: $("btn-create-backup-now"),
+  backupsListContainer: $("backups-list-container"),
+  btnTtsSpeak: $("btn-tts-speak"),
+  btnRestartStudy: $("btn-restart-study"),
+  btnUndoStudy: $("btn-undo-study"),
+  browserBulkToolbar: $("browser-bulk-toolbar"),
+  bulkSelectedCount: $("bulk-selected-count"),
+  btnBulkMove: $("btn-bulk-move"),
+  btnBulkReset: $("btn-bulk-reset"),
+  btnBulkDelete: $("btn-bulk-delete"),
+  btnBulkDeselect: $("btn-bulk-deselect"),
+  browserSelectAll: $("browser-select-all"),
+  quickLang: $("quick-lang"),
+  dashboardHeatmapGrid: $("dashboard-heatmap-grid"),
+  modalContainer: $("modal-container"),
+  modalTitle: $("modal-title"),
+  modalBody: $("modal-body"),
+  modalBtnCancel: $("modal-btn-cancel"),
+  modalBtnConfirm: $("modal-btn-confirm"),
+  promptModalContainer: $("prompt-modal-container"),
+  promptModalTitle: $("prompt-modal-title"),
+  promptModalMessage: $("prompt-modal-message"),
+  promptModalInput: $("prompt-modal-input"),
+  promptModalBtnCancel: $("prompt-modal-btn-cancel"),
+  promptModalBtnConfirm: $("prompt-modal-btn-confirm"),
+  toastContainer: $("toast-container"),
+  subviewDashboard: $("subview-dashboard"),
+  subviewStudy: $("subview-study"),
+  studyDeckBadge: $("study-deck-badge"),
+  btnDashboardResetDeck: $("btn-dashboard-reset-deck"),
+  btnDashboardAllDecks: $("btn-dashboard-all-decks"),
 };
 
 
@@ -113,6 +122,29 @@ export function showModal(title, body, onConfirm, onCancel = null) {
   dom.modalContainer.classList.remove("hidden");
 }
 
+export function showPromptModal(title, message, defaultValue = "", onConfirm, onCancel = null) {
+  const container = dom.promptModalContainer || document.getElementById("prompt-modal-container");
+  if (!container) return;
+  const titleEl = dom.promptModalTitle || document.getElementById("prompt-modal-title");
+  const msgEl = dom.promptModalMessage || document.getElementById("prompt-modal-message");
+  const inputEl = dom.promptModalInput || document.getElementById("prompt-modal-input");
+
+  if (titleEl) titleEl.textContent = title;
+  if (msgEl) msgEl.textContent = message;
+  if (inputEl) inputEl.value = defaultValue;
+
+  state.promptModalConfirmCallback = onConfirm;
+  state.promptModalCancelCallback = onCancel;
+  container.classList.remove("hidden");
+
+  setTimeout(() => {
+    if (inputEl) {
+      inputEl.focus();
+      inputEl.select();
+    }
+  }, 50);
+}
+
 export function initModalListeners() {
   if (dom.modalBtnCancel) {
     dom.modalBtnCancel.addEventListener("click", () => {
@@ -130,6 +162,42 @@ export function initModalListeners() {
       state.modalConfirmCallback = null;
       state.modalCancelCallback = null;
       if (confirmCb) confirmCb();
+    });
+  }
+
+  const promptInput = dom.promptModalInput || document.getElementById("prompt-modal-input");
+  const promptConfirm = dom.promptModalBtnConfirm || document.getElementById("prompt-modal-btn-confirm");
+  const promptCancel = dom.promptModalBtnCancel || document.getElementById("prompt-modal-btn-cancel");
+  const promptModal = dom.promptModalContainer || document.getElementById("prompt-modal-container");
+
+  const closePrompt = (confirmed) => {
+    if (!promptModal) return;
+    promptModal.classList.add("hidden");
+    const val = promptInput ? promptInput.value.trim() : "";
+    if (confirmed) {
+      const cb = state.promptModalConfirmCallback;
+      state.promptModalConfirmCallback = null;
+      state.promptModalCancelCallback = null;
+      if (cb) cb(val);
+    } else {
+      const cb = state.promptModalCancelCallback;
+      state.promptModalConfirmCallback = null;
+      state.promptModalCancelCallback = null;
+      if (cb) cb();
+    }
+  };
+
+  if (promptConfirm) promptConfirm.addEventListener("click", () => closePrompt(true));
+  if (promptCancel) promptCancel.addEventListener("click", () => closePrompt(false));
+  if (promptInput) {
+    promptInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        closePrompt(true);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        closePrompt(false);
+      }
     });
   }
 }

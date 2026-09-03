@@ -39,6 +39,9 @@ export function onCardsRefreshed(fn) {
  */
 export async function loadCardsFromDB() {
   try {
+    try {
+      await db.purgeOldDeletedCards(30);
+    } catch (purgeErr) {}
     state.allCards = await db.getCards();
     for (const fn of refreshSubscribers) {
       try {

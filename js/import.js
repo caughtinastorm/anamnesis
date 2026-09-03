@@ -11,8 +11,8 @@
  */
 
 import { state } from "./state.js";
-import { dom, showToast, scrollToElement, switchView } from "./ui.js";
-import { generateUUID, escapeHTML } from "./utils.js";
+import { dom, showToast, showPromptModal, scrollToElement, switchView } from "./ui.js";
+import { generateUUID, escapeHTML, sanitizeHTML } from "./utils.js";
 import { parseAnkiApkg, parseAnkiText, normalizeAnkiDeck, expandClozeCards, cleanHtmlTags } from "../anki.js";
 import { createDefaultFSRSStats } from "../fsrs.js";
 import * as db from "../db.js";
@@ -59,10 +59,16 @@ export function initImportEventListeners() {
   if (btnNewDeck) {
     btnNewDeck.addEventListener("click", () => {
       const folder = destFolderInput ? destFolderInput.value.trim() : "";
-      const name = prompt(`Enter new collection name${folder ? ` inside "${folder}"` : ""}:`);
-      if (!name || !name.trim()) return;
-      setImportDestination(folder, name.trim());
-      showToast(`Ready to import into "${name.trim()}"`, "success");
+      showPromptModal(
+        "Create New Collection",
+        `Enter new collection name${folder ? ` inside "${folder}"` : ""}:`,
+        "",
+        (name) => {
+          if (!name || !name.trim()) return;
+          setImportDestination(folder, name.trim());
+          showToast(`Ready to import into "${name.trim()}"`, "success");
+        }
+      );
     });
   }
 
@@ -517,8 +523,8 @@ function renderNextImportChunk() {
     [
       card.folder ? `📁 ${escapeHTML(card.folder)}` : "-",
       `🗂️ ${escapeHTML(card.deck || "Default")}`,
-      card.front,
-      card.back,
+      sanitizeHTML(card.front),
+      sanitizeHTML(card.back),
       card.sub ? escapeHTML(card.sub) : "-",
       card.description ? escapeHTML(card.description) : "-"
     ].forEach(text => {

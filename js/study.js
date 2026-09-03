@@ -4,7 +4,7 @@ import { sanitizeHTML, shuffle, formatDeckSelectionLabel } from "./utils.js";
 import { calculateFSRS5, Rating, calculateProjectedIntervals, getTargetRetention } from "../fsrs.js";
 import * as db from "../db.js";
 import { loadCardsFromDB } from "./cards.js";
-import { recordDailyReview, filterCards } from "./dashboard.js";
+import { recordDailyReview, filterCards, invalidateStatsCache } from "./dashboard.js";
 
 let onSyncRequest = () => {};
 export function onSyncNeeded(cb) { onSyncRequest = cb; }
@@ -269,6 +269,7 @@ export async function submitCardGrade(grade) {
   if (allIdx !== -1) {
     state.allCards[allIdx] = { ...state.allCards[allIdx], ...updated };
   }
+  invalidateStatsCache();
 
   try {
     await db.saveCard(updated);
@@ -324,6 +325,7 @@ export async function undoLastStudyCard() {
   if (allIdx !== -1) {
     state.allCards[allIdx] = { ...last.cardBefore };
   }
+  invalidateStatsCache();
 
   // Revert in IndexedDB and prune review log
   try {
@@ -384,21 +386,26 @@ function finishStudySession() {
   );
 }
 
-function renderCardContent(text, isBack = false) {
+export function renderCardContent(text, isBack = false) {
   if (!text) return "";
-  const hasBrackets = /\[([^\]]+)\]/.test(text);
-  const hasCloze = /\{\{c\d+::([^}]+)\}\}/.test(text);
-  if (hasBrackets || hasCloze) {
-    const html = sanitizeHTML(text);
+  let html = sanitizeHTML(text);
+
+  // 1. Handle explicit {{c1::answer}} or {{c1::answer::hint}}
+  if (/\{\{c\d+::.*?\}\}/i.test(html)) {
     if (isBack) {
-      return html.replace(/\{\{c\d+::([^}]+)\}\}/g, `<span class="cloze-answer">$1</span>`)
-                 .replace(/\[([^\]]+)\]/g, `<span class="cloze-answer">$1</span>`);
+      html = html.replace(/\{\{c\d+::(.*?)(?:::.*?)?\}\}/gi, '<span class="cloze-answer">$1</span>');
     } else {
-      return html.replace(/\{\{c\d+::([^}]+)\}\}/g, `<span class="cloze-blank">[ ... ]</span>`)
-                 .replace(/\[([^\]]+)\]/g, `<span class="cloze-blank">[ ... ]</span>`);
+      html = html.replace(/\{\{c\d+::(?:.*?)::(.*?)\}\}/gi, '<span class="cloze-blank">[ $1 ]</span>');
+      html = html.replace(/\{\{c\d+::(.*?)\}\}/gi, '<span class="cloze-blank">[ ... ]</span>');
     }
   }
-  return sanitizeHTML(text);
+
+  // 2. Handle expanded cloze blanks on front: [ ... ] or [ … ]
+  if (!isBack) {
+    html = html.replace(/\[\s*(?:\.{3}|…)\s*\]/g, '<span class="cloze-blank">[ ... ]</span>');
+  }
+
+  return html;
 }
 
 export function speakCardText(text, card = null) {

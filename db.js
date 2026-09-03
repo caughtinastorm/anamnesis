@@ -262,7 +262,7 @@ export async function createLocalBackup(label = 'Manual Snapshot', cards = []) {
     label,
     created_at: Date.now(),
     card_count: cards.length,
-    cards: JSON.parse(JSON.stringify(cards))
+    cards: typeof structuredClone === "function" ? structuredClone(cards) : JSON.parse(JSON.stringify(cards))
   };
 
   return new Promise((resolve, reject) => {
@@ -349,6 +349,35 @@ async function pruneOldBackups(keepLimit = 10) {
     const store = transaction.objectStore(STORE_BACKUPS);
     toDelete.forEach(b => store.delete(b.id));
   }
+}
+
+/**
+ * Permanently purges cards that have been soft-deleted for more than maxAgeDays.
+ * Prevents tombstone accumulation from indefinitely bloating local and cloud storage.
+ * @param {number} maxAgeDays Default 30 days
+ * @returns {Promise<number>} Number of deleted cards purged
+ */
+export async function purgeOldDeletedCards(maxAgeDays = 30) {
+  const db = await openDB();
+  const cutoff = Date.now() - (maxAgeDays * 24 * 60 * 60 * 1000);
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_CARDS, 'readwrite');
+    const store = transaction.objectStore(STORE_CARDS);
+    const request = store.getAll();
+
+    request.onsuccess = () => {
+      const allCards = request.result || [];
+      let purgedCount = 0;
+      allCards.forEach(c => {
+        if (c.deleted && (c.last_modified || 0) < cutoff) {
+          store.delete(c.id);
+          purgedCount++;
+        }
+      });
+      transaction.oncomplete = () => resolve(purgedCount);
+    };
+    request.onerror = () => reject(request.error);
+  });
 }
 
 
