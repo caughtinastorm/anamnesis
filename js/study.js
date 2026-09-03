@@ -186,10 +186,14 @@ export function renderCurrentStudyCard() {
   updateGradeButtonIntervals(card);
 
   if (dom.flashcard) {
+    // Suppress CSS transition while resetting so the new card appears directly on the front face
+    // without visibly spinning/unfolding in reverse
+    dom.flashcard.style.transition = "none";
     dom.flashcard.className = "flashcard";
-    dom.flashcard.style.transform = "";
-    dom.flashcard.style.transition = "";
+    dom.flashcard.style.transform = "none";
     dom.flashcard.style.borderColor = "";
+    void dom.flashcard.offsetHeight;
+    dom.flashcard.style.transition = "";
   }
   if (dom.studyHintBar) dom.studyHintBar.classList.remove("hidden");
   if (dom.studyGradingBar) dom.studyGradingBar.classList.add("hidden");
@@ -358,10 +362,12 @@ export function exitStudySession() {
   updateUndoButtonState();
 
   if (dom.flashcard) {
+    dom.flashcard.style.transition = "none";
     dom.flashcard.className = "flashcard";
-    dom.flashcard.style.transform = "";
-    dom.flashcard.style.transition = "";
+    dom.flashcard.style.transform = "none";
     dom.flashcard.style.borderColor = "";
+    void dom.flashcard.offsetHeight;
+    dom.flashcard.style.transition = "";
   }
   loadCardsFromDB();
   onSyncRequest(500);
