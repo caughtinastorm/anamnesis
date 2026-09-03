@@ -28,8 +28,6 @@ const server = http.createServer((req, res) => {
   
   if (safePath === '/' || safePath === '\\') {
     safePath = '/index.html';
-  } else if (safePath === '/favicon.ico' || safePath === '\\favicon.ico') {
-    safePath = '/icons/icon-192.png';
   }
 
   const baseDir = path.resolve(__dirname);

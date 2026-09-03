@@ -3,18 +3,23 @@
  * Implements Network-First caching with offline fallback.
  */
 
-const CACHE_NAME = "anamnesis-v32";
+const CACHE_NAME = "anamnesis-v33";
 const FONT_CACHE_NAME = "anamnesis-fonts-v1";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
   "./style.css",
+  "./favicon.svg",
+  "./favicon.ico",
   "./app.js",
   "./db.js",
   "./fsrs.js",
   "./sync.js",
   "./anki.js",
   "./manifest.json",
+  "./icons/favicon-16x16.png",
+  "./icons/favicon-32x32.png",
+  "./icons/apple-touch-icon.png",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./js/state.js",

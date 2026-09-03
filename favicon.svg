@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1c1d22"/>
+      <stop offset="100%" stop-color="#0b0c10"/>
+    </linearGradient>
+    <linearGradient id="pillarGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background tile with subtle border -->
+  <rect width="32" height="32" rx="7" fill="url(#bgGrad)"/>
+  <rect x="0.5" y="0.5" width="31" height="31" rx="6.5" fill="none" stroke="#2e3039" stroke-width="1"/>
+
+  <!-- Pediment / Roof -->
+  <line x1="6" y1="7.5" x2="26" y2="7.5" stroke="#f4f4f6" stroke-width="1.6" stroke-linecap="round"/>
+  <line x1="7.5" y1="10" x2="24.5" y2="10" stroke="#d1d5db" stroke-width="1.3" stroke-linecap="round"/>
+
+  <!-- Pillars of Memory -->
+  <line x1="9.5" y1="11" x2="9.5" y2="21" stroke="url(#pillarGrad)" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="13.8" y1="11" x2="13.8" y2="21" stroke="#f4f4f6" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="18.2" y1="11" x2="18.2" y2="21" stroke="#f4f4f6" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="22.5" y1="11" x2="22.5" y2="21" stroke="url(#pillarGrad)" stroke-width="1.8" stroke-linecap="round"/>
+
+  <!-- Base / Stylobate -->
+  <line x1="7.5" y1="22" x2="24.5" y2="22" stroke="#d1d5db" stroke-width="1.3" stroke-linecap="round"/>
+  <line x1="5" y1="24.5" x2="27" y2="24.5" stroke="#f4f4f6" stroke-width="1.6" stroke-linecap="round"/>
+</svg>
