@@ -31,6 +31,7 @@ import { calculateStreak } from "../js/dashboard.js";
 import { renderCardContent } from "../js/study.js";
 import { mergeCards, cardsDiffer, getCardTimestamp } from "../sync.js";
 import { parseAnkiText, normalizeAnkiDeck, expandClozeCards, cleanHtmlTags } from "../anki.js";
+import { sortCardsLogically } from "../js/explorer-actions.js";
 
 let testsRun = 0;
 let testsPassed = 0;
@@ -361,6 +362,42 @@ runTest("Path resolution prevents sibling directory traversal", () => {
   const dotDot = path.resolve(baseDir, "../../Windows/win.ini");
   const isDotDotSafe = dotDot === baseDir || dotDot.startsWith(baseDir + path.sep);
   assert.equal(isDotDotSafe, false);
+});
+
+console.log("\n=== 7. EXPORT LOGICAL ORDERING & SM2 PURGE TESTS ===");
+
+runTest("sortCardsLogically groups root cards, orders folders and natural decks", () => {
+  const cards = [
+    { front: "Social 1", folder: "Social", deck: "Smooth Exits", sub: "Exit" },
+    { front: "Culinary 2", folder: "Culinary", deck: "Basics", sub: "Pan" },
+    { front: "Root 1", folder: undefined, deck: "Default", sub: "" },
+    { front: "Japanese 2", folder: "Japanese", deck: "Core 100", sub: "Verb" },
+    { front: "Japanese 1", folder: "Japanese", deck: "Core 100", sub: "Noun" },
+    { front: "Culinary 1", folder: "Culinary", deck: "Basics", sub: "Acid" }
+  ];
+
+  const sorted = sortCardsLogically(cards);
+  assert.equal(sorted[0].front, "Root 1", "Root cards should come first");
+  assert.equal(sorted[1].folder, "Culinary");
+  assert.equal(sorted[1].front, "Culinary 1", "Within Culinary, Acid subtopic comes before Pan");
+  assert.equal(sorted[2].front, "Culinary 2");
+  assert.equal(sorted[3].folder, "Japanese");
+  assert.equal(sorted[3].front, "Japanese 1", "Within Japanese, Noun comes before Verb");
+  assert.equal(sorted[5].folder, "Social");
+});
+
+runTest("calculateFSRS5 never creates or maintains sm2_stats", () => {
+  const card = {
+    id: "fsrs-clean",
+    front: "Q",
+    back: "A",
+    sm2_stats: { ease_factor: 2.5, interval: 3, repetitions: 2, next_review: 1000 }
+  };
+
+  const updated = calculateFSRS5(card, Rating.Good, 5000);
+  assert.equal(updated.sm2_stats, undefined, "sm2_stats must be completely deleted from updated cards");
+  assert.ok(updated.fsrs_stats, "fsrs_stats must exist");
+  assert.ok(updated.fsrs_stats.stability > 0, "FSRS stability must be calculated");
 });
 
 console.log(`\nResults: ${testsPassed} passed / ${testsRun} total`);

@@ -10,7 +10,7 @@ export const explorerState = {
   currentPath: [],
   history: [[]],
   historyIndex: 0,
-  viewMode: localStorage.getItem("explorer-view-mode") || "grid", // 'grid' | 'details'
+  viewMode: (typeof localStorage !== "undefined" ? localStorage.getItem("explorer-view-mode") : null) || "grid", // 'grid' | 'details'
   searchQuery: "",
   expandedFolders: new Set()
 };

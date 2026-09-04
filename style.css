@@ -494,11 +494,59 @@ html[data-theme="light"] .app-header {
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
-  padding: 4px 2px;
-  transition: color 0.15s;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s, background-color 0.15s;
 }
-.btn-text:hover { color: var(--text-primary); }
+.btn-text:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
 .btn-text:active { opacity: 0.6; }
+
+html[data-theme="light"] .btn-text:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* Modal Close Icon Button */
+.modal-close-btn,
+.modal-header-with-action .btn-text,
+.edit-modal-header .btn-text,
+.picker-modal-header .btn-text {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.modal-close-btn:hover,
+.modal-header-with-action .btn-text:hover,
+.edit-modal-header .btn-text:hover,
+.picker-modal-header .btn-text:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--panel-border);
+  color: var(--text-primary);
+}
+
+html[data-theme="light"] .modal-close-btn:hover,
+html[data-theme="light"] .modal-header-with-action .btn-text:hover,
+html[data-theme="light"] .edit-modal-header .btn-text:hover,
+html[data-theme="light"] .picker-modal-header .btn-text:hover {
+  background: rgba(0, 0, 0, 0.06);
+  border-color: var(--panel-border);
+  color: var(--text-primary);
+}
 
 /* Form groups */
 .form-group {
@@ -1588,6 +1636,186 @@ textarea {
   border-color: var(--accent-color);
 }
 
+/* Collection Export Modal */
+.export-modal-dialog {
+  max-width: 480px;
+  text-align: left;
+  gap: 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header-with-action {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.modal-title-with-icon {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.modal-title-icon {
+  width: 24px;
+  height: 24px;
+  color: var(--text-primary);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.modal-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.export-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
+
+.export-scope-wrap select {
+  width: 100%;
+}
+
+.export-preview-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.export-count-pill {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.export-scope-indicator {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.export-format-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.export-format-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.export-format-card:hover {
+  border-color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.export-format-card input[type="radio"] {
+  margin-top: 3px;
+  cursor: pointer;
+}
+
+.format-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.format-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.format-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.format-card-desc {
+  font-size: 0.75rem !important;
+  color: var(--text-secondary) !important;
+  margin: 0 !important;
+  line-height: 1.35;
+}
+
+.export-format-card:has(input[type="radio"]:checked) {
+  border-color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.export-modal-dialog .modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.export-modal-dialog .modal-buttons .btn {
+  min-width: 90px;
+}
+
+html[data-theme="light"] .export-preview-card {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+html[data-theme="light"] .export-count-pill {
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--text-primary);
+}
+
+html[data-theme="light"] .export-format-card {
+  background: rgba(0, 0, 0, 0.015);
+}
+
+html[data-theme="light"] .export-format-card:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+html[data-theme="light"] .export-format-card:has(input[type="radio"]:checked) {
+  border-color: var(--text-primary);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+html[data-theme="light"] .format-badge {
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--text-secondary);
+}
+
 /* TOAST notifications */
 .toast-container {
   position: fixed;
@@ -2458,8 +2686,35 @@ textarea {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  margin-left: 4px;
+  margin-left: 2px;
   transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.btn-table-action svg {
+  width: 13px;
+  height: 13px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+  flex-shrink: 0;
+}
+
+.btn-table-action svg[fill="currentColor"],
+.btn-table-action.btn-study-action svg {
+  fill: currentColor !important;
+  stroke: none;
+}
+
+.btn-table-action:hover {
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-1px);
+}
+
+html[data-theme="light"] .btn-table-action:hover {
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .btn-table-action.btn-edit:hover {
@@ -2499,6 +2754,12 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.edit-card-modal-content .modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 /* Desktop Grid Placement for Card Browser */
@@ -2765,6 +3026,7 @@ html[data-theme="light"] .explorer-search-box input {
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
 .btn-command svg {
@@ -2773,12 +3035,28 @@ html[data-theme="light"] .explorer-search-box input {
   stroke: currentColor;
   stroke-width: 2;
   fill: none;
+  flex-shrink: 0;
+}
+
+.btn-command svg[fill="currentColor"],
+.btn-command-primary svg {
+  fill: currentColor !important;
+  stroke: none;
 }
 
 .btn-command:hover {
   background: rgba(255, 255, 255, 0.08);
   border-color: var(--text-secondary);
   transform: translateY(-1px);
+}
+
+html[data-theme="light"] .explorer-command-bar {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+html[data-theme="light"] .btn-command:hover {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: var(--text-secondary);
 }
 
 .btn-command-primary {
@@ -2797,6 +3075,7 @@ html[data-theme="light"] .explorer-search-box input {
   height: 18px;
   background: var(--panel-border);
   margin: 0 4px;
+  flex-shrink: 0;
 }
 
 /* Explorer Body & Sidebar Tree */
@@ -2961,7 +3240,7 @@ html[data-theme="light"] .explorer-sidebar {
 /* Grid Mode Layout (Tiles) */
 .explorer-grid-container {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 12px;
 }
 
@@ -2976,6 +3255,7 @@ html[data-theme="light"] .explorer-sidebar {
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
+  min-height: 120px;
 }
 
 .explorer-card-tile:hover {
@@ -2983,6 +3263,14 @@ html[data-theme="light"] .explorer-sidebar {
   border-color: var(--text-secondary);
   transform: translateY(-2px);
   box-shadow: var(--shadow-sm);
+}
+
+html[data-theme="light"] .explorer-card-tile {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+html[data-theme="light"] .explorer-card-tile:hover {
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .tile-top-row {
@@ -2999,6 +3287,10 @@ html[data-theme="light"] .explorer-sidebar {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+html[data-theme="light"] .tile-icon-wrap {
+  background: rgba(0, 0, 0, 0.04);
 }
 
 .tile-icon-svg {
@@ -3058,10 +3350,14 @@ html[data-theme="light"] .explorer-sidebar {
 .tile-actions-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 4px;
-  padding-top: 6px;
+  gap: 5px;
+  margin-top: auto;
+  padding-top: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+html[data-theme="light"] .tile-actions-row {
+  border-top-color: rgba(0, 0, 0, 0.06);
 }
 
 .tile-btn {
@@ -3071,14 +3367,26 @@ html[data-theme="light"] .explorer-sidebar {
   color: var(--text-primary);
   font-size: 0.74rem;
   font-weight: 600;
-  padding: 3px 8px;
+  padding: 4px 8px;
   cursor: pointer;
   transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tile-btn-primary {
   flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   background: rgba(255, 255, 255, 0.08);
+  height: 28px;
+}
+
+html[data-theme="light"] .tile-btn-primary {
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .tile-btn-primary:hover {
@@ -3087,17 +3395,31 @@ html[data-theme="light"] .explorer-sidebar {
 }
 
 .tile-btn-icon {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0;
 }
 
+.tile-btn-icon svg {
+  width: 13px;
+  height: 13px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+  flex-shrink: 0;
+}
+
 .tile-btn-icon:hover {
   background: rgba(255, 255, 255, 0.15);
   border-color: var(--text-primary);
+}
+
+html[data-theme="light"] .tile-btn-icon:hover {
+  background: rgba(0, 0, 0, 0.08);
 }
 
 /* Details Table Mode */
@@ -3106,6 +3428,31 @@ html[data-theme="light"] .explorer-sidebar {
   overflow-y: auto;
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-md);
+}
+
+.explorer-table {
+  width: 100%;
+}
+
+.explorer-table td {
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.explorer-table td:first-child {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.explorer-table th:last-child,
+.explorer-table td:last-child {
+  text-align: right;
+  white-space: nowrap;
+  width: 140px;
+  overflow: visible;
 }
 
 .explorer-table-row {
@@ -3117,10 +3464,15 @@ html[data-theme="light"] .explorer-sidebar {
   background: rgba(255, 255, 255, 0.04);
 }
 
+html[data-theme="light"] .explorer-table-row:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
 .table-name-cell {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .table-icon-svg {
@@ -3137,6 +3489,9 @@ html[data-theme="light"] .explorer-sidebar {
 .table-item-name {
   font-weight: 600;
   color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .type-pill {
@@ -3159,7 +3514,9 @@ html[data-theme="light"] .explorer-sidebar {
 .table-actions-group {
   display: inline-flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 4px;
+  flex-shrink: 0;
 }
 
 /* Deck Detail Hero View */
@@ -3280,6 +3637,8 @@ html[data-theme="light"] .explorer-sidebar {
 
 /* Floating Context Menu */
 .explorer-context-menu {
+  position: fixed;
+  z-index: 2500;
   background: rgba(18, 18, 20, 0.96);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -3290,12 +3649,13 @@ html[data-theme="light"] .explorer-sidebar {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  min-width: 170px;
+  min-width: 175px;
   animation: fadeIn 0.12s ease-out;
 }
 
 html[data-theme="light"] .explorer-context-menu {
   background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .menu-item {
@@ -3314,8 +3674,16 @@ html[data-theme="light"] .explorer-context-menu {
   transition: all 0.12s ease;
 }
 
+.menu-item svg {
+  flex-shrink: 0;
+}
+
 .menu-item:hover {
   background: rgba(255, 255, 255, 0.08);
+}
+
+html[data-theme="light"] .menu-item:hover {
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .menu-item.danger:hover {

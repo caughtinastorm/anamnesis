@@ -240,7 +240,7 @@ export function calculateFSRS5(card, grade, now = Date.now(), requestRetention =
   // Target 4:00 AM target boundary scheduling for daily reviews
   const nextReviewTimestamp = calculateNextReviewTimestamp(nextInterval, now, 4);
 
-  return {
+  const updated = {
     ...card,
     fsrs_stats: {
       stability: Math.round(stability * 100) / 100,
@@ -252,17 +252,11 @@ export function calculateFSRS5(card, grade, now = Date.now(), requestRetention =
       next_review: nextReviewTimestamp,
       interval: nextInterval
     },
-    // Maintain sm2_stats for backwards-compatibility
-    sm2_stats: {
-      ease_factor: 2.5,
-      interval: nextInterval,
-      repetitions: reps,
-      next_review: nextReviewTimestamp,
-      last_reviewed: now
-    },
     last_modified: now,
     updated_at: now
   };
+  delete updated.sm2_stats;
+  return updated;
 }
 
 /**
@@ -287,7 +281,6 @@ export function createDefaultFSRSStats() {
 export function getCardNextReview(card) {
   if (!card) return 0;
   if (card.fsrs_stats?.next_review !== undefined) return card.fsrs_stats.next_review;
-  if (card.sm2_stats?.next_review !== undefined) return card.sm2_stats.next_review;
   return 0;
 }
 
@@ -308,9 +301,6 @@ export function isCardNew(card) {
     const isZeroReps = (card.fsrs_stats.repetitions === 0 || card.fsrs_stats.repetitions === undefined);
     const isNewState = (card.fsrs_stats.state === State.New || card.fsrs_stats.state === 0 || card.fsrs_stats.state === undefined);
     return isZeroReps && isNewState;
-  }
-  if (card.sm2_stats) {
-    return card.sm2_stats.repetitions === 0;
   }
   return true;
 }

@@ -1,6 +1,7 @@
 import { state } from "./state.js";
 import { dom, showToast, showModal } from "./ui.js";
 import { getCardFolder, getCardDeck, escapeCSVField, escapeHTML } from "./utils.js";
+import { sortCardsLogically } from "./explorer-actions.js";
 import { getTargetRetention, setTargetRetention } from "../fsrs.js";
 import * as sync from "../sync.js";
 import * as db from "../db.js";
@@ -399,8 +400,9 @@ function updateSyncUIState() {
 async function exportDatabaseToCSV() {
   const active = state.allCards.filter(c => !c.deleted);
   if (!active.length) { showToast("No cards to export", "error"); return; }
+  const sorted = sortCardsLogically(active);
   let csv = "Folder,Deck,Front,Back,Sub-text,Description,Stability,Difficulty,State,Lapses,Interval,Reps,NextReview\n";
-  active.forEach(c => {
+  sorted.forEach(c => {
     const f = c.fsrs_stats || {};
     csv += [
       escapeCSVField(getCardFolder(c)), escapeCSVField(getCardDeck(c)),
@@ -418,10 +420,10 @@ async function exportDatabaseToCSV() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `anamnesis_export_${new Date().toISOString().slice(0,10)}.csv`;
+    a.download = `anamnesis_all_collections_${new Date().toISOString().slice(0,10)}.csv`;
     document.body.appendChild(a); a.click();
     document.body.removeChild(a); URL.revokeObjectURL(url);
-    showToast(`Exported ${active.length} cards!`, "success");
+    showToast(`Exported ${sorted.length} cards in logical order!`, "success");
   } catch (err) {
     console.error(err); showToast("Failed to export CSV file", "error");
   }

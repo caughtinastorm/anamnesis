@@ -38,6 +38,7 @@ export function initExplorerActions({ navigateTo, loadCardsFromDB, onSyncRequest
   _loadCardsFromDB = loadCardsFromDB;
   _onSyncRequest = onSyncRequest;
   _getExplorerData = getExplorerData;
+  initExportModal();
 }
 
 // -------------------------------------------------------------
@@ -63,6 +64,22 @@ export function handleImportHere() {
   }
 
   setImportDestination(targetFolder, targetDeck);
+}
+
+export function handleExplorerExport() {
+  const path = explorerState.currentPath;
+  if (path.length === 2) {
+    openExportModal(path[0], path[1]);
+  } else if (path.length === 1) {
+    const { folderMap } = _getExplorerData ? _getExplorerData() : { folderMap: new Map() };
+    if (folderMap && folderMap.has(path[0])) {
+      openExportModal(path[0], undefined);
+    } else {
+      openExportModal(undefined, path[0]);
+    }
+  } else {
+    openExportModal(undefined, undefined);
+  }
 }
 
 export function handleAddCardHere() {
@@ -150,15 +167,21 @@ export function showItemContextMenu(e, item) {
     </button>
   `;
 
-  // Position menu near the triggering element
-  const rect = e.target.getBoundingClientRect();
+  // Position menu near the triggering element safely within screen bounds
+  const triggerEl = e.target.closest("button") || e.target;
+  const rect = triggerEl.getBoundingClientRect();
   menu.style.position = "fixed";
-  menu.style.top = `${Math.min(window.innerHeight - 220, rect.bottom + 4)}px`;
-  menu.style.left = `${Math.min(window.innerWidth - 180, rect.left)}px`;
-  menu.style.zIndex = "1000";
+  menu.style.top = `${Math.max(10, Math.min(window.innerHeight - 240, rect.bottom + 4))}px`;
+  menu.style.left = `${Math.max(10, Math.min(window.innerWidth - 190, rect.left))}px`;
+  menu.style.zIndex = "2500";
+
+  const closeMenu = () => {
+    menu.remove();
+    document.removeEventListener("pointerdown", closeListener);
+  };
 
   menu.querySelector(".menu-open")?.addEventListener("click", () => {
-    menu.remove();
+    closeMenu();
     if (isFolder) {
       explorerState.expandedFolders.add(item.name);
       _navigateTo([item.name]);
@@ -168,7 +191,7 @@ export function showItemContextMenu(e, item) {
   });
 
   menu.querySelector(".menu-study")?.addEventListener("click", async () => {
-    menu.remove();
+    closeMenu();
     let sel = "all";
     if (isFolder) {
       sel = `folder:${item.name}`;
@@ -181,23 +204,22 @@ export function showItemContextMenu(e, item) {
     startStudySession(item.due === 0);
   });
 
-
   menu.querySelector(".menu-import")?.addEventListener("click", () => {
-    menu.remove();
+    closeMenu();
     setImportDestination(isFolder ? item.name : (item.folder || ""), isFolder ? "Default" : item.name);
   });
 
   menu.querySelector(".menu-export")?.addEventListener("click", () => {
-    menu.remove();
+    closeMenu();
     if (isFolder) {
-      exportFolderCSV(item.name);
+      openExportModal(item.name, undefined);
     } else {
-      exportDeckCSV(item.folder, item.name);
+      openExportModal(item.folder, item.name);
     }
   });
 
   menu.querySelector(".menu-rename")?.addEventListener("click", () => {
-    menu.remove();
+    closeMenu();
     if (isFolder) {
       promptRenameFolder(item.name);
     } else {
@@ -206,7 +228,7 @@ export function showItemContextMenu(e, item) {
   });
 
   menu.querySelector(".menu-delete")?.addEventListener("click", () => {
-    menu.remove();
+    closeMenu();
     if (isFolder) {
       promptDeleteFolder(item.name, item.total);
     } else {
@@ -218,8 +240,7 @@ export function showItemContextMenu(e, item) {
 
   const closeListener = (evt) => {
     if (!menu.contains(evt.target)) {
-      menu.remove();
-      document.removeEventListener("pointerdown", closeListener);
+      closeMenu();
     }
   };
   setTimeout(() => document.addEventListener("pointerdown", closeListener), 10);
@@ -425,63 +446,334 @@ export function promptDeleteDeck(folderName, deckName, count) {
 }
 
 // -------------------------------------------------------------
-// CSV Export
+// Collection Export System (CSV Standard, CSV FSRS Backup, JSON)
 // -------------------------------------------------------------
 
-export function exportDeckCSV(folder, deck) {
-  const cards = state.allCards.filter(c => {
-    if (c.deleted) return false;
-    if (folder) {
-      return getCardFolder(c).toLowerCase() === folder.toLowerCase() &&
-             getCardDeck(c).toLowerCase() === deck.toLowerCase();
-    } else {
-      return !getCardFolder(c) && getCardDeck(c).toLowerCase() === deck.toLowerCase();
-    }
+let exportModalEl = null;
+let exportScopeSelect = null;
+let exportCountPill = null;
+let exportScopeIndicator = null;
+let btnCloseExportModal = null;
+let btnExportModalCancel = null;
+let btnExportModalDownload = null;
+
+export function initExportModal() {
+  if (typeof document === "undefined") return;
+
+  exportModalEl = document.getElementById("export-collection-modal");
+  if (!exportModalEl) return;
+
+  exportScopeSelect = document.getElementById("export-scope-select");
+  exportCountPill = document.getElementById("export-count-pill");
+  exportScopeIndicator = document.getElementById("export-scope-indicator");
+  btnCloseExportModal = document.getElementById("btn-close-export-modal");
+  btnExportModalCancel = document.getElementById("btn-export-modal-cancel");
+  btnExportModalDownload = document.getElementById("btn-export-modal-download");
+
+  if (btnCloseExportModal) btnCloseExportModal.addEventListener("click", closeExportModal);
+  if (btnExportModalCancel) btnExportModalCancel.addEventListener("click", closeExportModal);
+  if (btnExportModalDownload) btnExportModalDownload.addEventListener("click", executeExport);
+
+  if (exportScopeSelect) {
+    exportScopeSelect.addEventListener("change", () => {
+      updateExportModalPreview();
+    });
+  }
+
+  // Close when clicking outside modal card
+  exportModalEl.addEventListener("click", (e) => {
+    if (e.target === exportModalEl) closeExportModal();
   });
+}
+
+export function openExportModal(initialFolder = undefined, initialDeck = undefined) {
+  if (!exportModalEl) exportModalEl = document.getElementById("export-collection-modal");
+  if (!exportModalEl) return;
+
+  if (!exportScopeSelect) initExportModal();
+
+  populateExportScopeOptions(initialFolder, initialDeck);
+  updateExportModalPreview();
+
+  exportModalEl.classList.remove("hidden");
+}
+
+export function closeExportModal() {
+  if (exportModalEl) exportModalEl.classList.add("hidden");
+}
+
+function populateExportScopeOptions(initialFolder, initialDeck) {
+  if (!exportScopeSelect) exportScopeSelect = document.getElementById("export-scope-select");
+  if (!exportScopeSelect) return;
+
+  exportScopeSelect.innerHTML = "";
+
+  const { folderMap, standaloneMap } = _getExplorerData ? _getExplorerData() : { folderMap: new Map(), standaloneMap: new Map() };
+
+  // 1. All collections option
+  const allOpt = document.createElement("option");
+  allOpt.value = "all";
+  allOpt.textContent = "🌐 All Collections (Entire Library)";
+  exportScopeSelect.appendChild(allOpt);
+
+  let targetValue = "all";
+  if (initialFolder && initialDeck) {
+    targetValue = `deck:${initialFolder} / ${initialDeck}`;
+  } else if (initialFolder) {
+    targetValue = `folder:${initialFolder}`;
+  } else if (initialDeck) {
+    targetValue = `deck:${initialDeck}`;
+  }
+
+  // 2. Folders
+  if (folderMap && folderMap.size > 0) {
+    const folderGroup = document.createElement("optgroup");
+    folderGroup.label = "📁 Folders (All Decks in Folder)";
+
+    Array.from(folderMap.keys()).sort().forEach(folderName => {
+      const opt = document.createElement("option");
+      opt.value = `folder:${folderName}`;
+      opt.textContent = `📁 Folder: ${folderName}`;
+      folderGroup.appendChild(opt);
+    });
+    exportScopeSelect.appendChild(folderGroup);
+  }
+
+  // 3. Decks / Collections
+  const deckGroup = document.createElement("optgroup");
+  deckGroup.label = "🗂️ Individual Collections / Decks";
+
+  // Standalone decks
+  if (standaloneMap) {
+    Array.from(standaloneMap.keys()).sort().forEach(deckName => {
+      const opt = document.createElement("option");
+      opt.value = `deck:${deckName}`;
+      opt.textContent = `🗂️ ${deckName}`;
+      deckGroup.appendChild(opt);
+    });
+  }
+
+  // Folder subdecks
+  if (folderMap) {
+    Array.from(folderMap.keys()).sort().forEach(folderName => {
+      const dMap = folderMap.get(folderName);
+      if (dMap) {
+        Array.from(dMap.keys()).sort().forEach(deckName => {
+          const opt = document.createElement("option");
+          opt.value = `deck:${folderName} / ${deckName}`;
+          opt.textContent = `🗂️ ${folderName} / ${deckName}`;
+          deckGroup.appendChild(opt);
+        });
+      }
+    });
+  }
+
+  if (deckGroup.children.length > 0) {
+    exportScopeSelect.appendChild(deckGroup);
+  }
+
+  // Set initial selected value
+  if (targetValue) {
+    exportScopeSelect.value = targetValue;
+    if (exportScopeSelect.value !== targetValue) {
+      exportScopeSelect.value = "all";
+    }
+  }
+}
+
+function updateExportModalPreview() {
+  if (!exportScopeSelect) exportScopeSelect = document.getElementById("export-scope-select");
+  if (!exportScopeSelect) return;
+
+  const scope = exportScopeSelect.value;
+  const cards = getCardsForScope(scope);
+
+  if (!exportCountPill) exportCountPill = document.getElementById("export-count-pill");
+  if (!exportScopeIndicator) exportScopeIndicator = document.getElementById("export-scope-indicator");
+
+  if (exportCountPill) {
+    exportCountPill.textContent = `${cards.length} card${cards.length === 1 ? "" : "s"} selected`;
+  }
+
+  if (exportScopeIndicator) {
+    if (scope === "all") {
+      exportScopeIndicator.textContent = "Entire Library";
+    } else if (scope.startsWith("folder:")) {
+      exportScopeIndicator.textContent = `Folder: ${scope.slice(7)}`;
+    } else if (scope.startsWith("deck:")) {
+      exportScopeIndicator.textContent = `Collection: ${scope.slice(5)}`;
+    }
+  }
+}
+
+function getCardsForScope(scope) {
+  const active = state.allCards.filter(c => !c.deleted);
+  if (!scope || scope === "all") {
+    return active;
+  }
+  if (scope.startsWith("folder:")) {
+    const targetFolder = scope.slice(7).toLowerCase();
+    return active.filter(c => getCardFolder(c).toLowerCase() === targetFolder);
+  }
+  if (scope.startsWith("deck:")) {
+    const targetDeckKey = scope.slice(5);
+    if (targetDeckKey.includes(" / ")) {
+      const [f, d] = targetDeckKey.split(" / ");
+      return active.filter(c =>
+        getCardFolder(c).toLowerCase() === f.toLowerCase() &&
+        getCardDeck(c).toLowerCase() === d.toLowerCase()
+      );
+    } else {
+      return active.filter(c =>
+        !getCardFolder(c) &&
+        getCardDeck(c).toLowerCase() === targetDeckKey.toLowerCase()
+      );
+    }
+  }
+  return active;
+}
+
+function generateExportFilename(scope, format) {
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const ext = format === "json" ? "json" : "csv";
+  let baseName = "anamnesis_all_collections";
+  if (scope && scope.startsWith("folder:")) {
+    const f = scope.slice(7).replace(/[^a-zA-Z0-9_-]/g, "_");
+    baseName = `anamnesis_folder_${f}`;
+  } else if (scope && scope.startsWith("deck:")) {
+    const d = scope.slice(5).replace(/ \/ /g, "_").replace(/[^a-zA-Z0-9_-]/g, "_");
+    baseName = `anamnesis_${d}`;
+  }
+  if (format === "csv-fsrs") {
+    baseName += "_fsrs_backup";
+  }
+  return `${baseName}_${dateStr}.${ext}`;
+}
+
+/**
+ * Sorts cards in logical hierarchical order:
+ * 1. Folder (root / standalone decks first, then alphabetical folders)
+ * 2. Collection / Deck (natural alphanumeric)
+ * 3. Sub-text / Topic
+ * 4. Front question text
+ * 5. Creation timestamp
+ */
+export function sortCardsLogically(cards) {
+  return [...cards].sort((a, b) => {
+    const folderA = (getCardFolder(a) || "").toLowerCase();
+    const folderB = (getCardFolder(b) || "").toLowerCase();
+    if (folderA !== folderB) {
+      if (!folderA) return -1;
+      if (!folderB) return 1;
+      return folderA.localeCompare(folderB, undefined, { numeric: true, sensitivity: "base" });
+    }
+
+    const deckA = (getCardDeck(a) || "").toLowerCase();
+    const deckB = (getCardDeck(b) || "").toLowerCase();
+    if (deckA !== deckB) {
+      return deckA.localeCompare(deckB, undefined, { numeric: true, sensitivity: "base" });
+    }
+
+    const subA = (a.sub || "").toLowerCase();
+    const subB = (b.sub || "").toLowerCase();
+    if (subA !== subB) {
+      return subA.localeCompare(subB, undefined, { numeric: true, sensitivity: "base" });
+    }
+
+    const frontA = (a.front || "").toLowerCase();
+    const frontB = (b.front || "").toLowerCase();
+    if (frontA !== frontB) {
+      return frontA.localeCompare(frontB, undefined, { numeric: true, sensitivity: "base" });
+    }
+
+    return (a.created_at || 0) - (b.created_at || 0);
+  });
+}
+
+function executeExport() {
+  if (!exportScopeSelect) exportScopeSelect = document.getElementById("export-scope-select");
+  if (!exportScopeSelect) return;
+
+  const scope = exportScopeSelect.value;
+  const cards = getCardsForScope(scope);
 
   if (cards.length === 0) {
-    showToast("No cards to export in this collection", "error");
+    showToast("No active cards to export in selected collection", "error");
     return;
   }
 
-  let csv = "Front,Back,Sub-text,Description\n";
-  cards.forEach(c => {
-    csv += [
-      escapeCSVField(c.front),
-      escapeCSVField(c.back),
-      escapeCSVField(c.sub || ""),
-      escapeCSVField(c.description || "")
-    ].join(",") + "\n";
-  });
+  // Future-proof: Sort logically by folder, deck, sub, and content
+  const sorted = sortCardsLogically(cards);
 
-  downloadCSV(csv, `${folder ? `${folder}_` : ""}${deck}_cards.csv`);
-  showToast(`Exported ${cards.length} cards from ${deck}!`, "success");
+  const formatEl = document.querySelector('input[name="export-format"]:checked');
+  const format = formatEl ? formatEl.value : "csv-standard";
+  const filename = generateExportFilename(scope, format);
+
+  try {
+    if (format === "json") {
+      // Lossless JSON stripped of any dead legacy SM2 cache properties
+      const sanitized = sorted.map(c => {
+        const copy = { ...c };
+        delete copy.sm2_stats;
+        return copy;
+      });
+      const jsonContent = JSON.stringify(sanitized, null, 2);
+      downloadFile(jsonContent, filename, "application/json;charset=utf-8;");
+    } else if (format === "csv-fsrs") {
+      let csv = "Folder,Deck,Front,Back,Sub-text,Description,Stability,Difficulty,State,Lapses,Interval,Reps,NextReview\n";
+      sorted.forEach(c => {
+        const f = c.fsrs_stats || {};
+        csv += [
+          escapeCSVField(getCardFolder(c)),
+          escapeCSVField(getCardDeck(c)),
+          escapeCSVField(c.front || ""),
+          escapeCSVField(c.back || ""),
+          escapeCSVField(c.sub || ""),
+          escapeCSVField(c.description || ""),
+          f.stability || 0,
+          f.difficulty || 0,
+          f.state ?? 0,
+          f.lapses || 0,
+          f.interval ?? 0,
+          f.repetitions ?? 0,
+          f.next_review || 0
+        ].join(",") + "\n";
+      });
+      downloadFile(csv, filename, "text/csv;charset=utf-8;");
+    } else {
+      // Standard clean CSV with folder & deck hierarchy
+      let csv = "Folder,Deck,Front,Back,Sub-text,Description\n";
+      sorted.forEach(c => {
+        csv += [
+          escapeCSVField(getCardFolder(c)),
+          escapeCSVField(getCardDeck(c)),
+          escapeCSVField(c.front || ""),
+          escapeCSVField(c.back || ""),
+          escapeCSVField(c.sub || ""),
+          escapeCSVField(c.description || "")
+        ].join(",") + "\n";
+      });
+      downloadFile(csv, filename, "text/csv;charset=utf-8;");
+    }
+
+    closeExportModal();
+    showToast(`Exported ${sorted.length} cards successfully in logical order!`, "success");
+  } catch (err) {
+    console.error("Export error:", err);
+    showToast("Failed to export cards", "error");
+  }
+}
+
+export function exportDeckCSV(folder, deck) {
+  openExportModal(folder, deck);
 }
 
 export function exportFolderCSV(folder) {
-  const cards = state.allCards.filter(c => !c.deleted && getCardFolder(c).toLowerCase() === folder.toLowerCase());
-  if (cards.length === 0) {
-    showToast("No cards to export in this folder", "error");
-    return;
-  }
-
-  let csv = "Deck,Front,Back,Sub-text,Description\n";
-  cards.forEach(c => {
-    csv += [
-      escapeCSVField(getCardDeck(c)),
-      escapeCSVField(c.front),
-      escapeCSVField(c.back),
-      escapeCSVField(c.sub || ""),
-      escapeCSVField(c.description || "")
-    ].join(",") + "\n";
-  });
-
-  downloadCSV(csv, `${folder}_all_collections.csv`);
-  showToast(`Exported ${cards.length} cards from folder "${folder}"!`, "success");
+  openExportModal(folder, undefined);
 }
 
-function downloadCSV(csvContent, filename) {
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+function downloadFile(content, filename, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -490,4 +782,8 @@ function downloadCSV(csvContent, filename) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+function downloadCSV(csvContent, filename) {
+  downloadFile(csvContent, filename, "text/csv;charset=utf-8;");
 }

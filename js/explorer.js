@@ -29,6 +29,8 @@ import {
   promptRenameDeck,
   promptDeleteDeck,
   handleImportHere,
+  handleExplorerExport,
+  openExportModal,
   handleAddCardHere,
   handleStudyCurrent
 } from "./explorer-actions.js";
@@ -49,6 +51,7 @@ let btnViewDetails;
 let btnNewDeck;
 let btnNewFolder;
 let btnImportHere;
+let btnExplorerExport;
 let btnAddCardHere;
 let btnStudyCurrent;
 let btnPracticeCurrent;
@@ -69,6 +72,7 @@ export function initExplorer() {
   btnNewDeck          = document.getElementById("btn-explorer-new-deck");
   btnNewFolder        = document.getElementById("btn-explorer-new-folder");
   btnImportHere       = document.getElementById("btn-explorer-import");
+  btnExplorerExport   = document.getElementById("btn-explorer-export");
   btnAddCardHere      = document.getElementById("btn-explorer-add-card");
   btnStudyCurrent     = document.getElementById("btn-explorer-study");
   btnPracticeCurrent  = document.getElementById("btn-explorer-practice");
@@ -106,11 +110,12 @@ export function initExplorer() {
   if (btnViewDetails) btnViewDetails.addEventListener("click", () => setViewMode("details"));
 
   // Toolbar actions — all delegates now live in explorer-actions.js
-  if (btnNewDeck)       btnNewDeck.addEventListener("click", promptCreateDeck);
-  if (btnNewFolder)     btnNewFolder.addEventListener("click", promptCreateFolder);
-  if (btnImportHere)    btnImportHere.addEventListener("click", handleImportHere);
-  if (btnAddCardHere)   btnAddCardHere.addEventListener("click", handleAddCardHere);
-  if (btnStudyCurrent)  btnStudyCurrent.addEventListener("click", () => handleStudyCurrent(false));
+  if (btnNewDeck)        btnNewDeck.addEventListener("click", promptCreateDeck);
+  if (btnNewFolder)      btnNewFolder.addEventListener("click", promptCreateFolder);
+  if (btnImportHere)     btnImportHere.addEventListener("click", handleImportHere);
+  if (btnExplorerExport) btnExplorerExport.addEventListener("click", handleExplorerExport);
+  if (btnAddCardHere)    btnAddCardHere.addEventListener("click", handleAddCardHere);
+  if (btnStudyCurrent)   btnStudyCurrent.addEventListener("click", () => handleStudyCurrent(false));
   if (btnPracticeCurrent) btnPracticeCurrent.addEventListener("click", () => handleStudyCurrent(true));
 
   updateViewModeButtons();
@@ -529,6 +534,9 @@ function renderGridCanvas(items) {
         <button class="tile-btn tile-btn-icon btn-import-item" title="Import Cards into this collection">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         </button>
+        <button class="tile-btn tile-btn-icon btn-export-item" title="Export this ${isFolder ? "folder" : "collection"}">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </button>
         <button class="tile-btn tile-btn-icon btn-menu-item" title="More Options">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
         </button>
@@ -559,10 +567,18 @@ function renderGridCanvas(items) {
       startStudySession(item.due === 0);
     });
 
-
     card.querySelector(".btn-import-item")?.addEventListener("click", (e) => {
       e.stopPropagation();
       setImportDestination(isFolder ? item.name : (item.folder || ""), isFolder ? "Default" : item.name);
+    });
+
+    card.querySelector(".btn-export-item")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (isFolder) {
+        openExportModal(item.name, undefined);
+      } else {
+        openExportModal(item.folder, item.name);
+      }
     });
 
     card.querySelector(".btn-menu-item")?.addEventListener("click", (e) => {
@@ -589,11 +605,11 @@ function renderDetailsCanvas(items) {
   table.innerHTML = `
     <thead>
       <tr>
-        <th style="width: 38%;">Name</th>
-        <th style="width: 14%;">Type</th>
-        <th style="width: 14%;">Total Cards</th>
-        <th style="width: 14%;">Due Today</th>
-        <th style="width: 20%; text-align: right;">Actions</th>
+        <th style="min-width: 150px;">Name</th>
+        <th style="width: 85px;">Type</th>
+        <th style="width: 100px;">Total Cards</th>
+        <th style="width: 100px;">Due Today</th>
+        <th style="width: 140px; text-align: right;">Actions</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -614,7 +630,7 @@ function renderDetailsCanvas(items) {
       <td>
         <div class="table-name-cell">
           ${iconSvg}
-          <span class="table-item-name">${escapeHTML(item.name)}</span>
+          <span class="table-item-name" title="${escapeHTML(item.name)}">${escapeHTML(item.name)}</span>
         </div>
       </td>
       <td><span class="type-pill ${isFolder ? "type-folder" : "type-deck"}">${isFolder ? "Folder" : "Collection"}</span></td>
@@ -629,6 +645,9 @@ function renderDetailsCanvas(items) {
           </button>
           <button class="btn-table-action btn-import-action" title="Import Here">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </button>
+          <button class="btn-table-action btn-export-action" title="Export Collection">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
           </button>
           <button class="btn-table-action btn-menu-action" title="More Options">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
@@ -661,10 +680,18 @@ function renderDetailsCanvas(items) {
       startStudySession(item.due === 0);
     });
 
-
     row.querySelector(".btn-import-action")?.addEventListener("click", (e) => {
       e.stopPropagation();
       setImportDestination(isFolder ? item.name : (item.folder || ""), isFolder ? "Default" : item.name);
+    });
+
+    row.querySelector(".btn-export-action")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (isFolder) {
+        openExportModal(item.name, undefined);
+      } else {
+        openExportModal(item.folder, item.name);
+      }
     });
 
     row.querySelector(".btn-menu-action")?.addEventListener("click", (e) => {
@@ -778,7 +805,7 @@ function renderDeckDetailCanvas(folder, deck, stats) {
   });
 
   detailView.querySelector("#btn-hero-export")?.addEventListener("click", () => {
-    exportDeckCSV(folder, deck);
+    openExportModal(folder, deck);
   });
 
   detailView.querySelector("#btn-hero-rename")?.addEventListener("click", () => {

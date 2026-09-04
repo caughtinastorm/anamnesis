@@ -384,6 +384,10 @@
               <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               <span>Import Cards Here</span>
             </button>
+            <button id="btn-explorer-export" class="btn-command">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <span>Export</span>
+            </button>
             <button id="btn-explorer-add-card" class="btn-command">
               <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
               <span>Quick Add</span>
@@ -890,7 +894,7 @@ Gracias,Thank you,greeting,Common polite phrase
       <div class="modal-content card-panel edit-card-modal-content">
         <div class="edit-modal-header">
           <h3>Edit Flashcard</h3>
-          <button id="btn-close-edit-modal" class="btn-text" title="Close">✕</button>
+          <button id="btn-close-edit-modal" class="btn-text modal-close-btn" title="Close">✕</button>
         </div>
         <div class="edit-modal-body">
           <input type="hidden" id="edit-card-id">
@@ -946,6 +950,95 @@ Gracias,Thank you,greeting,Common polite phrase
       </div>
     </div>
 
+    <!-- Collection Export Dialog -->
+    <div id="export-collection-modal" class="modal-overlay hidden">
+      <div class="modal-content card-panel export-modal-dialog">
+        <div class="modal-header-with-action">
+          <div class="modal-title-with-icon">
+            <svg class="modal-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <div>
+              <h3>Export Collections</h3>
+              <p class="modal-subtitle">Download flashcards in standard CSV or full backup formats.</p>
+            </div>
+          </div>
+          <button id="btn-close-export-modal" class="btn-text modal-close-btn" title="Close">✕</button>
+        </div>
+
+        <div class="export-modal-body">
+          <!-- Scope Selector -->
+          <div class="form-group">
+            <label for="export-scope-select" class="input-label">Select Collection or Folder to Export</label>
+            <div class="export-scope-wrap">
+              <select id="export-scope-select" class="select-input">
+                <option value="all">🌐 All Collections (Entire Library)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Dynamic Info / Stats Banner -->
+          <div class="export-preview-card" id="export-preview-card">
+            <span class="export-count-pill" id="export-count-pill">0 cards selected</span>
+            <span class="export-scope-indicator" id="export-scope-indicator">Entire Library</span>
+          </div>
+
+          <!-- Format Choice Selection -->
+          <div class="form-group">
+            <label class="input-label">Export Format</label>
+            <div class="export-format-options">
+              <label class="export-format-card">
+                <input type="radio" name="export-format" value="csv-standard" checked>
+                <div class="format-card-content">
+                  <div class="format-card-title">
+                    <span class="format-badge">CSV</span>
+                    <strong>Standard CSV</strong>
+                  </div>
+                  <p class="format-card-desc">Clean cards file with folder, deck, front, back, sub-text, and notes. Compatible with spreadsheets and other apps.</p>
+                </div>
+              </label>
+
+              <label class="export-format-card">
+                <input type="radio" name="export-format" value="csv-fsrs">
+                <div class="format-card-content">
+                  <div class="format-card-title">
+                    <span class="format-badge">FSRS</span>
+                    <strong>Full Backup CSV (with FSRS stats)</strong>
+                  </div>
+                  <p class="format-card-desc">Includes memory stability, difficulty, review intervals, lapses, and repetition counters.</p>
+                </div>
+              </label>
+
+              <label class="export-format-card">
+                <input type="radio" name="export-format" value="json">
+                <div class="format-card-content">
+                  <div class="format-card-title">
+                    <span class="format-badge">JSON</span>
+                    <strong>Complete JSON Archive</strong>
+                  </div>
+                  <p class="format-card-desc">Lossless JSON dataset including internal timestamps, identifiers, and scheduling parameters.</p>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-buttons" style="margin-top: 16px;">
+          <button id="btn-export-modal-cancel" class="btn btn-secondary">Cancel</button>
+          <button id="btn-export-modal-download" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            Download Export
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Windows-Style Universal Collection Browser Dialog -->
     <div id="collection-picker-modal" class="modal-overlay hidden">
       <div class="modal-content card-panel picker-modal-dialog">
@@ -955,7 +1048,7 @@ Gracias,Thank you,greeting,Common polite phrase
             <svg class="picker-window-icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
             <h3 id="picker-modal-title">Select Collection or Destination</h3>
           </div>
-          <button id="btn-close-picker-modal" class="btn-text" title="Close">✕</button>
+          <button id="btn-close-picker-modal" class="btn-text modal-close-btn" title="Close">✕</button>
         </div>
 
         <!-- Address Bar & Navigation Toolbar -->
