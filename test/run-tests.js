@@ -29,7 +29,7 @@ import {
 } from "../js/utils.js";
 import { calculateStreak } from "../js/dashboard.js";
 import { renderCardContent } from "../js/study.js";
-import { mergeCards, cardsDiffer, getCardTimestamp } from "../sync.js";
+import { mergeCards, cardsDiffer, getCardTimestamp, sanitizeGistId } from "../sync.js";
 import { parseAnkiText, normalizeAnkiDeck, expandClozeCards, cleanHtmlTags } from "../anki.js";
 import { sortCardsLogically } from "../js/explorer-actions.js";
 
@@ -340,6 +340,15 @@ runTest("cardsDiffer detects content, deletion, and timestamp differences", () =
 
   const c = [{ id: "1", front: "A", last_modified: 100 }];
   assert.equal(cardsDiffer(a, c), false);
+});
+
+runTest("sanitizeGistId extracts clean hex ID from URL, fragments, and queries", () => {
+  assert.equal(sanitizeGistId("https://gist.github.com/user/e30c449339485f8c6b738927498c0d9a"), "e30c449339485f8c6b738927498c0d9a");
+  assert.equal(sanitizeGistId("https://gist.github.com/user/e30c449339485f8c6b738927498c0d9a#file-flashcards-json"), "e30c449339485f8c6b738927498c0d9a");
+  assert.equal(sanitizeGistId("https://gist.github.com/user/e30c449339485f8c6b738927498c0d9a?foo=bar/"), "e30c449339485f8c6b738927498c0d9a");
+  assert.equal(sanitizeGistId("  e30c449339485f8c6b738927498c0d9a  "), "e30c449339485f8c6b738927498c0d9a");
+  assert.equal(sanitizeGistId(""), "");
+  assert.equal(sanitizeGistId(null), "");
 });
 
 console.log("\n=== 6. SERVER PATH RESOLUTION SECURITY TESTS ===");

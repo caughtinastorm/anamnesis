@@ -13,11 +13,29 @@ const CREDENTIALS_KEY = 'flashcard_sync_credentials';
 const LAST_SYNC_KEY = 'flashcard_last_sync_time';
 const LAST_ETAG_KEY = 'flashcard_sync_etag';
 
+export function sanitizeGistId(raw) {
+  if (!raw) return '';
+  let trimmed = String(raw).trim();
+  trimmed = trimmed.split('#')[0].split('?')[0].replace(/\/+$/, '');
+  const match = trimmed.match(/([a-f0-9]{20,32})/i);
+  if (match) return match[1];
+  if (trimmed.includes('/')) {
+    const parts = trimmed.split('/');
+    return parts[parts.length - 1];
+  }
+  return trimmed;
+}
+
 export function getSyncCredentials() {
   try {
     if (typeof localStorage === 'undefined') return { pat: '', gistId: '' };
     const raw = localStorage.getItem(CREDENTIALS_KEY);
-    return raw ? JSON.parse(raw) : { pat: '', gistId: '' };
+    if (!raw) return { pat: '', gistId: '' };
+    const parsed = JSON.parse(raw);
+    return {
+      pat: (parsed.pat || '').trim(),
+      gistId: sanitizeGistId(parsed.gistId)
+    };
   } catch (e) {
     return { pat: '', gistId: '' };
   }
@@ -25,7 +43,9 @@ export function getSyncCredentials() {
 
 export function saveSyncCredentials(pat, gistId) {
   if (typeof localStorage !== 'undefined') {
-    localStorage.setItem(CREDENTIALS_KEY, JSON.stringify({ pat, gistId }));
+    const cleanPat = (pat || '').trim();
+    const cleanGistId = sanitizeGistId(gistId);
+    localStorage.setItem(CREDENTIALS_KEY, JSON.stringify({ pat: cleanPat, gistId: cleanGistId }));
   }
 }
 
@@ -64,10 +84,37 @@ export function saveLastSyncEtag(etag) {
 }
 
 /**
+ * Fetch with automatic AbortController timeout to prevent hanging syncs
+ */
+export async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    return res;
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error(`Sync request timed out after ${timeoutMs / 1000}s`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
  * Common Headers for GitHub API request
  */
 function getHeaders(pat, etag = '') {
-  const tokenHeader = (pat.startsWith('ghp_') || pat.startsWith('github_pat_')) ? `Bearer ${pat}` : `token ${pat}`;
+  const cleanPat = (pat || '').trim();
+  const tokenHeader = (cleanPat.startsWith('ghp_') || cleanPat.startsWith('github_pat_'))
+    ? `Bearer ${cleanPat}`
+    : (cleanPat.startsWith('Bearer ') || cleanPat.startsWith('token '))
+      ? cleanPat
+      : `token ${cleanPat}`;
   const headers = {
     'Authorization': tokenHeader,
     'Accept': 'application/vnd.github+json',
@@ -84,7 +131,7 @@ function getHeaders(pat, etag = '') {
  * Test a Personal Access Token (PAT) by fetching user profile
  */
 export async function testToken(pat) {
-  const res = await fetch('https://api.github.com/user', {
+  const res = await fetchWithTimeout('https://api.github.com/user', {
     headers: getHeaders(pat)
   });
   if (!res.ok) {
@@ -100,7 +147,7 @@ export async function testToken(pat) {
  */
 export async function findExistingFlashcardGist(pat) {
   try {
-    const res = await fetch('https://api.github.com/gists?per_page=100', {
+    const res = await fetchWithTimeout('https://api.github.com/gists?per_page=100', {
       headers: getHeaders(pat),
       cache: 'no-store'
     });
@@ -113,7 +160,7 @@ export async function findExistingFlashcardGist(pat) {
     if (!Array.isArray(gists)) return null;
 
     for (const g of gists) {
-      if (g.files && g.files['flashcards.json']) {
+      if (g.files && (g.files['flashcards.json'] || g.files['cards.json'])) {
         return g.id;
       }
       if (g.description && g.description.toLowerCase().includes('flashcard')) {
@@ -146,7 +193,7 @@ export async function createFlashcardGist(pat) {
     }
   };
 
-  const res = await fetch('https://api.github.com/gists', {
+  const res = await fetchWithTimeout('https://api.github.com/gists', {
     method: 'POST',
     headers: getHeaders(pat),
     body: JSON.stringify(body)
@@ -164,7 +211,8 @@ export async function createFlashcardGist(pat) {
  * Fetch a specific gist with ETag caching support
  */
 async function fetchGist(pat, gistId, etag = '') {
-  const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+  const cleanGistId = sanitizeGistId(gistId);
+  const res = await fetchWithTimeout(`https://api.github.com/gists/${cleanGistId}`, {
     headers: getHeaders(pat, etag),
     cache: 'no-store'
   });
@@ -178,7 +226,7 @@ async function fetchGist(pat, gistId, etag = '') {
   }
 
   if (!res.ok) {
-    throw new Error(`Failed to fetch gist: ${res.statusText}`);
+    throw new Error(`Failed to fetch gist (${res.status}): ${res.statusText}`);
   }
 
   const data = await res.json();
@@ -189,23 +237,25 @@ async function fetchGist(pat, gistId, etag = '') {
 /**
  * Update the gist file with new content
  */
-async function updateGist(pat, gistId, cards) {
+async function updateGist(pat, gistId, cards, targetFilename = 'flashcards.json') {
+  const cleanGistId = sanitizeGistId(gistId);
+  const fileName = targetFilename || 'flashcards.json';
   const body = {
     files: {
-      'flashcards.json': {
-        content: JSON.stringify(cards)
+      [fileName]: {
+        content: JSON.stringify(cards, null, 2)
       }
     }
   };
 
-  const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+  const res = await fetchWithTimeout(`https://api.github.com/gists/${cleanGistId}`, {
     method: 'PATCH',
     headers: getHeaders(pat),
     body: JSON.stringify(body)
   });
 
   if (!res.ok) {
-    throw new Error(`Failed to update Gist: ${res.statusText}`);
+    throw new Error(`Failed to update Gist (${res.status}): ${res.statusText}`);
   }
 
   const data = await res.json();
@@ -315,19 +365,29 @@ export function mergeCards(localCards = [], remoteCards = [], maxTombstoneAgeDay
  */
 export async function syncCards(localCards = []) {
   const { pat, gistId } = getSyncCredentials();
+  const cleanGistId = sanitizeGistId(gistId);
   
-  if (!pat || !gistId) {
+  if (!pat || !cleanGistId) {
     return { cards: localCards, status: 'unconfigured', changed: false };
   }
 
   try {
+    const hasLocalCards = Array.isArray(localCards) && localCards.length > 0;
     const lastEtag = getLastSyncEtag();
     const lastSyncTime = getLastSyncTime();
 
-    // 1. Fetch remote gist conditionally
-    const fetchResult = await fetchGist(pat, gistId, lastEtag);
+    // 1. Fetch remote gist conditionally ONLY if local database has cards.
+    // If local DB is empty (initial sync, cleared browser data, new device), do NOT send ETag!
+    // We MUST download remote cards.
+    const effectiveEtag = hasLocalCards ? lastEtag : '';
+    let fetchResult = await fetchGist(pat, cleanGistId, effectiveEtag);
 
-    // If 304 Not Modified:
+    // Safeguard: If remote returns 304 but local DB is empty, force full unconditional fetch
+    if (fetchResult.notModified && !hasLocalCards) {
+      fetchResult = await fetchGist(pat, cleanGistId, '');
+    }
+
+    // If 304 Not Modified (and we have local cards):
     if (fetchResult.notModified) {
       // Check if local cards have any modifications since last sync
       const hasLocalEdits = localCards.some(c => getCardTimestamp(c) > lastSyncTime);
@@ -338,7 +398,7 @@ export async function syncCards(localCards = []) {
       }
 
       // Local has changes that remote lacks: push to remote
-      const { data: updatedGist, etag: newEtag } = await updateGist(pat, gistId, localCards);
+      const { data: updatedGist, etag: newEtag } = await updateGist(pat, cleanGistId, localCards);
       const newSyncTime = Math.max(Date.now(), new Date(updatedGist.updated_at).getTime());
       saveLastSyncTime(newSyncTime);
       saveLastSyncEtag(newEtag);
@@ -346,27 +406,54 @@ export async function syncCards(localCards = []) {
     }
 
     const { gist, etag } = fetchResult;
+    const files = gist.files || {};
 
-    // Check if the file flashcards.json exists in Gist
-    const file = gist.files && gist.files['flashcards.json'];
-    let remoteCards = [];
-    
+    // Resilient file discovery: check standard names, then any JSON file, then first file
+    let targetFilename = 'flashcards.json';
+    let file = files['flashcards.json'] || files['cards.json'] || files['flashcards.JSON'];
+    if (!file) {
+      const jsonKey = Object.keys(files).find(k => k.toLowerCase().endsWith('.json'));
+      if (jsonKey) {
+        file = files[jsonKey];
+        targetFilename = jsonKey;
+      } else {
+        const firstKey = Object.keys(files)[0];
+        if (firstKey) {
+          file = files[firstKey];
+          targetFilename = firstKey;
+        }
+      }
+    } else {
+      targetFilename = file.filename || targetFilename;
+    }
+
+    let remoteData = [];
     if (file) {
-      if (file.truncated) {
-        const rawRes = await fetch(file.raw_url, { cache: 'no-store' });
-        if (!rawRes.ok) throw new Error('Failed to fetch raw gist data');
-        remoteCards = await rawRes.json();
+      if (file.truncated && file.raw_url) {
+        // Truncated raw file (>300KB) requires Authorization header for private gists!
+        const rawRes = await fetchWithTimeout(file.raw_url, {
+          headers: getHeaders(pat),
+          cache: 'no-store'
+        });
+        if (!rawRes.ok) throw new Error(`Failed to fetch raw gist data (${rawRes.status})`);
+        remoteData = await rawRes.json();
       } else if (file.content) {
         try {
-          remoteCards = JSON.parse(file.content);
+          remoteData = JSON.parse(file.content);
         } catch (e) {
           console.warn('Malformed JSON in Gist, resetting to []');
-          remoteCards = [];
+          remoteData = [];
         }
       }
     }
 
-    if (!Array.isArray(remoteCards)) {
+    // Support both direct array format and wrapped object format { cards: [...] }
+    let remoteCards = [];
+    if (Array.isArray(remoteData)) {
+      remoteCards = remoteData;
+    } else if (remoteData && Array.isArray(remoteData.cards)) {
+      remoteCards = remoteData.cards;
+    } else {
       remoteCards = [];
     }
 
@@ -378,8 +465,8 @@ export async function syncCards(localCards = []) {
     const remoteNeedsUpdate = cardsDiffer(remoteCards, merged);
 
     if (remoteNeedsUpdate) {
-      // Push merged cards to Gist
-      const { data: updatedGist, etag: updatedEtag } = await updateGist(pat, gistId, merged);
+      // Push merged cards to Gist using the detected filename
+      const { data: updatedGist, etag: updatedEtag } = await updateGist(pat, cleanGistId, merged, targetFilename);
       const newSyncTime = Math.max(Date.now(), new Date(updatedGist.updated_at).getTime());
       saveLastSyncTime(newSyncTime);
       saveLastSyncEtag(updatedEtag);

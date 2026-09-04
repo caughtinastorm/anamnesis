@@ -243,7 +243,7 @@ async function createSyncGist() {
 
 async function saveSyncConfig() {
   const pat = dom.settingsPat.value.trim();
-  let gistId = dom.settingsGistId.value.trim();
+  let gistId = sync.sanitizeGistId(dom.settingsGistId.value);
   if (!pat) {
     sync.clearSyncCredentials();
     state.syncCredentials = { pat: "", gistId: "" };
@@ -255,12 +255,15 @@ async function saveSyncConfig() {
     try {
       logToConsole("Auto-discovering or creating Gist...");
       gistId = await sync.createFlashcardGist(pat);
+      gistId = sync.sanitizeGistId(gistId);
       dom.settingsGistId.value = gistId;
       logToConsole(`Gist linked: ${gistId}`);
     } catch (e) {
       showToast("Could not auto-create Gist: " + e.message, "error");
       return;
     }
+  } else {
+    dom.settingsGistId.value = gistId;
   }
   sync.saveSyncCredentials(pat, gistId);
   state.syncCredentials = { pat, gistId };
@@ -303,10 +306,18 @@ export async function triggerManualSync() {
     const localCards = await db.getCards();
     const result = await sync.syncCards(localCards);
 
+    // Safeguard: Refuse to wipe non-empty local cards if remote returns an empty array
+    if (localCards.length > 0 && (!result.cards || result.cards.length === 0)) {
+      logToConsole("Warning: Remote returned 0 cards while local database has cards. Preserving local cards.", true);
+      showToast("Sync warning: Remote returned 0 cards; local database preserved.", "warning");
+      setSyncStateIndicator("synced");
+      return;
+    }
+
     if (result.changed || result.status === "pulled_from_remote" || result.status === "merged_with_remote") {
       await db.replaceCards(result.cards);
       await loadCardsFromDB();
-      logToConsole("Downloaded updates from cloud and merged successfully.");
+      logToConsole(`Downloaded updates from cloud and merged successfully (${result.cards.filter(c => !c.deleted).length} active cards).`);
     } else if (result.status === "pushed_to_remote") {
       logToConsole("Pushed local database updates to cloud.");
     } else if (result.status === "no_change") {
@@ -344,6 +355,13 @@ export async function performBackgroundSync(silent = true) {
   try {
     const localCards = await db.getCards();
     const result = await sync.syncCards(localCards);
+
+    // Safeguard: Refuse to wipe non-empty local cards if remote returns an empty array
+    if (localCards.length > 0 && (!result.cards || result.cards.length === 0)) {
+      console.warn("Background sync warning: Remote returned 0 cards while local has cards; skipping overwrite.");
+      setSyncStateIndicator("synced");
+      return;
+    }
 
     if (result.changed || result.status === "pulled_from_remote" || result.status === "merged_with_remote") {
       await db.replaceCards(result.cards);
