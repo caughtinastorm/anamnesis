@@ -77,6 +77,15 @@ export function initCollectionPicker() {
   if (btnNewFolder) btnNewFolder.addEventListener("click", promptCreateFolderInPicker);
   if (btnNewDeck) btnNewDeck.addEventListener("click", promptCreateDeckInPicker);
 
+  const btnExport = document.getElementById("btn-picker-export");
+  if (btnExport) {
+    btnExport.addEventListener("click", async () => {
+      closeCollectionPicker();
+      const { openExportModal } = await import("./explorer-actions.js");
+      openExportModal(pickerState.selectedFolder, pickerState.selectedDeck === "all" ? undefined : pickerState.selectedDeck);
+    });
+  }
+
   if (searchInputEl) {
     searchInputEl.addEventListener("input", (e) => {
       pickerState.searchQuery = (e.target.value || "").trim().toLowerCase();

@@ -289,6 +289,30 @@ export function initDashboardPickerButton() {
     });
   }
 
+  const exportBtn = document.getElementById("btn-dashboard-export-deck");
+  if (exportBtn) {
+    exportBtn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      const currentVal = state.selectedDeck || "all";
+      let folder, deck;
+      if (currentVal.startsWith("folder:")) {
+        folder = currentVal.slice(7);
+      } else if (currentVal.startsWith("deck:")) {
+        const full = currentVal.slice(5);
+        const parts = full.split(" / ");
+        if (parts.length > 1) {
+          folder = parts[0];
+          deck = parts.slice(1).join(" / ");
+        } else {
+          deck = parts[0];
+        }
+      }
+      const { openExportModal } = await import("./explorer-actions.js");
+      openExportModal(folder, deck);
+    });
+  }
+
   if (dom.btnDashboardAllDecks) {
     dom.btnDashboardAllDecks.addEventListener("click", () => {
       switchView("view-decks");
