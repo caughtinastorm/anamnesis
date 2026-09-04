@@ -739,7 +739,7 @@ function executeExport() {
           f.next_review || 0
         ].join(",") + "\n";
       });
-      downloadFile(csv, filename, "text/csv;charset=utf-8;");
+      downloadCSV(csv, filename);
     } else {
       // Standard clean CSV with folder & deck hierarchy
       let csv = "Folder,Deck,Front,Back,Sub-text,Description\n";
@@ -753,7 +753,7 @@ function executeExport() {
           escapeCSVField(c.description || "")
         ].join(",") + "\n";
       });
-      downloadFile(csv, filename, "text/csv;charset=utf-8;");
+      downloadCSV(csv, filename);
     }
 
     closeExportModal();
@@ -785,5 +785,9 @@ function downloadFile(content, filename, mimeType) {
 }
 
 function downloadCSV(csvContent, filename) {
-  downloadFile(csvContent, filename, "text/csv;charset=utf-8;");
+  // UTF-8 BOM (\uFEFF) forces Microsoft Excel on Windows to open CSV files with UTF-8 encoding
+  // without garbling Japanese Kanji/Kana or accented characters
+  const bom = "\uFEFF";
+  const contentWithBom = csvContent.startsWith(bom) ? csvContent : bom + csvContent;
+  downloadFile(contentWithBom, filename, "text/csv;charset=utf-8;");
 }
