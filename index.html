@@ -147,6 +147,7 @@
                 <span class="input-label">Active Collection</span>
                 <div style="display: flex; align-items: center; gap: 8px;">
                   <button type="button" id="btn-dashboard-reset-deck" class="gui-picker-clear-btn hidden" title="Reset filter to All Collections">✕ Clear</button>
+                  <button type="button" id="btn-dashboard-reset-fsrs" class="gui-picker-clear-btn hidden" title="Erase FSRS memory data and review history for this collection" style="color: #f87171; border-color: rgba(239, 68, 68, 0.25);">🔄 Reset FSRS</button>
                   <button type="button" id="btn-dashboard-export-deck" class="gui-picker-clear-btn" title="Export Current Collection to CSV">📥 Export</button>
                   <span class="deck-picker-hint">Click to browse or switch</span>
                 </div>
@@ -870,6 +871,33 @@ Gracias,Thank you,greeting,Common polite phrase
         <div class="modal-buttons">
           <button id="modal-btn-cancel" class="btn btn-secondary">Cancel</button>
           <button id="modal-btn-confirm" class="btn btn-danger">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Practice Mode Choice Modal -->
+    <div id="practice-modal-container" class="modal-overlay hidden">
+      <div class="modal-content card-panel" style="max-width: 440px;">
+        <h3 id="practice-modal-title" style="display: flex; align-items: center; gap: 8px;">
+          <span>🎯</span> Practice Mode
+        </h3>
+        <p id="practice-modal-message" style="margin: 10px 0 14px 0; color: var(--text-secondary); font-size: 0.88rem; line-height: 1.5;">
+          Do you want this practice session to count towards your <strong>FSRS spaced repetition</strong> scheduling?
+        </p>
+        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--panel-border); border-radius: var(--radius-md); padding: 12px; margin-bottom: 18px; font-size: 0.82rem; line-height: 1.45; color: var(--text-secondary);">
+          <strong style="color: var(--text-primary); display: block; margin-bottom: 4px;">💡 Recommendation:</strong>
+          Choose <strong>Practice Only</strong> for new word acquisition or rapid drilling to avoid distorting your memory stability, difficulty, and review intervals.
+        </div>
+        <div class="modal-buttons" style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+          <button id="btn-practice-only" class="btn btn-primary" style="width: 100%; justify-content: center;">
+            🎯 Practice Only (Keep FSRS Untouched)
+          </button>
+          <button id="btn-practice-fsrs" class="btn btn-secondary" style="width: 100%; justify-content: center;">
+            📈 Count Towards FSRS Data
+          </button>
+          <button id="btn-practice-cancel" class="btn btn-text" style="width: 100%; justify-content: center; margin-top: 4px;">
+            Cancel
+          </button>
         </div>
       </div>
     </div>

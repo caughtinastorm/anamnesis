@@ -19,6 +19,7 @@ import { explorerState } from "./explorer-state.js";
 import { state } from "./state.js";
 import { dom, showToast, showModal, showPromptModal, switchView, scrollToElement } from "./ui.js";
 import { getCardFolder, getCardDeck, escapeHTML, escapeCSVField } from "./utils.js";
+import { createDefaultFSRSStats } from "../fsrs.js";
 import * as db from "../db.js";
 import { calculateStats, updateUIStats, setActiveDeckSelection } from "./dashboard.js";
 import { setImportDestination } from "./import.js";
@@ -161,6 +162,10 @@ export function showItemContextMenu(e, item) {
       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       Rename
     </button>
+    <button class="menu-item menu-reset-fsrs warning">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+      Reset FSRS Data
+    </button>
     <button class="menu-item menu-delete danger">
       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
       Delete
@@ -224,6 +229,15 @@ export function showItemContextMenu(e, item) {
       promptRenameFolder(item.name);
     } else {
       promptRenameDeck(item.folder, item.name);
+    }
+  });
+
+  menu.querySelector(".menu-reset-fsrs")?.addEventListener("click", () => {
+    closeMenu();
+    if (isFolder) {
+      promptResetFolderFSRS(item.name, item.total);
+    } else {
+      promptResetDeckFSRS(item.folder, item.name, item.total);
     }
   });
 
@@ -440,6 +454,78 @@ export function promptDeleteDeck(folderName, deckName, count) {
           console.error("Delete deck error:", err);
           showToast("Failed to delete collection", "error");
         }
+      }
+    }
+  );
+}
+
+export function promptResetDeckFSRS(folderName, deckName, count) {
+  const label = folderName ? `${folderName} / ${deckName}` : deckName;
+  const targetCards = state.allCards.filter(c => {
+    if (c.deleted) return false;
+    if (folderName) {
+      return getCardFolder(c).toLowerCase() === folderName.toLowerCase() &&
+             getCardDeck(c).toLowerCase() === deckName.toLowerCase();
+    } else {
+      return !getCardFolder(c) && getCardDeck(c).toLowerCase() === deckName.toLowerCase();
+    }
+  });
+
+  const cardCount = count !== undefined ? count : targetCards.length;
+  showModal(
+    `Reset FSRS Data for "${label}"?`,
+    `Are you sure you want to completely erase FSRS spaced repetition data and review logs for this collection (${cardCount} cards)? All cards will return to New state, but card content will NOT be deleted.`,
+    async () => {
+      if (targetCards.length === 0) return;
+      const now = Date.now();
+      const updatedCards = targetCards.map(c => {
+        const copy = { ...c, fsrs_stats: createDefaultFSRSStats(), last_modified: now };
+        delete copy.sm2_stats;
+        return copy;
+      });
+
+      try {
+        await db.saveCards(updatedCards);
+        await db.deleteReviewLogsForCards(updatedCards.map(c => c.id));
+        showToast(`Reset FSRS data for ${updatedCards.length} cards in "${label}"`, "success");
+        await _loadCardsFromDB();
+        _onSyncRequest();
+      } catch (err) {
+        console.error("Reset FSRS deck error:", err);
+        showToast("Failed to reset FSRS data", "error");
+      }
+    }
+  );
+}
+
+export function promptResetFolderFSRS(folderName, count) {
+  const targetCards = state.allCards.filter(c => {
+    if (c.deleted) return false;
+    return getCardFolder(c).toLowerCase() === folderName.toLowerCase();
+  });
+
+  const cardCount = count !== undefined ? count : targetCards.length;
+  showModal(
+    `Reset FSRS Data for Folder "${folderName}"?`,
+    `Are you sure you want to completely erase FSRS spaced repetition data and review logs for ALL collections in folder "${folderName}" (${cardCount} cards)? All cards will return to New state, but card content will NOT be deleted.`,
+    async () => {
+      if (targetCards.length === 0) return;
+      const now = Date.now();
+      const updatedCards = targetCards.map(c => {
+        const copy = { ...c, fsrs_stats: createDefaultFSRSStats(), last_modified: now };
+        delete copy.sm2_stats;
+        return copy;
+      });
+
+      try {
+        await db.saveCards(updatedCards);
+        await db.deleteReviewLogsForCards(updatedCards.map(c => c.id));
+        showToast(`Reset FSRS data for ${updatedCards.length} cards in folder "${folderName}"`, "success");
+        await _loadCardsFromDB();
+        _onSyncRequest();
+      } catch (err) {
+        console.error("Reset FSRS folder error:", err);
+        showToast("Failed to reset FSRS data", "error");
       }
     }
   );

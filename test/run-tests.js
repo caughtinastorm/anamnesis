@@ -17,6 +17,7 @@ import {
   calculateRetrievability,
   calculateInterval,
   calculateFSRS5,
+  createDefaultFSRSStats,
   Rating,
   State,
   DEFAULT_TARGET_RETENTION
@@ -25,7 +26,9 @@ import {
   escapeHTML,
   sanitizeHTML,
   plainText,
-  getLocalDateString
+  getLocalDateString,
+  limitText,
+  formatDeckSelectionLabel
 } from "../js/utils.js";
 import { calculateStreak } from "../js/dashboard.js";
 import { renderCardContent } from "../js/study.js";
@@ -177,6 +180,20 @@ runTest("plainText strips HTML and normalizes whitespace", () => {
   const input = `<b>Hello</b><br>world   &amp; test`;
   const plain = plainText(input);
   assert.equal(plain, "Hello world &amp; test");
+});
+
+runTest("limitText limits text length and appends ellipsis without exceeding limit", () => {
+  assert.equal(limitText("Short Deck", 20), "Short Deck");
+  assert.equal(limitText("Super Long Deck Name Exceeding Twenty Characters", 20), "Super Long Deck Nam…");
+  assert.equal(limitText("Super Long Deck Name Exceeding Twenty Characters", 20).length, 20);
+  assert.equal(limitText("", 10), "");
+});
+
+runTest("formatDeckSelectionLabel formats and limits long collection names", () => {
+  assert.equal(formatDeckSelectionLabel("all"), "📁 All Collections");
+  assert.equal(formatDeckSelectionLabel("deck:Grammar"), "🗂️ Grammar");
+  assert.equal(formatDeckSelectionLabel("deck:Super Long Deck Name Exceeding Twenty Characters", 20), "🗂️ Super Long Deck…");
+  assert.equal(formatDeckSelectionLabel("folder:Advanced Japanese Kanji & Grammar", 20), "📁 Advanced Japanes…");
 });
 
 console.log("\n=== 3. LOCAL TIME & STREAK TESTS ===");
@@ -407,6 +424,59 @@ runTest("calculateFSRS5 never creates or maintains sm2_stats", () => {
   assert.equal(updated.sm2_stats, undefined, "sm2_stats must be completely deleted from updated cards");
   assert.ok(updated.fsrs_stats, "fsrs_stats must exist");
   assert.ok(updated.fsrs_stats.stability > 0, "FSRS stability must be calculated");
+});
+
+runTest("Resetting FSRS data resets stats to default, purges legacy SM2, and preserves card content", () => {
+  const card = {
+    id: "card-reset-1",
+    front: "Katakana",
+    back: "カタカナ",
+    sub: "Alphabet",
+    description: "Syllabary",
+    folder: "Japanese",
+    deck: "Katakana",
+    sm2_stats: { ease_factor: 2.1, interval: 14, repetitions: 5 },
+    fsrs_stats: {
+      stability: 12.5,
+      difficulty: 6.2,
+      repetitions: 7,
+      lapses: 1,
+      state: State.Review,
+      last_review: 1600000000000,
+      next_review: 1601000000000,
+      interval: 12
+    },
+    last_modified: 1500000000000
+  };
+
+  const now = Date.now();
+  const resetCard = {
+    ...card,
+    fsrs_stats: createDefaultFSRSStats(),
+    last_modified: now
+  };
+  delete resetCard.sm2_stats;
+
+  assert.equal(resetCard.front, "Katakana");
+  assert.equal(resetCard.back, "カタカナ");
+  assert.equal(resetCard.sub, "Alphabet");
+  assert.equal(resetCard.description, "Syllabary");
+  assert.equal(resetCard.folder, "Japanese");
+  assert.equal(resetCard.deck, "Katakana");
+  assert.equal(resetCard.id, "card-reset-1");
+  assert.equal(resetCard.last_modified, now);
+
+  assert.equal(resetCard.sm2_stats, undefined, "sm2_stats must be purged");
+  assert.deepEqual(resetCard.fsrs_stats, {
+    stability: 0,
+    difficulty: 0,
+    repetitions: 0,
+    lapses: 0,
+    state: State.New,
+    last_review: 0,
+    next_review: 0,
+    interval: 0
+  }, "FSRS stats must be reset to defaults");
 });
 
 console.log(`\nResults: ${testsPassed} passed / ${testsRun} total`);

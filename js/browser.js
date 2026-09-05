@@ -10,7 +10,7 @@
 
 import { state } from "./state.js";
 import { showToast, showModal, scrollToElement } from "./ui.js";
-import { getCardFolder, getCardDeck, getCardFullHierarchy, matchesDeckSelection, formatDeckSelectionLabel, escapeHTML, sanitizeHTML } from "./utils.js";
+import { getCardFolder, getCardDeck, getCardFullHierarchy, matchesDeckSelection, formatDeckSelectionLabel, limitText, escapeHTML, sanitizeHTML } from "./utils.js";
 import { isCardDue, isCardNew, getCardNextReview, createDefaultFSRSStats } from "../fsrs.js";
 import * as db from "../db.js";
 import { loadCardsFromDB } from "./cards.js";
@@ -198,7 +198,9 @@ export function setBrowserDeckSelection(selection = "all") {
   }
 
   if (browserPickerLabel) {
-    browserPickerLabel.textContent = formatDeckSelectionLabel(sel);
+    const rawLabel = formatDeckSelectionLabel(sel);
+    browserPickerLabel.textContent = limitText(rawLabel, 26);
+    browserPickerLabel.title = rawLabel;
   }
 
   renderCardBrowser();
@@ -577,23 +579,26 @@ async function handleBulkResetFSRS() {
 
   showModal(
     `Reset Progress on ${count} Cards?`,
-    `This will reset the FSRS memory stability and intervals for ${count} cards back to New state.`,
+    `This will reset the FSRS memory stability and intervals for ${count} cards back to New state, and purge their review history.`,
     async () => {
       const now = Date.now();
       const updatedCards = [];
 
       state.allCards.forEach(card => {
         if (selectedCardIds.has(card.id)) {
-          updatedCards.push({
+          const copy = {
             ...card,
             fsrs_stats: createDefaultFSRSStats(),
             last_modified: now
-          });
+          };
+          delete copy.sm2_stats;
+          updatedCards.push(copy);
         }
       });
 
       try {
         await db.saveCards(updatedCards);
+        await db.deleteReviewLogsForCards(updatedCards.map(c => c.id));
         showToast(`Reset progress on ${count} flashcards`, "success");
         clearSelection();
         await loadCardsFromDB();

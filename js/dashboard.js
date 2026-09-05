@@ -1,6 +1,6 @@
 import { state } from "./state.js";
 import { dom, showToast, showModal, switchView } from "./ui.js";
-import { getCardFolder, getCardDeck, getCardFullHierarchy, matchesDeckSelection, formatDeckSelectionLabel, escapeHTML, generateUUID, getLocalDateString } from "./utils.js";
+import { getCardFolder, getCardDeck, getCardFullHierarchy, matchesDeckSelection, formatDeckSelectionLabel, limitText, escapeHTML, generateUUID, getLocalDateString } from "./utils.js";
 import { isCardDue, isCardNew, createDefaultFSRSStats } from "../fsrs.js";
 import * as db from "../db.js";
 import { loadCardsFromDB } from "./cards.js";
@@ -209,13 +209,16 @@ export function updateDashboardPickerDisplay() {
   const subEl = document.getElementById("dashboard-deck-stats");
   const duePillEl = document.getElementById("dashboard-deck-due-pill");
   const resetBtn = document.getElementById("btn-dashboard-reset-deck");
+  const resetFsrsBtn = document.getElementById("btn-dashboard-reset-fsrs");
 
   const filtered = filterCards();
   const due = state.dueCards.length;
   const total = filtered.length;
 
+  const fullLabel = formatDeckSelectionLabel(currentVal);
   if (titleEl) {
-    titleEl.textContent = formatDeckSelectionLabel(currentVal);
+    titleEl.textContent = limitText(fullLabel, 32);
+    titleEl.title = fullLabel;
   }
 
   if (subEl) {
@@ -232,6 +235,11 @@ export function updateDashboardPickerDisplay() {
   if (resetBtn) {
     resetBtn.classList.toggle("hidden", currentVal === "all");
     resetBtn.style.display = currentVal === "all" ? "none" : "inline-flex";
+  }
+
+  if (resetFsrsBtn) {
+    resetFsrsBtn.classList.toggle("hidden", currentVal === "all");
+    resetFsrsBtn.style.display = currentVal === "all" ? "none" : "inline-flex";
   }
 }
 
@@ -286,6 +294,15 @@ export function initDashboardPickerButton() {
       e.preventDefault();
       setActiveDeckSelection("all");
       showToast("Reset to All Collections", "info");
+    });
+  }
+
+  const resetFsrsBtn = document.getElementById("btn-dashboard-reset-fsrs");
+  if (resetFsrsBtn) {
+    resetFsrsBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      promptResetCurrentSelectionFSRS();
     });
   }
 
@@ -395,6 +412,16 @@ export function renderFoldersTree() {
     });
     actWrap.appendChild(btnPracticeFolder);
 
+    const btnResetFolder = document.createElement("button");
+    btnResetFolder.className = "btn-folder-action btn-folder-reset-fsrs";
+    btnResetFolder.title = `Reset FSRS data for folder "${folder}"`;
+    btnResetFolder.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>`;
+    btnResetFolder.addEventListener("click", e => {
+      e.stopPropagation();
+      promptResetFolderFSRS(folder, totalCards);
+    });
+    actWrap.appendChild(btnResetFolder);
+
     const btnDeleteFolder = document.createElement("button");
     btnDeleteFolder.className = "btn-folder-action btn-folder-delete";
     btnDeleteFolder.title = `Delete folder "${folder}" and all its collections`;
@@ -463,6 +490,16 @@ export function renderFoldersTree() {
         startStudySession(true);
       });
       actGroup.appendChild(btnDeckPractice);
+
+      const btnDeckReset = document.createElement("button");
+      btnDeckReset.className = "btn-deck-action btn-deck-reset-fsrs";
+      btnDeckReset.title = `Reset FSRS data for collection "${deck}"`;
+      btnDeckReset.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>`;
+      btnDeckReset.addEventListener("click", (e) => {
+        e.stopPropagation();
+        promptResetDeckFSRS(folder, deck, s.total);
+      });
+      actGroup.appendChild(btnDeckReset);
 
       const btnDeckDelete = document.createElement("button");
       btnDeckDelete.className = "btn-deck-action btn-deck-delete";
@@ -544,6 +581,16 @@ export function renderFoldersTree() {
       });
       actGroup.appendChild(btnDeckPractice);
 
+      const btnDeckReset = document.createElement("button");
+      btnDeckReset.className = "btn-deck-action btn-deck-reset-fsrs";
+      btnDeckReset.title = `Reset FSRS data for collection "${deck}"`;
+      btnDeckReset.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>`;
+      btnDeckReset.addEventListener("click", (e) => {
+        e.stopPropagation();
+        promptResetDeckFSRS(null, deck, s.total);
+      });
+      actGroup.appendChild(btnDeckReset);
+
       const btnDeckDelete = document.createElement("button");
       btnDeckDelete.className = "btn-deck-action btn-deck-delete";
       btnDeckDelete.title = `Delete collection "${deck}"`;
@@ -618,6 +665,88 @@ export function deleteFolder(folderName, count) {
         }
       }
     }
+  );
+}
+
+export async function executeResetCardsFSRS(cardsToReset, label) {
+  if (!cardsToReset || cardsToReset.length === 0) {
+    showToast("No cards to reset", "info");
+    return;
+  }
+
+  const now = Date.now();
+  const updatedCards = cardsToReset.map(c => {
+    const copy = { ...c, fsrs_stats: createDefaultFSRSStats(), last_modified: now };
+    delete copy.sm2_stats;
+    return copy;
+  });
+  const cardIds = updatedCards.map(c => c.id);
+
+  try {
+    await db.saveCards(updatedCards);
+    await db.deleteReviewLogsForCards(cardIds);
+    showToast(`Reset FSRS data for ${updatedCards.length} cards in "${label}"`, "success");
+    await loadCardsFromDB();
+    onSyncRequest();
+  } catch (err) {
+    console.error("Reset FSRS data error:", err);
+    showToast("Failed to reset FSRS data", "error");
+  }
+}
+
+export function promptResetCurrentSelectionFSRS() {
+  const currentVal = state.selectedDeck || "all";
+  if (currentVal === "all") {
+    showToast("Select a specific collection or folder to reset FSRS data", "info");
+    return;
+  }
+
+  const label = formatDeckSelectionLabel(currentVal);
+  const targetCards = state.allCards.filter(c => !c.deleted && matchesDeckSelection(c, currentVal));
+
+  if (targetCards.length === 0) {
+    showToast(`No cards found in "${label}"`, "info");
+    return;
+  }
+
+  showModal(
+    `Reset FSRS Data for "${label}"?`,
+    `Are you sure you want to completely erase FSRS spaced repetition data and review logs for all ${targetCards.length} cards in this collection? All cards will return to New state, but card content will NOT be deleted.`,
+    () => executeResetCardsFSRS(targetCards, label)
+  );
+}
+
+export function promptResetDeckFSRS(folderName, deckName, count) {
+  const label = folderName ? `${folderName} / ${deckName}` : deckName;
+  const targetCards = state.allCards.filter(c => {
+    if (c.deleted) return false;
+    if (folderName) {
+      return getCardFolder(c).toLowerCase() === folderName.toLowerCase() &&
+             getCardDeck(c).toLowerCase() === deckName.toLowerCase();
+    } else {
+      return !getCardFolder(c) && getCardDeck(c).toLowerCase() === deckName.toLowerCase();
+    }
+  });
+
+  const cardCount = count !== undefined ? count : targetCards.length;
+  showModal(
+    `Reset FSRS Data for "${label}"?`,
+    `Are you sure you want to completely erase FSRS spaced repetition data and review logs for this collection (${cardCount} cards)? All cards will return to New state, but card content will NOT be deleted.`,
+    () => executeResetCardsFSRS(targetCards, label)
+  );
+}
+
+export function promptResetFolderFSRS(folderName, count) {
+  const targetCards = state.allCards.filter(c => {
+    if (c.deleted) return false;
+    return getCardFolder(c).toLowerCase() === folderName.toLowerCase();
+  });
+
+  const cardCount = count !== undefined ? count : targetCards.length;
+  showModal(
+    `Reset FSRS Data for Folder "${folderName}"?`,
+    `Are you sure you want to completely erase FSRS spaced repetition data and review logs for ALL collections in folder "${folderName}" (${cardCount} cards)? All cards will return to New state, but card content will NOT be deleted.`,
+    () => executeResetCardsFSRS(targetCards, folderName)
   );
 }
 

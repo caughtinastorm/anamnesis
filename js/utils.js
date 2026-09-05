@@ -58,15 +58,33 @@ export function matchesDeckSelection(card, selection = "all") {
 }
 
 /**
- * Format a human-readable display label for a deck selection.
- * @param {string} selection
+ * Limit text to a maximum character length, appending an ellipsis if truncated.
+ * @param {string} str
+ * @param {number} maxLength
  * @returns {string}
  */
-export function formatDeckSelectionLabel(selection = "all") {
+export function limitText(str, maxLength = 26) {
+  if (!str) return "";
+  const s = String(str).trim();
+  if (!maxLength || s.length <= maxLength) return s;
+  return s.slice(0, maxLength - 1).trim() + "…";
+}
+
+/**
+ * Format a human-readable display label for a deck selection.
+ * @param {string} selection
+ * @param {number|null} [maxLength=null]
+ * @returns {string}
+ */
+export function formatDeckSelectionLabel(selection = "all", maxLength = null) {
   if (!selection || selection === "all") return "📁 All Collections";
-  if (selection.startsWith("folder:")) return `📁 ${selection.substring(7)} (All)`;
-  if (selection.startsWith("deck:")) return `🗂️ ${selection.substring(5)}`;
-  return selection;
+  let label = selection;
+  if (selection.startsWith("folder:")) label = `📁 ${selection.substring(7)} (All)`;
+  else if (selection.startsWith("deck:")) label = `🗂️ ${selection.substring(5)}`;
+  if (maxLength && label.length > maxLength) {
+    return limitText(label, maxLength);
+  }
+  return label;
 }
 
 

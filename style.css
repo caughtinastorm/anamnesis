@@ -1041,6 +1041,7 @@ textarea {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .study-header {
@@ -1049,6 +1050,11 @@ textarea {
   justify-content: space-between;
   margin-bottom: 12px;
   gap: 8px;
+  width: 100%;
+}
+
+#btn-cancel-study {
+  flex-shrink: 0;
 }
 
 .study-deck-badge {
@@ -1059,13 +1065,14 @@ textarea {
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-pill);
   padding: 3px 9px;
-  max-width: 180px;
+  max-width: 140px;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 1;
 }
 
 .study-progress {
@@ -1074,6 +1081,7 @@ textarea {
   align-items: flex-end;
   gap: 2px;
   flex: 1;
+  min-width: 60px;
 }
 
 
@@ -1109,6 +1117,7 @@ textarea {
   align-items: center;
   padding: 8px 0;
   perspective: 1000px;
+  -webkit-perspective: 1000px;
 }
 
 .flashcard {
@@ -1119,12 +1128,14 @@ textarea {
   max-height: 320px;
   position: relative;
   transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
   transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
 }
 
 .flashcard.flipped {
-  transform: rotateY(180deg);
+  transform: rotateY(180deg) !important;
+  -webkit-transform: rotateY(180deg) !important;
 }
 
 .card-face {
@@ -1145,8 +1156,14 @@ textarea {
   box-sizing: border-box;
 }
 
+.card-front {
+  transform: rotateY(0deg);
+  -webkit-transform: rotateY(0deg);
+}
+
 .card-back {
   transform: rotateY(180deg);
+  -webkit-transform: rotateY(180deg);
 }
 
 /* Card contents labels */
@@ -1251,6 +1268,8 @@ textarea {
   font-size: 0.85rem;
   color: var(--text-secondary);
   letter-spacing: 0.02em;
+  cursor: pointer;
+  user-select: none;
 }
 
 /* Grading Bar outline style */
@@ -2785,6 +2804,12 @@ html[data-theme="light"] .btn-table-action:hover {
   color: var(--text-secondary);
 }
 
+.btn-deck-reset-fsrs:hover, .btn-folder-reset-fsrs:hover {
+  color: #f87171 !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+  background: rgba(239, 68, 68, 0.12) !important;
+}
+
 .btn-deck-delete:hover, .btn-folder-delete:hover {
   color: var(--danger-color) !important;
   border-color: var(--danger-color) !important;
@@ -3691,6 +3716,11 @@ html[data-theme="light"] .menu-item:hover {
   color: var(--danger-color);
 }
 
+.menu-item.warning:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
 .menu-divider {
   border: none;
   border-top: 1px solid var(--panel-border);
@@ -3794,6 +3824,8 @@ html[data-theme="light"] .menu-item:hover {
   align-items: center;
   gap: 10px;
   overflow: hidden;
+  min-width: 0;
+  flex: 1;
 }
 
 .gui-picker-icon-wrap {
@@ -3820,6 +3852,8 @@ html[data-theme="light"] .menu-item:hover {
   flex-direction: column;
   gap: 2px;
   overflow: hidden;
+  min-width: 0;
+  flex: 1;
 }
 
 .gui-picker-title {
@@ -3829,6 +3863,8 @@ html[data-theme="light"] .menu-item:hover {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100%;
+  display: block;
 }
 
 .gui-picker-sub {
@@ -3837,6 +3873,8 @@ html[data-theme="light"] .menu-item:hover {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100%;
+  display: block;
 }
 
 .gui-picker-right {
@@ -3887,6 +3925,17 @@ html[data-theme="light"] .menu-item:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   transition: all 0.15s ease;
+  flex-shrink: 1;
+}
+
+#browser-deck-filter-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 170px;
+  min-width: 0;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .gui-picker-filter-btn:hover {
@@ -4378,5 +4427,27 @@ html[data-theme="light"] .picker-sidebar {
     display: flex;
     justify-content: flex-end;
     gap: 6px;
+  }
+
+  .study-deck-badge {
+    max-width: 100px;
+  }
+  .progress-bar-bg {
+    max-width: 80px;
+  }
+}
+
+@media (max-width: 380px) {
+  .study-deck-badge {
+    max-width: 80px;
+  }
+  .progress-bar-bg {
+    max-width: 60px;
+  }
+  .study-header {
+    gap: 4px;
+  }
+  .study-header-actions {
+    gap: 4px;
   }
 }

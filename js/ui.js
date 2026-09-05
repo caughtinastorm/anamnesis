@@ -145,6 +145,68 @@ export function showPromptModal(title, message, defaultValue = "", onConfirm, on
   }, 50);
 }
 
+export function showPracticeModeModal(onPracticeOnly, onTrackFSRS, onCancel = null) {
+  const modal = document.getElementById("practice-modal-container");
+  if (!modal) {
+    if (confirm("Count practice session towards FSRS spaced repetition data?")) {
+      if (onTrackFSRS) onTrackFSRS();
+    } else {
+      if (onPracticeOnly) onPracticeOnly();
+    }
+    return;
+  }
+
+  const btnOnly = document.getElementById("btn-practice-only");
+  const btnFsrs = document.getElementById("btn-practice-fsrs");
+  const btnCancel = document.getElementById("btn-practice-cancel");
+
+  const close = () => {
+    modal.classList.add("hidden");
+    if (btnOnly) btnOnly.onclick = null;
+    if (btnFsrs) btnFsrs.onclick = null;
+    if (btnCancel) btnCancel.onclick = null;
+    window.removeEventListener("keydown", handleKey);
+  };
+
+  const handleKey = (e) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      close();
+      if (onCancel) onCancel();
+    }
+  };
+
+  if (btnOnly) {
+    btnOnly.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      close();
+      if (onPracticeOnly) onPracticeOnly();
+    };
+  }
+
+  if (btnFsrs) {
+    btnFsrs.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      close();
+      if (onTrackFSRS) onTrackFSRS();
+    };
+  }
+
+  if (btnCancel) {
+    btnCancel.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      close();
+      if (onCancel) onCancel();
+    };
+  }
+
+  window.addEventListener("keydown", handleKey);
+  modal.classList.remove("hidden");
+}
+
 export function initModalListeners() {
   if (dom.modalBtnCancel) {
     dom.modalBtnCancel.addEventListener("click", () => {

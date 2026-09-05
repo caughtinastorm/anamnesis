@@ -246,6 +246,34 @@ export async function deleteReviewLog(logId) {
   });
 }
 
+/**
+ * Delete all review logs associated with a list of card IDs.
+ * @param {Array<string>} cardIds
+ */
+export async function deleteReviewLogsForCards(cardIds) {
+  if (!cardIds || cardIds.length === 0) return;
+  const db = await openDB();
+  const idSet = new Set(cardIds);
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_REVIEW_LOGS, 'readwrite');
+    const store = transaction.objectStore(STORE_REVIEW_LOGS);
+    const request = store.openCursor();
+
+    request.onsuccess = (e) => {
+      const cursor = e.target.result;
+      if (cursor) {
+        if (idSet.has(cursor.value.card_id)) {
+          cursor.delete();
+        }
+        cursor.continue();
+      } else {
+        resolve();
+      }
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
 // ==========================================================================
 // Local Automated Backups API
 // ==========================================================================
