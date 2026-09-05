@@ -805,8 +805,11 @@ export function renderHeatmap() {
   }
   const sub = document.getElementById("heatmap-reviews-count");
   if (sub) sub.textContent = `${total} reviews in last 60 days`;
+  const streakVal = calculateStreak(h);
   const streak = document.getElementById("stat-streak-days");
-  if (streak) streak.textContent = calculateStreak(h);
+  if (streak) streak.textContent = streakVal;
+  const heroStreak = document.getElementById("hero-streak-days");
+  if (heroStreak) heroStreak.textContent = `${streakVal}d`;
 }
 
 export async function handleQuickAddCard() {

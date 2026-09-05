@@ -69,98 +69,85 @@
         
         <!-- Dashboard Sub-view -->
         <div id="subview-dashboard" class="subview active">
-          <div class="dashboard-hero">
-            <div class="hero-glow-backdrop"></div>
-            <div class="hero-content">
-              <div class="hero-badge">FSRS-5 SCHEDULER ACTIVE</div>
-              <div class="hero-title-row">
-                <h2>Active Recall</h2>
-                <div class="hero-streak-badge" id="hero-streak-badge">
-                  <span class="streak-flame">🔥</span>
-                  <span id="stat-streak-days">0</span>d Streak
-                </div>
-              </div>
-              <p class="dashboard-subtitle">Optimal memory retention powered by FSRS-5 Stability & Retrievability models.</p>
+          <!-- Unified View Header -->
+          <div class="view-header">
+            <div class="view-header-content">
+              <h2>Review</h2>
+              <p>Spaced repetition active recall powered by FSRS-5 Stability &amp; Retrievability models.</p>
             </div>
-            <div class="hero-graphic">
-              <svg class="hero-column-svg" viewBox="0 0 80 80" fill="none" stroke="currentColor">
-                <rect x="18" y="16" width="44" height="4" rx="1" fill="var(--text-primary)" />
-                <path d="M16 25 C12 25 10 21 14 18 C18 15 26 21 26 25 C26 27 24 29 22 29 C20 29 18 27 18 25" stroke="var(--text-primary)" stroke-width="2.2" fill="none" />
-                <path d="M64 25 C68 25 70 21 66 18 C62 15 54 21 54 25 C54 27 56 29 58 29 C60 29 62 27 62 25" stroke="var(--text-primary)" stroke-width="2.2" fill="none" />
-                <path d="M22 23 C30 27 50 27 58 23" stroke="var(--text-primary)" stroke-width="2" />
-                <path d="M25 32 L25 64" stroke="var(--text-primary)" stroke-width="2" stroke-linecap="round" />
-                <path d="M31 32 L31 64" stroke="var(--text-primary)" stroke-width="2" stroke-linecap="round" />
-                <path d="M37 32 L37 64" stroke="var(--text-primary)" stroke-width="2" stroke-linecap="round" />
-                <path d="M43 32 L43 64" stroke="var(--text-primary)" stroke-width="2" stroke-linecap="round" />
-                <path d="M49 32 L49 64" stroke="var(--text-primary)" stroke-width="2" stroke-linecap="round" />
-                <path d="M55 32 L55 64" stroke="var(--text-primary)" stroke-width="2" stroke-linecap="round" />
-                <rect x="20" y="64" width="40" height="4" rx="1" fill="var(--text-primary)" />
-              </svg>
+            <div class="view-header-badges">
+              <div class="hero-streak-badge" id="hero-streak-badge" title="Consecutive active review streak">
+                <span class="streak-flame">🔥</span>
+                <span id="stat-streak-days">0</span>d Streak
+              </div>
+              <div class="header-status-pill">
+                <span class="status-indicator-dot"></span>
+                <span>FSRS-5 Active</span>
+              </div>
             </div>
           </div>
 
-          <!-- Responsive Dashboard Layout Container -->
-          <div class="dashboard-layout-container">
-            
-            <!-- Statistics Panel -->
-            <div class="stats-grid">
-              <div class="stat-card due">
+          <!-- Statistics Panel: 3 Balanced Cards Spanning Full Width -->
+          <div class="stats-grid">
+            <div class="stat-card due">
+              <div class="stat-card-icon-wrap">
                 <svg class="stat-icon-svg" viewBox="0 0 24 24">
                   <circle cx="12" cy="12" r="10" stroke="currentColor" fill="none"/>
                   <polyline points="12 6 12 12 16 14" stroke="currentColor"/>
                 </svg>
-                <div class="stat-info">
-                  <span class="stat-val" id="stat-due-count">0</span>
-                  <span class="stat-label">Due</span>
-                </div>
               </div>
-              
-              <div class="stat-card new">
+              <div class="stat-info">
+                <span class="stat-val" id="stat-due-count">0</span>
+                <span class="stat-label">Due Today</span>
+              </div>
+            </div>
+            
+            <div class="stat-card new">
+              <div class="stat-card-icon-wrap">
                 <svg class="stat-icon-svg" viewBox="0 0 24 24">
                   <circle cx="12" cy="12" r="10" stroke="currentColor" fill="none"/>
                   <line x1="12" y1="8" x2="12" y2="16" stroke="currentColor"/>
                   <line x1="8" y1="12" x2="16" y2="12" stroke="currentColor"/>
                 </svg>
-                <div class="stat-info">
-                  <span class="stat-val" id="stat-new-count">0</span>
-                  <span class="stat-label">New</span>
-                </div>
               </div>
+              <div class="stat-info">
+                <span class="stat-val" id="stat-new-count">0</span>
+                <span class="stat-label">New Cards</span>
+              </div>
+            </div>
 
-              <div class="stat-card total">
+            <div class="stat-card total">
+              <div class="stat-card-icon-wrap">
                 <svg class="stat-icon-svg" viewBox="0 0 24 24">
                   <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" fill="none"/>
                   <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" stroke="currentColor" fill="none"/>
                 </svg>
-                <div class="stat-info">
-                  <span class="stat-val" id="stat-total-count">0</span>
-                  <span class="stat-label">Total</span>
-                </div>
+              </div>
+              <div class="stat-info">
+                <span class="stat-val" id="stat-total-count">0</span>
+                <span class="stat-label">Total Library</span>
               </div>
             </div>
+          </div>
 
-            <!-- Activity Consistency Heatmap Card -->
-            <div class="dashboard-card activity-heatmap-card">
-              <div class="heatmap-header">
-                <span class="heatmap-title">Study Consistency</span>
-                <span class="heatmap-subtitle" id="heatmap-reviews-count">0 reviews recorded</span>
-              </div>
-              <div class="heatmap-grid" id="dashboard-heatmap-grid">
-                <!-- 60-day heatmap squares rendered via JS -->
-              </div>
-            </div>
-
-            <!-- Deck Selector & Action Panel -->
+          <!-- Balanced 2-Column Dashboard Main Layout -->
+          <div class="dashboard-main-grid">
+            
+            <!-- Left Column: Active Collection & Primary Study Actions -->
             <div class="dashboard-card deck-control-card">
               <div class="dashboard-deck-picker-header">
-                <span class="input-label">Active Collection</span>
-                <div style="display: flex; align-items: center; gap: 8px;">
+                <div>
+                  <span class="input-label">Active Collection</span>
+                  <span class="deck-picker-hint">Choose collection to study</span>
+                </div>
+                <div class="deck-picker-actions">
                   <button type="button" id="btn-dashboard-reset-deck" class="gui-picker-clear-btn hidden" title="Reset filter to All Collections">✕ Clear</button>
                   <button type="button" id="btn-dashboard-reset-fsrs" class="gui-picker-clear-btn hidden" title="Erase FSRS memory data and review history for this collection" style="color: #f87171; border-color: rgba(239, 68, 68, 0.25);">🔄 Reset FSRS</button>
                   <button type="button" id="btn-dashboard-export-deck" class="gui-picker-clear-btn" title="Export Current Collection to CSV">📥 Export</button>
-                  <span class="deck-picker-hint">Click to browse or switch</span>
                 </div>
               </div>
+
+              <!-- Visual GUI Collection Picker -->
               <button type="button" id="btn-dashboard-deck-picker" class="gui-picker-btn" title="Browse and switch collections">
                 <div class="gui-picker-left">
                   <div class="gui-picker-icon-wrap">
@@ -186,44 +173,58 @@
                   <svg class="btn-icon-svg" viewBox="0 0 24 24">
                     <polygon points="5 3 19 12 5 21 5 3"/>
                   </svg>
-                  Start Study Session
+                  Start Due Review
                 </button>
                 <button id="btn-force-review" class="btn btn-secondary btn-full btn-lg">
                   <svg class="btn-icon-svg" viewBox="0 0 24 24">
                     <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
                   </svg>
-                  Review All Cards
+                  Practice Mode
                 </button>
               </div>
             </div>
 
-            <!-- Collections Quick Study Panel -->
-            <div class="dashboard-card collections-tree-card" id="dashboard-collections-panel">
-              <div class="panel-header-with-action">
-                <div>
-                  <span class="heatmap-title">Collections &amp; Decks</span>
-                  <p class="panel-subtext">Click any deck to study due cards or practice anytime.</p>
+            <!-- Right Column: Consistency Heatmap & Collections Quick Panel -->
+            <div class="dashboard-right-col">
+              <!-- Activity Consistency Heatmap Card -->
+              <div class="dashboard-card activity-heatmap-card">
+                <div class="heatmap-header">
+                  <span class="heatmap-title">Study Consistency</span>
+                  <span class="heatmap-subtitle" id="heatmap-reviews-count">0 reviews recorded</span>
                 </div>
-                <button type="button" id="btn-dashboard-all-decks" class="btn btn-secondary btn-sm" title="View all collections in Explorer">
-                  Explorer View
-                </button>
+                <div class="heatmap-grid" id="dashboard-heatmap-grid">
+                  <!-- 60-day heatmap squares rendered via JS -->
+                </div>
               </div>
-              <div id="folders-tree-container" class="folders-tree-container">
-                <!-- Dynamically populated folders and decks -->
+
+              <!-- Collections Quick Study Panel -->
+              <div class="dashboard-card collections-tree-card" id="dashboard-collections-panel">
+                <div class="panel-header-with-action">
+                  <div>
+                    <span class="heatmap-title">Collections &amp; Decks</span>
+                    <p class="panel-subtext">Click any deck to study due cards or practice anytime.</p>
+                  </div>
+                  <button type="button" id="btn-dashboard-all-decks" class="btn btn-secondary btn-sm" title="View all collections in Explorer">
+                    Explorer View
+                  </button>
+                </div>
+                <div id="folders-tree-container" class="folders-tree-container">
+                  <!-- Dynamically populated folders and decks -->
+                </div>
               </div>
             </div>
 
-            <!-- Empty State Display -->
-            <div id="dashboard-empty-state" class="empty-state hidden">
-              <div class="empty-icon-circle">
-                <svg class="empty-icon-svg" viewBox="0 0 24 24">
-                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-                </svg>
-              </div>
-              <h3>There are no cards available</h3>
-              <p>Your collection is empty. Use Quick Add or the Import tab to create flashcards.</p>
-            </div>
+          </div>
 
+          <!-- Empty State Display -->
+          <div id="dashboard-empty-state" class="empty-state hidden">
+            <div class="empty-icon-circle">
+              <svg class="empty-icon-svg" viewBox="0 0 24 24">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              </svg>
+            </div>
+            <h3>There are no cards available</h3>
+            <p>Your collection is empty. Use Quick Add or the Import tab to create flashcards.</p>
           </div>
         </div>
 
@@ -506,7 +507,15 @@
               </select>
             </div>
           </div>
-          <button id="btn-quick-add" class="btn btn-primary btn-full">Add Card</button>
+          <div class="form-action-row">
+            <button id="btn-quick-add" class="btn btn-primary">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Add Card
+            </button>
+          </div>
         </div>
       
         <!-- Card Browser & Management Panel -->
@@ -644,21 +653,32 @@ Gracias,Thank you,greeting,Common polite phrase
 
           <div class="import-methods">
             <div class="file-picker-wrapper">
-              <label for="import-file" class="btn btn-secondary">
-                Choose Anki / CSV File
+              <label for="import-file" class="btn btn-secondary file-picker-btn">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                Choose File (.apkg, .csv)
               </label>
               <input type="file" id="import-file" accept=".apkg,.csv,.tsv,.txt" class="hidden">
-              <span id="import-file-name" class="file-name-label">No file chosen</span>
+              <span id="import-file-name" class="file-name-label">No file selected</span>
             </div>
 
             <div class="text-input-wrapper">
               <label for="import-text" class="input-label">Or paste text / CSV below:</label>
-              <textarea id="import-text" placeholder="Hablar,To speak,hablo&#10;Gracias,Thank you,greeting&#10;水|みず,Water,Essential noun"></textarea>
+              <textarea id="import-text" placeholder="Hablar,To speak,hablo&#10;Gracias,Thank you,greeting&#10;水|みず,Water,Essential noun" rows="6"></textarea>
             </div>
           </div>
 
           <div class="import-actions">
-            <button id="btn-parse-csv" class="btn btn-secondary btn-full">Preview Import</button>
+            <button id="btn-parse-csv" class="btn btn-primary btn-full">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              Preview Import
+            </button>
           </div>
         </div>
 
@@ -698,144 +718,149 @@ Gracias,Thank you,greeting,Common polite phrase
           <p>Configure device syncing, themes, and manage database.</p>
         </div>
 
-        <!-- GitHub Gist Remote Sync Section -->
-        <div class="card-panel">
-          <div class="panel-header">
-            <h3>GitHub Gist Sync</h3>
-            <p>Sync cards across devices using a private GitHub Gist.</p>
-          </div>
-          
-          <div class="form-group">
-            <label for="settings-pat" class="input-label">GitHub Personal Access Token (PAT)</label>
-            <input type="password" id="settings-pat" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
-            <small class="help-text">Requires <code>gist</code> scope to create or update private gists.</small>
-          </div>
+        <div class="settings-grid">
+          <!-- GitHub Gist Remote Sync Section -->
+          <div class="card-panel">
+            <div class="panel-header">
+              <h3>GitHub Gist Sync</h3>
+              <p>Sync cards across devices using a private GitHub Gist.</p>
+            </div>
+            
+            <div class="form-group">
+              <label for="settings-pat" class="input-label">GitHub Personal Access Token (PAT)</label>
+              <input type="password" id="settings-pat" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+              <small class="help-text">Requires <code>gist</code> scope to create or update private gists.</small>
+            </div>
 
-          <div class="form-group">
-            <label for="settings-gist-id" class="input-label">Gist ID</label>
-            <div class="input-with-button">
-              <input type="text" id="settings-gist-id" placeholder="Paste Gist ID or leave empty to auto-create">
+            <div class="form-group">
+              <label for="settings-gist-id" class="input-label">Gist ID</label>
+              <div class="input-with-button">
+                <input type="text" id="settings-gist-id" placeholder="Paste Gist ID or leave empty to auto-create">
+              </div>
+            </div>
+
+            <div class="sync-actions-grid">
+              <button id="btn-validate-token" class="btn btn-secondary">Verify Token</button>
+              <button id="btn-create-gist" class="btn btn-secondary">Create Gist</button>
+              <button id="btn-save-credentials" class="btn btn-primary">Save Config</button>
+            </div>
+
+            <div id="sync-console-log" class="sync-log-terminal hidden">
+              <!-- Terminal logs go here -->
+            </div>
+
+            <div class="manual-sync-trigger hidden" id="manual-sync-container">
+              <button id="btn-force-sync" class="btn btn-secondary btn-full">
+                Sync Data Now
+              </button>
+              <p id="sync-last-time-label" class="sync-timestamp-footer">Last synced: Never</p>
             </div>
           </div>
 
-          <div class="sync-actions-grid">
-            <button id="btn-validate-token" class="btn btn-secondary">Verify Token</button>
-            <button id="btn-create-gist" class="btn btn-secondary">Create Gist</button>
-            <button id="btn-save-credentials" class="btn btn-primary">Save Config</button>
-          </div>
-
-          <div id="sync-console-log" class="sync-log-terminal hidden">
-            <!-- Terminal logs go here -->
-          </div>
-
-          <div class="manual-sync-trigger hidden" id="manual-sync-container">
-            <button id="btn-force-sync" class="btn btn-secondary btn-full">
-              Sync Data Now
-            </button>
-            <p id="sync-last-time-label" class="sync-timestamp-footer">Last synced: Never</p>
-          </div>
-        </div>
-
-        <!-- Spaced Repetition & Audio Settings -->
-        <div class="card-panel">
-          <div class="panel-header">
-            <h3>Spaced Repetition & Audio</h3>
-            <p>FSRS-5 Next-Gen Model & Native Speech Pronunciation</p>
-          </div>
-          
-          <div class="form-group">
-            <label for="settings-voice-lang" class="input-label">Pronunciation Language</label>
-            <select id="settings-voice-lang" class="select-input">
-              <option value="auto">Auto-Detect Language</option>
-              <option value="es-ES">Spanish (Spain - es-ES)</option>
-              <option value="es-MX">Spanish (Latin America - es-MX)</option>
-              <option value="en-US">English (US - en-US)</option>
-              <option value="en-GB">English (UK - en-GB)</option>
-              <option value="fr-FR">French (France - fr-FR)</option>
-              <option value="de-DE">German (Germany - de-DE)</option>
-              <option value="ja-JP">Japanese (Japan - ja-JP)</option>
-              <option value="it-IT">Italian (Italy - it-IT)</option>
-              <option value="ru-RU">Russian (Russia - ru-RU)</option>
-              <option value="pt-BR">Portuguese (Brazil - pt-BR)</option>
-              <option value="zh-CN">Chinese (Mandarin - zh-CN)</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-              <label for="settings-target-retention" class="input-label" style="margin-bottom: 0;">FSRS-5 Target Retention Rate</label>
-              <span id="target-retention-badge" class="badge-pill" style="font-weight: 700; color: var(--accent-color);">90%</span>
+          <!-- Spaced Repetition & Audio Settings -->
+          <div class="card-panel">
+            <div class="panel-header">
+              <h3>Spaced Repetition & Audio</h3>
+              <p>FSRS-5 Next-Gen Model & Native Speech Pronunciation</p>
             </div>
-            <div style="display: flex; align-items: center; gap: 12px;">
-              <input type="range" id="settings-target-retention" min="70" max="97" step="1" value="90" style="flex: 1; accent-color: var(--accent-color); cursor: pointer;">
+            
+            <div class="form-group">
+              <label for="settings-voice-lang" class="input-label">Pronunciation Language</label>
+              <select id="settings-voice-lang" class="select-input">
+                <option value="auto">Auto-Detect Language</option>
+                <option value="es-ES">Spanish (Spain - es-ES)</option>
+                <option value="es-MX">Spanish (Latin America - es-MX)</option>
+                <option value="en-US">English (US - en-US)</option>
+                <option value="en-GB">English (UK - en-GB)</option>
+                <option value="fr-FR">French (France - fr-FR)</option>
+                <option value="de-DE">German (Germany - de-DE)</option>
+                <option value="ja-JP">Japanese (Japan - ja-JP)</option>
+                <option value="it-IT">Italian (Italy - it-IT)</option>
+                <option value="ru-RU">Russian (Russia - ru-RU)</option>
+                <option value="pt-BR">Portuguese (Brazil - pt-BR)</option>
+                <option value="zh-CN">Chinese (Mandarin - zh-CN)</option>
+              </select>
             </div>
-            <small class="help-text">Standard recommendation is 90%. Lower rates (e.g. 85%) reduce daily review volume; higher rates (e.g. 95%) improve recall accuracy at the cost of more frequent reviews.</small>
-          </div>
 
-          <div class="form-group">
-            <label for="settings-review-cap" class="input-label">Vacation / Catch-Up Mode (Daily Review Cap)</label>
-            <select id="settings-review-cap" class="select-input">
-              <option value="0">Off (Review All Due Cards)</option>
-              <option value="15">Max 15 Due Cards / Session</option>
-              <option value="25">Max 25 Due Cards / Session (Recommended)</option>
-              <option value="35">Max 35 Due Cards / Session</option>
-              <option value="50">Max 50 Due Cards / Session</option>
-            </select>
-            <small class="help-text">Caps overdue card load to prevent burnout when returning after a break.</small>
-          </div>
-        </div>
-
-        <!-- Backup / Local Data Management -->
-        <div class="card-panel">
-          <div class="panel-header">
-            <h3>Data Administration</h3>
-            <p>Export your flashcards or clear the offline database.</p>
-          </div>
-          
-          <div class="admin-actions-grid">
-            <button id="btn-export-csv" class="btn btn-secondary btn-full">Export All Collections to CSV</button>
-            <button id="btn-clear-db" class="btn btn-danger btn-full">Delete All Local Data</button>
-          </div>
-        </div>
-
-        <!-- Local Database Backups Panel -->
-        <div class="card-panel">
-          <div class="panel-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
-            <div>
-              <h3>Local Database Backups</h3>
-              <p>Rolling historical snapshots stored safely in local IndexedDB storage.</p>
+            <div class="form-group">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label for="settings-target-retention" class="input-label" style="margin-bottom: 0;">FSRS-5 Target Retention Rate</label>
+                <span id="target-retention-badge" class="badge-pill" style="font-weight: 700; color: var(--accent-color);">90%</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <input type="range" id="settings-target-retention" min="70" max="97" step="1" value="90" style="flex: 1; accent-color: var(--accent-color); cursor: pointer;">
+              </div>
+              <small class="help-text">Standard recommendation is 90%. Lower rates reduce daily review volume; higher rates improve recall accuracy.</small>
             </div>
-            <button id="btn-create-backup-now" class="btn btn-secondary btn-sm" title="Take a local snapshot right now">
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-              Create Snapshot
-            </button>
-          </div>
-          <div id="backups-list-container" class="backups-list-container">
-            <!-- Dynamically populated -->
-          </div>
-        </div>
 
-        <!-- Visual Settings -->
-        <div class="card-panel">
-          <div class="panel-header">
-            <h3>Appearance Theme</h3>
-          </div>
-          <div class="theme-picker">
-            <button class="btn btn-theme active" data-theme-value="system">System</button>
-            <button class="btn btn-theme" data-theme-value="light">Light</button>
-            <button class="btn btn-theme" data-theme-value="dark">Dark</button>
-          </div>
-        <!-- App Guide & Onboarding -->
-        <div class="card-panel">
-          <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <h3>App Guide &amp; Introduction</h3>
-              <p>Revisit the interactive walkthrough explaining each section and feature.</p>
+            <div class="form-group">
+              <label for="settings-review-cap" class="input-label">Vacation / Catch-Up Mode (Daily Review Cap)</label>
+              <select id="settings-review-cap" class="select-input">
+                <option value="0">Off (Review All Due Cards)</option>
+                <option value="15">Max 15 Due Cards / Session</option>
+                <option value="25">Max 25 Due Cards / Session (Recommended)</option>
+                <option value="35">Max 35 Due Cards / Session</option>
+                <option value="50">Max 50 Due Cards / Session</option>
+              </select>
+              <small class="help-text">Caps overdue card load to prevent burnout when returning after a break.</small>
             </div>
-            <button id="btn-start-tour" class="btn btn-secondary btn-sm" type="button">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor"/></svg>
-              Start Tour
-            </button>
+          </div>
+
+          <!-- Backup / Local Data Management -->
+          <div class="card-panel">
+            <div class="panel-header">
+              <h3>Data Administration</h3>
+              <p>Export your flashcards or clear the offline database.</p>
+            </div>
+            
+            <div class="admin-actions-grid">
+              <button id="btn-export-csv" class="btn btn-secondary btn-full">Export All Collections to CSV</button>
+              <button id="btn-clear-db" class="btn btn-danger btn-full">Delete All Local Data</button>
+            </div>
+          </div>
+
+          <!-- Local Database Backups Panel -->
+          <div class="card-panel">
+            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <div>
+                <h3>Local Database Backups</h3>
+                <p>Rolling historical snapshots stored safely in local IndexedDB storage.</p>
+              </div>
+              <button id="btn-create-backup-now" class="btn btn-secondary btn-sm" title="Take a local snapshot right now">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Create Snapshot
+              </button>
+            </div>
+            <div id="backups-list-container" class="backups-list-container">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Visual Settings -->
+          <div class="card-panel">
+            <div class="panel-header">
+              <h3>Appearance Theme</h3>
+              <p>Switch between dark, light, or system default color themes.</p>
+            </div>
+            <div class="theme-picker">
+              <button class="btn btn-theme active" data-theme-value="system">System</button>
+              <button class="btn btn-theme" data-theme-value="light">Light</button>
+              <button class="btn btn-theme" data-theme-value="dark">Dark</button>
+            </div>
+          </div>
+
+          <!-- App Guide & Onboarding -->
+          <div class="card-panel">
+            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <h3>App Guide &amp; Introduction</h3>
+                <p>Revisit the interactive walkthrough explaining each section and feature.</p>
+              </div>
+              <button id="btn-start-tour" class="btn btn-secondary btn-sm" type="button">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor"/></svg>
+                Start Tour
+              </button>
+            </div>
           </div>
         </div>
 
