@@ -44,11 +44,20 @@
         </svg>
         <h1 class="logo-text">anamnesis</h1>
       </div>
-      <div class="header-sync" id="header-sync-status" title="Sync Status">
-        <svg class="sync-icon-svg" viewBox="0 0 24 24">
-          <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l.56-.56" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <span class="sync-label" id="sync-label-text">Offline</span>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button type="button" id="btn-header-help" class="header-help-btn" title="App Introduction &amp; Guide">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </button>
+        <div class="header-sync" id="header-sync-status" title="Sync Status">
+          <svg class="sync-icon-svg" viewBox="0 0 24 24">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l.56-.56" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="sync-label" id="sync-label-text">Offline</span>
+        </div>
       </div>
     </header>
 
@@ -804,6 +813,18 @@ Gracias,Thank you,greeting,Common polite phrase
             <button class="btn btn-theme" data-theme-value="light">Light</button>
             <button class="btn btn-theme" data-theme-value="dark">Dark</button>
           </div>
+        <!-- App Guide & Onboarding -->
+        <div class="card-panel">
+          <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <h3>App Guide &amp; Introduction</h3>
+              <p>Revisit the interactive walkthrough explaining each section and feature.</p>
+            </div>
+            <button id="btn-start-tour" class="btn btn-secondary btn-sm" type="button">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor"/></svg>
+              Start Tour
+            </button>
+          </div>
         </div>
 
         <div class="app-version-footer">
@@ -917,7 +938,43 @@ Gracias,Thank you,greeting,Common polite phrase
       </div>
     </div>
 
-    
+    <!-- App Introduction & Onboarding Tour Modal -->
+    <div id="intro-tour-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="intro-tour-title">
+      <div class="modal-content card-panel intro-tour-panel">
+        <div class="intro-tour-header">
+          <div class="intro-step-badge" id="intro-step-badge">
+            <span class="intro-step-tag" id="intro-step-tag">⚡ Quick Start</span>
+            <span class="intro-step-counter" id="intro-step-counter">1 of 7</span>
+          </div>
+          <button type="button" id="btn-intro-skip-top" class="intro-skip-btn" title="Skip Introduction">
+            ✕ Skip
+          </button>
+        </div>
+
+        <div class="intro-hero-wrap" id="intro-hero-wrap"></div>
+
+        <div class="intro-body-wrap">
+          <h3 id="intro-tour-title" class="intro-title">Welcome to anamnesis</h3>
+          <div id="intro-tour-body" class="intro-body"></div>
+        </div>
+
+        <div class="intro-tour-footer">
+          <button type="button" id="btn-intro-skip" class="btn-intro-skip-link">
+            Skip Tutorial
+          </button>
+          <div class="intro-dots" id="intro-dots"></div>
+          <div class="intro-nav-btns">
+            <button type="button" id="btn-intro-prev" class="btn btn-secondary btn-sm hidden">
+              ‹ Back
+            </button>
+            <button type="button" id="btn-intro-next" class="btn btn-primary btn-sm">
+              Next ›
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Edit Flashcard Modal Dialog -->
     <div id="edit-modal-container" class="modal-overlay hidden">
       <div class="modal-content card-panel edit-card-modal-content">

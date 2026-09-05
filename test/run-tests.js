@@ -35,6 +35,7 @@ import { renderCardContent } from "../js/study.js";
 import { mergeCards, cardsDiffer, getCardTimestamp, sanitizeGistId } from "../sync.js";
 import { parseAnkiText, normalizeAnkiDeck, expandClozeCards, cleanHtmlTags } from "../anki.js";
 import { sortCardsLogically } from "../js/explorer-actions.js";
+import { INTRO_STEPS } from "../js/intro.js";
 
 let testsRun = 0;
 let testsPassed = 0;
@@ -477,6 +478,35 @@ runTest("Resetting FSRS data resets stats to default, purges legacy SM2, and pre
     next_review: 0,
     interval: 0
   }, "FSRS stats must be reset to defaults");
+});
+
+console.log("\n=== 8. ONBOARDING & INTRODUCTION TOUR TESTS ===");
+
+runTest("INTRO_STEPS contains all essential app areas with valid metadata", () => {
+  assert.ok(Array.isArray(INTRO_STEPS), "INTRO_STEPS must be an array");
+  assert.ok(INTRO_STEPS.length >= 6, "Must contain at least 6 guided steps");
+
+  const validViews = new Set(["view-review", "view-decks", "view-browser", "view-settings"]);
+
+  INTRO_STEPS.forEach((step, idx) => {
+    assert.ok(step.id, `Step ${idx} must have an id`);
+    assert.ok(step.tag, `Step ${idx} must have a tag badge`);
+    assert.ok(step.title, `Step ${idx} must have a title`);
+    assert.ok(step.bodyHtml, `Step ${idx} must have body HTML content`);
+    assert.ok(validViews.has(step.view), `Step ${idx} view '${step.view}' must be a valid app view`);
+  });
+
+  // Check that the first step covers welcome and has a skip hint
+  assert.equal(INTRO_STEPS[0].id, "welcome");
+  assert.ok(INTRO_STEPS[0].bodyHtml.includes("skip"), "Step 1 must explicitly mention skipping");
+
+  // Check key area steps exist
+  const stepIds = INTRO_STEPS.map(s => s.id);
+  assert.ok(stepIds.includes("dashboard"), "Must have dashboard step");
+  assert.ok(stepIds.includes("study-practice"), "Must have study vs practice step");
+  assert.ok(stepIds.includes("decks-explorer"), "Must have deck explorer step");
+  assert.ok(stepIds.includes("card-browser"), "Must have card browser step");
+  assert.ok(stepIds.includes("settings-sync"), "Must have settings and sync step");
 });
 
 console.log(`\nResults: ${testsPassed} passed / ${testsRun} total`);
