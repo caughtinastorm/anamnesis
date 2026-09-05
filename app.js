@@ -16,6 +16,7 @@ import { initCardBrowser, onSyncNeeded as browserOnSync, refreshBrowser } from "
 import { initExplorer, onSyncNeeded as explorerOnSync, renderExplorer } from "./js/explorer.js";
 import { initCollectionPicker } from "./js/picker.js";
 import { initIntroTour, checkAutoStartIntro } from "./js/intro.js";
+import { checkAndSeedStarterDecks } from "./js/presets.js";
 
 // Wire up sync callbacks so all modules trigger debounced background sync
 const requestSync = (delayMs = 1200) => requestDebouncedSync(delayMs);
@@ -118,6 +119,7 @@ async function initApp() {
     registerServiceWorker();
 
     await loadCardsFromDB();
+    await checkAndSeedStarterDecks();
     performBackgroundSync();
     checkAutoStartIntro();
   } catch (err) {

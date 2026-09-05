@@ -18,6 +18,7 @@ import { createDefaultFSRSStats } from "../fsrs.js";
 import * as db from "../db.js";
 import { loadCardsFromDB } from "./cards.js";
 import { openCollectionPicker } from "./picker.js";
+import { loadN5KanjiDeck } from "./presets.js";
 
 let onSyncRequest = () => {};
 export function onSyncNeeded(cb) { onSyncRequest = cb; }
@@ -69,6 +70,21 @@ export function initImportEventListeners() {
           showToast(`Ready to import into "${name.trim()}"`, "success");
         }
       );
+    });
+  }
+
+  const btnLoadN5 = document.getElementById("btn-load-n5-kanji");
+  if (btnLoadN5) {
+    btnLoadN5.addEventListener("click", async () => {
+      btnLoadN5.disabled = true;
+      try {
+        await loadN5KanjiDeck({ notify: true });
+        switchView("view-review");
+      } catch (err) {
+        console.error("Failed to load preset deck:", err);
+      } finally {
+        btnLoadN5.disabled = false;
+      }
     });
   }
 

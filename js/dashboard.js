@@ -5,6 +5,7 @@ import { isCardDue, isCardNew, createDefaultFSRSStats } from "../fsrs.js";
 import * as db from "../db.js";
 import { loadCardsFromDB } from "./cards.js";
 import { openCollectionPicker } from "./picker.js";
+import { loadN5KanjiDeck } from "./presets.js";
 
 let onSyncRequest = () => {};
 export function onSyncNeeded(cb) { onSyncRequest = cb; }
@@ -333,6 +334,20 @@ export function initDashboardPickerButton() {
   if (dom.btnDashboardAllDecks) {
     dom.btnDashboardAllDecks.addEventListener("click", () => {
       switchView("view-decks");
+    });
+  }
+
+  const btnEmptyLoadN5 = document.getElementById("btn-empty-load-n5-kanji");
+  if (btnEmptyLoadN5) {
+    btnEmptyLoadN5.addEventListener("click", async () => {
+      btnEmptyLoadN5.disabled = true;
+      try {
+        await loadN5KanjiDeck({ notify: true });
+      } catch (err) {
+        console.error("Failed to load preset deck:", err);
+      } finally {
+        btnEmptyLoadN5.disabled = false;
+      }
     });
   }
 }

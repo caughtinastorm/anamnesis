@@ -43,6 +43,7 @@ import { mergeCards, cardsDiffer, getCardTimestamp, sanitizeGistId } from "../sy
 import { parseAnkiText, normalizeAnkiDeck, expandClozeCards, cleanHtmlTags } from "../anki.js";
 import { sortCardsLogically } from "../js/explorer-actions.js";
 import { INTRO_STEPS } from "../js/intro.js";
+import { JLPT_N5_KANJI_DECK, STARTER_FOLDER, STARTER_DECK } from "../js/presets.js";
 
 let testsRun = 0;
 let testsPassed = 0;
@@ -735,6 +736,38 @@ runTest("deferred cards return automatically at end of session and graduate comp
   assert.equal(session.graduatedCards.length, 5, "All 5 cards including parked c1 must graduate");
   assert.equal(session.deferredQueue.length, 0, "Deferred queue must be fully emptied");
   assert.equal(session.workingSet.length, 0, "Working set must be empty");
+});
+
+console.log("\n=== 10. PRELOADED JLPT N5 KANJI DECK TESTS ===");
+
+runTest("JLPT_N5_KANJI_DECK contains exactly 104 canonical N5 kanji characters", () => {
+  assert.equal(JLPT_N5_KANJI_DECK.length, 104);
+  assert.equal(STARTER_FOLDER, "Japanese");
+  assert.equal(STARTER_DECK, "JLPT N5 Kanji");
+});
+
+runTest("Every JLPT N5 Kanji card has valid front, back, and description without front spoilers", () => {
+  const frontSet = new Set();
+
+  for (const card of JLPT_N5_KANJI_DECK) {
+    // 1. Front must be a single kanji character (length 1)
+    assert.ok(card.front && card.front.length === 1, `Card front should be a single character: ${card.front}`);
+    
+    // 2. Fronts must be distinct (no duplicate kanji)
+    assert.ok(!frontSet.has(card.front), `Duplicate kanji detected: ${card.front}`);
+    frontSet.add(card.front);
+
+    // 3. Sub must be undefined/empty so it doesn't display pronunciation on front
+    assert.ok(!card.sub, `Card front must not have sub spoiler: ${card.front}`);
+
+    // 4. Back must contain On/Kun readings and meaning
+    assert.ok(card.back && card.back.includes("Kun:") && card.back.includes("On:"), `Card back missing readings: ${card.front}`);
+
+    // 5. Description must contain Radical, Mnemonic, and Examples
+    assert.ok(card.description && card.description.includes("Radical:"), `Card description missing Radical: ${card.front}`);
+    assert.ok(card.description && card.description.includes("Mnemonic:"), `Card description missing Mnemonic: ${card.front}`);
+    assert.ok(card.description && card.description.includes("Examples:"), `Card description missing Examples: ${card.front}`);
+  }
 });
 
 console.log(`\nResults: ${testsPassed} passed / ${testsRun} total`);

@@ -224,7 +224,12 @@
               </svg>
             </div>
             <h3>There are no cards available</h3>
-            <p>Your collection is empty. Use Quick Add or the Import tab to create flashcards.</p>
+            <p>Your collection is empty. Use Quick Add, Import, or load our preloaded JLPT N5 Kanji deck.</p>
+            <div style="margin-top: 14px; display: flex; justify-content: center; gap: 10px;">
+              <button type="button" id="btn-empty-load-n5-kanji" class="btn btn-primary btn-sm">
+                🎌 Load JLPT N5 Kanji Deck (104 Cards)
+              </button>
+            </div>
           </div>
         </div>
 
@@ -601,6 +606,38 @@
         <div class="view-header">
           <h2>Import Decks</h2>
           <p>Upload native Anki packages (.apkg), text exports, or pure card CSV spreadsheets.</p>
+        </div>
+
+        <!-- Preloaded Starter Decks Panel -->
+        <div class="card-panel starter-decks-panel" style="margin-bottom: var(--space-4);">
+          <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <h3>🎌 Preloaded Starter Decks</h3>
+              <p>Curated flashcard collections with verified readings, mnemonics, and examples.</p>
+            </div>
+            <span class="badge-tag card-badge">Instant Load</span>
+          </div>
+
+          <div class="starter-deck-card" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding: 14px 16px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+            <div style="max-width: 620px;">
+              <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 0.95rem; margin-bottom: 4px;">
+                <span>JLPT N5 Kanji</span>
+                <span class="badge-tag" style="font-size: 0.72rem; padding: 2px 6px;">104 Characters</span>
+                <span class="badge-tag" style="font-size: 0.72rem; padding: 2px 6px;">Strict Recognition</span>
+              </div>
+              <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0; line-height: 1.4;">
+                The complete canonical N5 Kanji syllabus. Front face is strictly the kanji character to test active recall without spoilers. Back face features English meanings, On/Kun readings, radical breakdowns, mnemonics, and real compound words.
+              </p>
+            </div>
+            <button type="button" id="btn-load-n5-kanji" class="btn btn-primary" style="white-space: nowrap;">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Load N5 Kanji Deck
+            </button>
+          </div>
         </div>
 
         <!-- Universal Bulk Import Panel (Anki .apkg, CSV, TSV) -->
