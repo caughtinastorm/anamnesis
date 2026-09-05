@@ -36,7 +36,8 @@ import {
   PRACTICE_CONFIG,
   createPracticeSession,
   pickNextPracticeCard,
-  processPracticeGrade
+  processPracticeGrade,
+  skipPracticeCard
 } from "../js/study.js";
 import { mergeCards, cardsDiffer, getCardTimestamp, sanitizeGistId } from "../sync.js";
 import { parseAnkiText, normalizeAnkiDeck, expandClozeCards, cleanHtmlTags } from "../anki.js";
@@ -675,6 +676,65 @@ runTest("Full practice simulation: 6 cards cycle and graduate completely", () =>
   assert.equal(session.pendingQueue.length, 0, "Pending queue must be empty");
   assert.equal(session.graduatedCards.length, 6, "All 6 cards must be graduated");
   assert.ok(steps < maxSteps, "Should finish cleanly without infinite loop");
+});
+
+runTest("skipPracticeCard moves card to deferredQueue and pulls new card from pendingQueue", () => {
+  const dummyCards = [
+    { id: "c1", front: "1", back: "1" },
+    { id: "c2", front: "2", back: "2" }, // troublesome leech
+    { id: "c3", front: "3", back: "3" },
+    { id: "c4", front: "4", back: "4" },
+    { id: "c5", front: "5", back: "5" }, // in pending queue
+    { id: "c6", front: "6", back: "6" }
+  ];
+
+  const session = createPracticeSession(dummyCards, PRACTICE_CONFIG);
+  assert.equal(session.workingSet.length, 4);
+  assert.equal(session.pendingQueue.length, 2);
+  assert.equal(session.deferredQueue.length, 0);
+
+  // User decides to skip c2
+  const c2 = session.workingSet.find(c => c.id === "c2");
+  const res = skipPracticeCard(session, c2);
+
+  assert.equal(res.skippedCardId, "c2");
+  assert.equal(session.deferredQueue.length, 1, "c2 must be stored in deferredQueue");
+  assert.equal(session.deferredQueue[0].id, "c2");
+  assert.ok(!session.workingSet.some(c => c.id === "c2"), "c2 must be removed from active working set");
+  assert.equal(session.workingSet.length, 4, "Working set must remain full at 4 cards");
+  assert.ok(session.workingSet.some(c => c.id === "c5"), "c5 must be pulled into working set to replace c2");
+  assert.equal(session.pendingQueue.length, 1, "Pending queue should now have 1 card (c6)");
+});
+
+runTest("deferred cards return automatically at end of session and graduate completely", () => {
+  const dummyCards = [
+    { id: "c1", front: "1", back: "1" },
+    { id: "c2", front: "2", back: "2" },
+    { id: "c3", front: "3", back: "3" },
+    { id: "c4", front: "4", back: "4" },
+    { id: "c5", front: "5", back: "5" }
+  ];
+
+  const session = createPracticeSession(dummyCards, PRACTICE_CONFIG);
+
+  // Park c1 immediately
+  const c1 = session.workingSet[0];
+  skipPracticeCard(session, c1);
+  assert.equal(session.deferredQueue.length, 1);
+  assert.ok(session.workingSet.some(c => c.id === "c5"), "c5 replaced c1 in working set");
+
+  // Graduate remaining cards in working set
+  let steps = 0;
+  const maxSteps = 100;
+  while (session.workingSet.length > 0 && steps < maxSteps) {
+    steps++;
+    const card = pickNextPracticeCard(session);
+    processPracticeGrade(session, card, Rating.Good);
+  }
+
+  assert.equal(session.graduatedCards.length, 5, "All 5 cards including parked c1 must graduate");
+  assert.equal(session.deferredQueue.length, 0, "Deferred queue must be fully emptied");
+  assert.equal(session.workingSet.length, 0, "Working set must be empty");
 });
 
 console.log(`\nResults: ${testsPassed} passed / ${testsRun} total`);

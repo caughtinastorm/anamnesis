@@ -69,6 +69,7 @@ export const dom = {
   btnTtsSpeak: $("btn-tts-speak"),
   btnRestartStudy: $("btn-restart-study"),
   btnUndoStudy: $("btn-undo-study"),
+  btnSkipCard: $("btn-skip-card"),
   browserBulkToolbar: $("browser-bulk-toolbar"),
   bulkSelectedCount: $("bulk-selected-count"),
   btnBulkMove: $("btn-bulk-move"),

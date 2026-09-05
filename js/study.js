@@ -27,6 +27,7 @@ export function createPracticeSession(cards, config = PRACTICE_CONFIG) {
   const targetStreak = config?.TARGET_STREAK || 3;
   const workingSet = cards.slice(0, batchSize);
   const pendingQueue = cards.slice(batchSize);
+  const deferredQueue = [];
   const graduatedCards = [];
   const cardStates = new Map();
 
@@ -44,6 +45,7 @@ export function createPracticeSession(cards, config = PRACTICE_CONFIG) {
   return {
     workingSet,
     pendingQueue,
+    deferredQueue,
     graduatedCards,
     cardStates,
     totalCards: cards.length,
@@ -56,7 +58,16 @@ export function createPracticeSession(cards, config = PRACTICE_CONFIG) {
 }
 
 export function pickNextPracticeCard(session) {
-  if (!session || !session.workingSet || session.workingSet.length === 0) {
+  if (!session) return null;
+
+  // If working set is depleted, restore from deferredQueue if any cards were parked
+  if ((!session.workingSet || session.workingSet.length === 0) && session.deferredQueue && session.deferredQueue.length > 0) {
+    while (session.deferredQueue.length > 0 && session.workingSet.length < session.batchSize) {
+      session.workingSet.push(session.deferredQueue.shift());
+    }
+  }
+
+  if (!session.workingSet || session.workingSet.length === 0) {
     return null;
   }
 
@@ -154,8 +165,22 @@ export function processPracticeGrade(session, card, rating) {
     }
     session.graduatedCards.push(card);
 
-    if (session.pendingQueue.length > 0) {
+    if (session.pendingQueue && session.pendingQueue.length > 0) {
       const nextCard = session.pendingQueue.shift();
+      session.workingSet.push(nextCard);
+      const nextId = nextCard.id || nextCard._id;
+      if (!session.cardStates.has(nextId)) {
+        session.cardStates.set(nextId, {
+          streak: 0,
+          totalReviews: 0,
+          nextDueTurn: session.currentTurn,
+          lastReviewedTurn: -1,
+          history: []
+        });
+      }
+    } else if (session.deferredQueue && session.deferredQueue.length > 0) {
+      // Pending queue empty: bring back deferred/parked cards
+      const nextCard = session.deferredQueue.shift();
       session.workingSet.push(nextCard);
       const nextId = nextCard.id || nextCard._id;
       if (!session.cardStates.has(nextId)) {
@@ -176,8 +201,60 @@ export function processPracticeGrade(session, card, rating) {
     newStreak,
     graduated,
     remainingWorking: session.workingSet.length,
-    remainingPending: session.pendingQueue.length,
+    remainingPending: session.pendingQueue ? session.pendingQueue.length : 0,
+    deferredCount: session.deferredQueue ? session.deferredQueue.length : 0,
     totalGraduated: session.graduatedCards.length
+  };
+}
+
+export function skipPracticeCard(session, card) {
+  if (!session || !card) return null;
+  const cardId = card.id || card._id;
+
+  const wsIdx = session.workingSet.findIndex(c => (c.id || c._id) === cardId);
+  if (wsIdx === -1) return null;
+
+  // Remove card from active working set
+  session.workingSet.splice(wsIdx, 1);
+
+  // Add to deferredQueue
+  if (!session.deferredQueue) session.deferredQueue = [];
+  session.deferredQueue.push(card);
+
+  const st = session.cardStates.get(cardId);
+  if (st) {
+    st.lastReviewedTurn = session.currentTurn;
+  }
+
+  // Refill working set from pendingQueue if available
+  if (session.pendingQueue && session.pendingQueue.length > 0) {
+    const nextCard = session.pendingQueue.shift();
+    session.workingSet.push(nextCard);
+    const nextId = nextCard.id || nextCard._id;
+    if (!session.cardStates.has(nextId)) {
+      session.cardStates.set(nextId, {
+        streak: 0,
+        totalReviews: 0,
+        nextDueTurn: session.currentTurn,
+        lastReviewedTurn: -1,
+        history: []
+      });
+    }
+  } else if (session.workingSet.length === 0 && session.deferredQueue.length > 0) {
+    // If working set is now empty and pending queue has no cards, restore from deferredQueue
+    while (session.deferredQueue.length > 0 && session.workingSet.length < session.batchSize) {
+      session.workingSet.push(session.deferredQueue.shift());
+    }
+  }
+
+  session.currentTurn++;
+  session.lastCardId = cardId;
+
+  return {
+    skippedCardId: cardId,
+    remainingWorking: session.workingSet.length,
+    remainingPending: session.pendingQueue ? session.pendingQueue.length : 0,
+    deferredCount: session.deferredQueue.length
   };
 }
 
@@ -456,9 +533,11 @@ export function renderCurrentStudyCard() {
     const graduated = practiceSession.graduatedCards.length;
     const active = practiceSession.workingSet.length;
     const target = practiceSession.targetStreak || 3;
+    const deferredCount = practiceSession.deferredQueue ? practiceSession.deferredQueue.length : 0;
 
     if (dom.studyProgressText) {
-      dom.studyProgressText.textContent = `${graduated} of ${total} Mastered (${active} active in set)`;
+      const parkedText = deferredCount > 0 ? `, ${deferredCount} parked` : "";
+      dom.studyProgressText.textContent = `${graduated} of ${total} Mastered (${active} active in set${parkedText})`;
     }
 
     if (dom.studyProgressBar) {
@@ -583,6 +662,7 @@ export async function submitCardGrade(grade) {
         currentCard: practiceSession.currentCard,
         workingSet: [...practiceSession.workingSet],
         pendingQueue: [...practiceSession.pendingQueue],
+        deferredQueue: [...(practiceSession.deferredQueue || [])],
         graduatedCards: [...practiceSession.graduatedCards],
         cardStates: cardStatesCopy
       },
@@ -718,21 +798,28 @@ export async function undoLastStudyCard() {
     practiceSession.currentCard = last.practiceSnapshot.currentCard;
     practiceSession.workingSet = [...last.practiceSnapshot.workingSet];
     practiceSession.pendingQueue = [...last.practiceSnapshot.pendingQueue];
+    practiceSession.deferredQueue = [...(last.practiceSnapshot.deferredQueue || [])];
     practiceSession.graduatedCards = [...last.practiceSnapshot.graduatedCards];
     practiceSession.cardStates = last.practiceSnapshot.cardStates;
 
     state.studySessionCards = last.practiceSnapshot.currentCard ? [last.practiceSnapshot.currentCard] : [];
     state.currentCardIndex = 0;
   } else {
-    // If card was re-appended for 'Again', remove the appended instance from pool
-    if (last.wasPushedAgain && state.studySessionCards.length > last.cardIndex + 1) {
-      const lastItem = state.studySessionCards[state.studySessionCards.length - 1];
-      if (lastItem && (lastItem.id || lastItem._id) === (last.cardBefore.id || last.cardBefore._id)) {
-        state.studySessionCards.pop();
+    if (last.wasSkipped) {
+      state.studySessionCards.pop();
+      state.studySessionCards.splice(last.cardIndex, 0, last.cardBefore);
+      state.currentCardIndex = last.cardIndex;
+    } else {
+      // If card was re-appended for 'Again', remove the appended instance from pool
+      if (last.wasPushedAgain && state.studySessionCards.length > last.cardIndex + 1) {
+        const lastItem = state.studySessionCards[state.studySessionCards.length - 1];
+        if (lastItem && (lastItem.id || lastItem._id) === (last.cardBefore.id || last.cardBefore._id)) {
+          state.studySessionCards.pop();
+        }
       }
+      state.studySessionCards[last.cardIndex] = last.cardBefore;
+      state.currentCardIndex = last.cardIndex;
     }
-    state.studySessionCards[last.cardIndex] = last.cardBefore;
-    state.currentCardIndex = last.cardIndex;
   }
 
   // Restore session card and in-memory allCards if FSRS was tracked
@@ -755,7 +842,104 @@ export async function undoLastStudyCard() {
   state.isFlipped = false;
   isGradingInProgress = false;
   renderCurrentStudyCard();
-  showToast("Reverted last review", "info");
+  showToast("Reverted last action", "info");
+}
+
+/**
+ * Defers/parks the currently presented card until the end of the study/practice session.
+ * Prevents leech cards from jamming the 4-card practice buffer.
+ */
+export function skipCurrentCard() {
+  if (isGradingInProgress) return;
+
+  const card = (currentSessionIsForce && practiceSession)
+    ? practiceSession.currentCard
+    : state.studySessionCards[state.currentCardIndex];
+
+  if (!card) return;
+
+  if (currentSessionIsForce && practiceSession) {
+    const totalRemaining = practiceSession.workingSet.length + 
+      (practiceSession.pendingQueue ? practiceSession.pendingQueue.length : 0) + 
+      (practiceSession.deferredQueue ? practiceSession.deferredQueue.length : 0);
+      
+    if (totalRemaining <= 1) {
+      showToast("Only 1 card left in session", "info");
+      return;
+    }
+
+    // Save undo state
+    const cardStatesCopy = new Map();
+    for (const [k, v] of practiceSession.cardStates.entries()) {
+      cardStatesCopy.set(k, { ...v, history: [...(v.history || [])] });
+    }
+    studyUndoStack.push({
+      isPractice: true,
+      wasSkipped: true,
+      cardBefore: JSON.parse(JSON.stringify(card)),
+      practiceSnapshot: {
+        currentTurn: practiceSession.currentTurn,
+        lastCardId: practiceSession.lastCardId,
+        currentCard: practiceSession.currentCard,
+        workingSet: [...practiceSession.workingSet],
+        pendingQueue: [...(practiceSession.pendingQueue || [])],
+        deferredQueue: [...(practiceSession.deferredQueue || [])],
+        graduatedCards: [...practiceSession.graduatedCards],
+        cardStates: cardStatesCopy
+      },
+      logId: null
+    });
+    updateUndoButtonState();
+
+    skipPracticeCard(practiceSession, card);
+
+    if (practiceSession.workingSet.length === 0) {
+      if (practiceSession.deferredQueue && practiceSession.deferredQueue.length > 0) {
+        while (practiceSession.deferredQueue.length > 0 && practiceSession.workingSet.length < practiceSession.batchSize) {
+          practiceSession.workingSet.push(practiceSession.deferredQueue.shift());
+        }
+      } else {
+        finishStudySession();
+        return;
+      }
+    }
+
+    const nextCard = pickNextPracticeCard(practiceSession);
+    practiceSession.currentCard = nextCard;
+    state.studySessionCards = nextCard ? [nextCard] : [];
+    state.currentCardIndex = 0;
+
+    animateCardExit(Rating.Easy);
+    setTimeout(() => {
+      renderCurrentStudyCard();
+      showToast("Card parked until end of session", "info");
+    }, 180);
+  } else {
+    // Normal review: move current card to the end of the session cards
+    if (state.studySessionCards.length <= 1) {
+      showToast("Only 1 card left in session", "info");
+      return;
+    }
+
+    studyUndoStack.push({
+      isPractice: false,
+      wasSkipped: true,
+      cardBefore: JSON.parse(JSON.stringify(card)),
+      cardIndex: state.currentCardIndex,
+      wasPushedAgain: false,
+      logId: null
+    });
+    updateUndoButtonState();
+
+    const removed = state.studySessionCards.splice(state.currentCardIndex, 1)[0];
+    state.studySessionCards.push(removed);
+
+    animateCardExit(Rating.Easy);
+    setTimeout(() => {
+      renderCurrentStudyCard();
+      showToast("Card moved to end of session", "info");
+    }, 180);
+  }
 }
 
 export function exitStudySession() {
@@ -932,6 +1116,13 @@ export function initKeyboardShortcuts() {
       return;
     }
 
+    // S key: skip/park card to end of session
+    if (e.key === "s" || e.key === "S" || e.code === "KeyS") {
+      e.preventDefault();
+      skipCurrentCard();
+      return;
+    }
+
     if (e.code === "Space" || e.code === "Enter" || e.key === " ") {
       e.preventDefault();
       flipCard();
@@ -970,6 +1161,15 @@ export function initStudyEventListeners() {
       restartStudySession();
     });
   });
+
+  const skipBtn = document.getElementById("btn-skip-card") || dom.btnSkipCard;
+  if (skipBtn) {
+    skipBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      skipCurrentCard();
+    });
+  }
 
   const undoBtn = document.getElementById("btn-undo-study") || dom.btnUndoStudy;
   if (undoBtn) {
