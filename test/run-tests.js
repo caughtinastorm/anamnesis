@@ -31,7 +31,13 @@ import {
   formatDeckSelectionLabel
 } from "../js/utils.js";
 import { calculateStreak } from "../js/dashboard.js";
-import { renderCardContent } from "../js/study.js";
+import {
+  renderCardContent,
+  PRACTICE_CONFIG,
+  createPracticeSession,
+  pickNextPracticeCard,
+  processPracticeGrade
+} from "../js/study.js";
 import { mergeCards, cardsDiffer, getCardTimestamp, sanitizeGistId } from "../sync.js";
 import { parseAnkiText, normalizeAnkiDeck, expandClozeCards, cleanHtmlTags } from "../anki.js";
 import { sortCardsLogically } from "../js/explorer-actions.js";
@@ -507,6 +513,168 @@ runTest("INTRO_STEPS contains all essential app areas with valid metadata", () =
   assert.ok(stepIds.includes("decks-explorer"), "Must have deck explorer step");
   assert.ok(stepIds.includes("card-browser"), "Must have card browser step");
   assert.ok(stepIds.includes("settings-sync"), "Must have settings and sync step");
+});
+
+console.log("\n=== 9. PRACTICE BUFFER & LOCAL RETENTION ENGINE TESTS ===");
+
+runTest("createPracticeSession caps workingSet at 4 cards and queues remainder", () => {
+  const dummyCards = Array.from({ length: 10 }, (_, i) => ({
+    id: `card_${i + 1}`,
+    front: `Front ${i + 1}`,
+    back: `Back ${i + 1}`
+  }));
+
+  const session = createPracticeSession(dummyCards, PRACTICE_CONFIG);
+  assert.equal(session.batchSize, 4, "Batch size must be 4");
+  assert.equal(session.targetStreak, 3, "Target streak must be 3");
+  assert.equal(session.workingSet.length, 4, "Active working set must contain exactly 4 cards");
+  assert.equal(session.pendingQueue.length, 6, "Pending queue must contain remaining 6 cards");
+  assert.equal(session.graduatedCards.length, 0, "No cards should be graduated at start");
+  assert.equal(session.totalCards, 10, "Total cards must be 10");
+
+  // Verify all cards have initialized state
+  dummyCards.forEach(c => {
+    const st = session.cardStates.get(c.id);
+    assert.ok(st, `State must exist for ${c.id}`);
+    assert.equal(st.streak, 0, "Initial streak must be 0");
+    assert.equal(st.nextDueTurn, 0, "Initial nextDueTurn must be 0");
+  });
+});
+
+runTest("createPracticeSession handles decks smaller than batch size", () => {
+  const dummyCards = [
+    { id: "c1", front: "1", back: "1" },
+    { id: "c2", front: "2", back: "2" }
+  ];
+  const session = createPracticeSession(dummyCards, PRACTICE_CONFIG);
+  assert.equal(session.workingSet.length, 2);
+  assert.equal(session.pendingQueue.length, 0);
+  assert.equal(session.totalCards, 2);
+});
+
+runTest("pickNextPracticeCard avoids immediate back-to-back repetitions", () => {
+  const dummyCards = [
+    { id: "c1", front: "A", back: "A" },
+    { id: "c2", front: "B", back: "B" },
+    { id: "c3", front: "C", back: "C" },
+    { id: "c4", front: "D", back: "D" }
+  ];
+  const session = createPracticeSession(dummyCards, PRACTICE_CONFIG);
+  session.lastCardId = "c1"; // Just reviewed c1
+
+  const next = pickNextPracticeCard(session);
+  assert.notEqual(next.id, "c1", "Should not pick c1 immediately after reviewing c1");
+});
+
+runTest("pickNextPracticeCard prioritizes cards with lower streak", () => {
+  const dummyCards = [
+    { id: "c1", front: "A", back: "A" },
+    { id: "c2", front: "B", back: "B" },
+    { id: "c3", front: "C", back: "C" },
+    { id: "c4", front: "D", back: "D" }
+  ];
+  const session = createPracticeSession(dummyCards, PRACTICE_CONFIG);
+  session.cardStates.get("c1").streak = 2;
+  session.cardStates.get("c2").streak = 1;
+  session.cardStates.get("c3").streak = 0; // lowest streak
+  session.cardStates.get("c4").streak = 2;
+  session.lastCardId = "c1";
+
+  const next = pickNextPracticeCard(session);
+  assert.equal(next.id, "c3", "Must pick card c3 which has lowest streak (0)");
+});
+
+runTest("processPracticeGrade increments streak on Good and graduates at target", () => {
+  const dummyCards = [
+    { id: "c1", front: "A", back: "A" },
+    { id: "c2", front: "B", back: "B" },
+    { id: "c3", front: "C", back: "C" },
+    { id: "c4", front: "D", back: "D" },
+    { id: "c5", front: "E", back: "E" } // queued
+  ];
+  const session = createPracticeSession(dummyCards, PRACTICE_CONFIG);
+
+  // Turn 1: Good on c1 -> streak becomes 1
+  let res = processPracticeGrade(session, session.workingSet[0], Rating.Good);
+  assert.equal(res.oldStreak, 0);
+  assert.equal(res.newStreak, 1);
+  assert.equal(res.graduated, false);
+  assert.equal(session.workingSet.length, 4);
+
+  // Turn 2: Good on c1 -> streak becomes 2
+  const c1 = session.workingSet.find(c => c.id === "c1");
+  res = processPracticeGrade(session, c1, Rating.Good);
+  assert.equal(res.newStreak, 2);
+  assert.equal(res.graduated, false);
+
+  // Turn 3: Good on c1 -> streak reaches 3 -> GRADUATION!
+  res = processPracticeGrade(session, c1, Rating.Good);
+  assert.equal(res.newStreak, 3);
+  assert.equal(res.graduated, true);
+  assert.equal(session.graduatedCards.length, 1);
+  assert.equal(session.graduatedCards[0].id, "c1");
+
+  // Verify workingSet refilled from pendingQueue: c5 must now be in workingSet!
+  assert.equal(session.workingSet.length, 4, "Working set must remain full at 4");
+  assert.ok(session.workingSet.some(c => c.id === "c5"), "c5 must have entered working set from pending queue");
+  assert.equal(session.pendingQueue.length, 0, "Pending queue should now have 0 cards");
+});
+
+runTest("processPracticeGrade resets streak to 0 and schedules urgent retry on Again", () => {
+  const dummyCards = [
+    { id: "c1", front: "A", back: "A" },
+    { id: "c2", front: "B", back: "B" }
+  ];
+  const session = createPracticeSession(dummyCards, PRACTICE_CONFIG);
+  session.cardStates.get("c1").streak = 2; // Was at 2
+
+  const res = processPracticeGrade(session, dummyCards[0], Rating.Again);
+  assert.equal(res.oldStreak, 2);
+  assert.equal(res.newStreak, 0, "Again must reset streak to 0");
+  assert.equal(res.graduated, false);
+
+  const st = session.cardStates.get("c1");
+  assert.equal(st.streak, 0);
+  assert.equal(st.nextDueTurn, session.currentTurn, "nextDueTurn must be scheduled 1 turn ahead");
+});
+
+runTest("processPracticeGrade with Easy advances streak by 2 and can graduate", () => {
+  const dummyCards = [
+    { id: "c1", front: "A", back: "A" },
+    { id: "c2", front: "B", back: "B" }
+  ];
+  const session = createPracticeSession(dummyCards, PRACTICE_CONFIG);
+  session.cardStates.get("c1").streak = 1;
+
+  const res = processPracticeGrade(session, dummyCards[0], Rating.Easy);
+  assert.equal(res.newStreak, 3, "Easy should advance streak from 1 to 3");
+  assert.equal(res.graduated, true, "Card should graduate when reaching 3 streak");
+});
+
+runTest("Full practice simulation: 6 cards cycle and graduate completely", () => {
+  const dummyCards = Array.from({ length: 6 }, (_, i) => ({
+    id: `card_${i + 1}`,
+    front: `Q${i + 1}`,
+    back: `A${i + 1}`
+  }));
+
+  const session = createPracticeSession(dummyCards, PRACTICE_CONFIG);
+  let steps = 0;
+  const maxSteps = 100;
+
+  while (session.workingSet.length > 0 && steps < maxSteps) {
+    steps++;
+    const card = pickNextPracticeCard(session);
+    assert.ok(card, `Card must be selected on step ${steps}`);
+    // Alternate ratings: Mostly Good, occasionally Again
+    const rating = (steps === 3 || steps === 7) ? Rating.Again : Rating.Good;
+    processPracticeGrade(session, card, rating);
+  }
+
+  assert.equal(session.workingSet.length, 0, "All cards must graduate from working set");
+  assert.equal(session.pendingQueue.length, 0, "Pending queue must be empty");
+  assert.equal(session.graduatedCards.length, 6, "All 6 cards must be graduated");
+  assert.ok(steps < maxSteps, "Should finish cleanly without infinite loop");
 });
 
 console.log(`\nResults: ${testsPassed} passed / ${testsRun} total`);

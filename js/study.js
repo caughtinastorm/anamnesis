@@ -14,6 +14,208 @@ let currentSessionIsForce = false;
 let isGradingInProgress = false;
 let studyUndoStack = [];
 
+export const PRACTICE_CONFIG = {
+  BATCH_SIZE: 4,
+  TARGET_STREAK: 3
+};
+
+let practiceSession = null;
+export const getPracticeSession = () => practiceSession;
+
+export function createPracticeSession(cards, config = PRACTICE_CONFIG) {
+  const batchSize = config?.BATCH_SIZE || 4;
+  const targetStreak = config?.TARGET_STREAK || 3;
+  const workingSet = cards.slice(0, batchSize);
+  const pendingQueue = cards.slice(batchSize);
+  const graduatedCards = [];
+  const cardStates = new Map();
+
+  for (const card of cards) {
+    const cid = card.id || card._id;
+    cardStates.set(cid, {
+      streak: 0,
+      totalReviews: 0,
+      nextDueTurn: 0,
+      lastReviewedTurn: -1,
+      history: []
+    });
+  }
+
+  return {
+    workingSet,
+    pendingQueue,
+    graduatedCards,
+    cardStates,
+    totalCards: cards.length,
+    currentTurn: 0,
+    lastCardId: null,
+    currentCard: null,
+    targetStreak,
+    batchSize
+  };
+}
+
+export function pickNextPracticeCard(session) {
+  if (!session || !session.workingSet || session.workingSet.length === 0) {
+    return null;
+  }
+
+  const { workingSet, cardStates, currentTurn, lastCardId } = session;
+
+  if (workingSet.length === 1) {
+    return workingSet[0];
+  }
+
+  // Filter out the last reviewed card to prevent back-to-back repetitions if possible
+  let candidates = workingSet.filter(c => (c.id || c._id) !== lastCardId);
+  if (candidates.length === 0) {
+    candidates = [...workingSet];
+  }
+
+  // Check if any candidate is due (nextDueTurn <= currentTurn)
+  const dueCandidates = candidates.filter(c => {
+    const s = cardStates.get(c.id || c._id);
+    return !s || s.nextDueTurn <= currentTurn;
+  });
+
+  const pool = dueCandidates.length > 0 ? dueCandidates : candidates;
+
+  // Priority:
+  // 1. Lowest streak first (unlearned/troublesome cards seen most frequently)
+  // 2. Earliest nextDueTurn
+  // 3. Least recently reviewed turn
+  pool.sort((a, b) => {
+    const sa = cardStates.get(a.id || a._id) || { streak: 0, nextDueTurn: 0, lastReviewedTurn: -1 };
+    const sb = cardStates.get(b.id || b._id) || { streak: 0, nextDueTurn: 0, lastReviewedTurn: -1 };
+
+    if (sa.streak !== sb.streak) {
+      return sa.streak - sb.streak;
+    }
+    if (sa.nextDueTurn !== sb.nextDueTurn) {
+      return sa.nextDueTurn - sb.nextDueTurn;
+    }
+    return sa.lastReviewedTurn - sb.lastReviewedTurn;
+  });
+
+  return pool[0];
+}
+
+export function processPracticeGrade(session, card, rating) {
+  if (!session || !card) return null;
+  const cardId = card.id || card._id;
+  const st = session.cardStates.get(cardId) || {
+    streak: 0,
+    totalReviews: 0,
+    nextDueTurn: 0,
+    lastReviewedTurn: -1,
+    history: []
+  };
+
+  const oldStreak = st.streak || 0;
+  let newStreak = oldStreak;
+  let graduated = false;
+
+  st.totalReviews = (st.totalReviews || 0) + 1;
+  st.lastReviewedTurn = session.currentTurn;
+  if (!st.history) st.history = [];
+  st.history.push(rating);
+
+  if (rating === Rating.Again) { // 1
+    newStreak = 0;
+    st.nextDueTurn = session.currentTurn + 1; // Retry soon after 1 intervening card
+  } else if (rating === Rating.Hard) { // 2
+    newStreak = Math.max(0, oldStreak);
+    st.nextDueTurn = session.currentTurn + 2; // Repeat soon
+  } else if (rating === Rating.Good) { // 3
+    newStreak = oldStreak + 1;
+    if (newStreak >= session.targetStreak) {
+      graduated = true;
+    } else {
+      st.nextDueTurn = session.currentTurn + (newStreak >= 2 ? 4 : 3);
+    }
+  } else if (rating === Rating.Easy) { // 4
+    newStreak = oldStreak + 2;
+    if (newStreak >= session.targetStreak) {
+      graduated = true;
+    } else {
+      st.nextDueTurn = session.currentTurn + 4;
+    }
+  }
+
+  st.streak = newStreak;
+  session.cardStates.set(cardId, st);
+  session.lastCardId = cardId;
+  session.currentTurn++;
+
+  if (graduated) {
+    const wsIdx = session.workingSet.findIndex(c => (c.id || c._id) === cardId);
+    if (wsIdx !== -1) {
+      session.workingSet.splice(wsIdx, 1);
+    }
+    session.graduatedCards.push(card);
+
+    if (session.pendingQueue.length > 0) {
+      const nextCard = session.pendingQueue.shift();
+      session.workingSet.push(nextCard);
+      const nextId = nextCard.id || nextCard._id;
+      if (!session.cardStates.has(nextId)) {
+        session.cardStates.set(nextId, {
+          streak: 0,
+          totalReviews: 0,
+          nextDueTurn: session.currentTurn,
+          lastReviewedTurn: -1,
+          history: []
+        });
+      }
+    }
+  }
+
+  return {
+    cardId,
+    oldStreak,
+    newStreak,
+    graduated,
+    remainingWorking: session.workingSet.length,
+    remainingPending: session.pendingQueue.length,
+    totalGraduated: session.graduatedCards.length
+  };
+}
+
+export function updatePracticeMasteryBadges(streak = 0, target = 3) {
+  const pills = [
+    document.getElementById("practice-mastery-pill-front") || dom.practiceMasteryPillFront,
+    document.getElementById("practice-mastery-pill-back") || dom.practiceMasteryPillBack
+  ].filter(Boolean);
+
+  if (pills.length === 0) return;
+
+  if (!currentSessionIsForce || !practiceSession) {
+    pills.forEach(p => p.classList.add("hidden"));
+    return;
+  }
+
+  const cappedStreak = Math.min(target, Math.max(0, streak));
+
+  pills.forEach(p => {
+    p.classList.remove("hidden");
+    p.classList.remove("streak-0", "streak-1", "streak-2", "streak-3");
+    p.classList.add(`streak-${cappedStreak}`);
+
+    let dots = "";
+    for (let i = 0; i < target; i++) {
+      dots += (i < cappedStreak ? "● " : "○ ");
+    }
+    const dotsEl = p.querySelector(".mastery-dots");
+    const labelEl = p.querySelector(".mastery-label");
+    if (dotsEl) dotsEl.textContent = dots.trim();
+    if (labelEl) {
+      labelEl.textContent = cappedStreak >= target
+        ? `${cappedStreak}/${target} Mastered`
+        : `${cappedStreak}/${target} Streak`;
+    }
+  });
+}
+
 function updateUndoButtonState() {
   const undoBtn = document.getElementById("btn-undo-study") || dom.btnUndoStudy;
   if (undoBtn) {
@@ -91,14 +293,27 @@ export function startStudySession(force = false, customCards = null, sessionTitl
   };
 
   if (dom.studyDeckBadge) {
-    dom.studyDeckBadge.textContent = isFSRSEnabled ? displayTitle : `${displayTitle} (Practice)`;
-    dom.studyDeckBadge.title = isFSRSEnabled 
-      ? rawTitle 
-      : `${rawTitle} — Practice Mode (FSRS untouched)`;
+    dom.studyDeckBadge.textContent = currentSessionIsForce ? `${displayTitle} (Practice)` : displayTitle;
+    dom.studyDeckBadge.title = currentSessionIsForce
+      ? (isFSRSEnabled
+          ? `${rawTitle} — Practice Mode (FSRS recorded)`
+          : `${rawTitle} — Practice Mode (FSRS untouched)`)
+      : rawTitle;
   }
 
-  state.studySessionCards = shuffle([...pool]);
-  state.currentCardIndex = 0;
+  if (currentSessionIsForce) {
+    const shuffledPool = shuffle([...pool]);
+    practiceSession = createPracticeSession(shuffledPool, PRACTICE_CONFIG);
+    const firstCard = pickNextPracticeCard(practiceSession);
+    practiceSession.currentCard = firstCard;
+    state.studySessionCards = firstCard ? [firstCard] : [];
+    state.currentCardIndex = 0;
+  } else {
+    practiceSession = null;
+    state.studySessionCards = shuffle([...pool]);
+    state.currentCardIndex = 0;
+  }
+
   state.isFlipped = false;
   state.isSwipeActive = false;
   state.touchMoveX = 0;
@@ -118,9 +333,23 @@ export function restartStudySession() {
     return;
   }
   studyUndoStack = [];
-  updateUndoButtonState();  const isPracticeOnly = state.studySessionInfo && state.studySessionInfo.recordFSRS === false;
-  state.studySessionCards = shuffle([...pool]);
-  state.currentCardIndex = 0;
+  updateUndoButtonState();
+
+  const isPracticeOnly = state.studySessionInfo && state.studySessionInfo.recordFSRS === false;
+
+  if (currentSessionIsForce) {
+    const shuffledPool = shuffle([...pool]);
+    practiceSession = createPracticeSession(shuffledPool, PRACTICE_CONFIG);
+    const firstCard = pickNextPracticeCard(practiceSession);
+    practiceSession.currentCard = firstCard;
+    state.studySessionCards = firstCard ? [firstCard] : [];
+    state.currentCardIndex = 0;
+  } else {
+    practiceSession = null;
+    state.studySessionCards = shuffle([...pool]);
+    state.currentCardIndex = 0;
+  }
+
   state.isFlipped = false;
   state.isSwipeActive = false;
   state.touchMoveX = 0;
@@ -128,16 +357,18 @@ export function restartStudySession() {
   isGradingInProgress = false;
 
   if (dom.studyDeckBadge && state.studySessionInfo?.name) {
-    dom.studyDeckBadge.textContent = isPracticeOnly
+    dom.studyDeckBadge.textContent = currentSessionIsForce
       ? `${state.studySessionInfo.name} (Practice)`
       : state.studySessionInfo.name;
-    dom.studyDeckBadge.title = isPracticeOnly
-      ? `${state.studySessionInfo.fullName || state.studySessionInfo.name} — Practice Mode (FSRS untouched)`
+    dom.studyDeckBadge.title = currentSessionIsForce
+      ? (isPracticeOnly
+          ? `${state.studySessionInfo.fullName || state.studySessionInfo.name} — Practice Mode (FSRS untouched)`
+          : `${state.studySessionInfo.fullName || state.studySessionInfo.name} — Practice Mode (FSRS recorded)`)
       : (state.studySessionInfo.fullName || state.studySessionInfo.name);
   }
 
   renderCurrentStudyCard();
-  showToast(`Restarted session (${state.studySessionCards.length} cards)`, "info");
+  showToast(`Restarted session (${pool.length} cards)`, "info");
 }
 
 function updateGradeButtonIntervals(card) {
@@ -147,6 +378,25 @@ function updateGradeButtonIntervals(card) {
   const int2 = document.getElementById("grade-interval-2");
   const int3 = document.getElementById("grade-interval-3");
   const int4 = document.getElementById("grade-interval-4");
+
+  if (currentSessionIsForce && practiceSession) {
+    const cardId = card.id || card._id;
+    const st = practiceSession.cardStates.get(cardId) || { streak: 0 };
+    const s = st.streak || 0;
+    const target = practiceSession.targetStreak || 3;
+
+    if (int1) int1.textContent = "Reset 0/3";
+    if (int2) int2.textContent = `${s}/${target} Repeat`;
+    if (int3) {
+      const nextS = s + 1;
+      int3.textContent = nextS >= target ? "Master 🎉" : `+1 (${nextS}/${target})`;
+    }
+    if (int4) {
+      const nextS = s + 2;
+      int4.textContent = nextS >= target ? "Master 🎉" : `+2 (${Math.min(target, nextS)}/${target})`;
+    }
+    return;
+  }
 
   if (isPracticeOnly) {
     if (int1) int1.textContent = "< 10m";
@@ -166,14 +416,33 @@ function updateGradeButtonIntervals(card) {
 export function renderCurrentStudyCard() {
   updateUndoButtonState();
 
-  if (state.currentCardIndex >= state.studySessionCards.length) {
-    finishStudySession();
-    return;
-  }
-  const card = state.studySessionCards[state.currentCardIndex];
-  if (!card) {
-    finishStudySession();
-    return;
+  let card = null;
+  if (currentSessionIsForce && practiceSession) {
+    if (!practiceSession.workingSet || practiceSession.workingSet.length === 0) {
+      finishStudySession();
+      return;
+    }
+    card = practiceSession.currentCard;
+    if (!card) {
+      card = pickNextPracticeCard(practiceSession);
+      practiceSession.currentCard = card;
+    }
+    if (!card) {
+      finishStudySession();
+      return;
+    }
+    state.studySessionCards = [card];
+    state.currentCardIndex = 0;
+  } else {
+    if (state.currentCardIndex >= state.studySessionCards.length) {
+      finishStudySession();
+      return;
+    }
+    card = state.studySessionCards[state.currentCardIndex];
+    if (!card) {
+      finishStudySession();
+      return;
+    }
   }
 
   state.isFlipped = false;
@@ -182,13 +451,40 @@ export function renderCurrentStudyCard() {
   state.touchMoveY = 0;
   isGradingInProgress = false;
 
-  if (dom.studyProgressText) {
-    dom.studyProgressText.textContent = `Card ${state.currentCardIndex + 1} of ${state.studySessionCards.length}`;
-  }
+  if (currentSessionIsForce && practiceSession) {
+    const total = practiceSession.totalCards;
+    const graduated = practiceSession.graduatedCards.length;
+    const active = practiceSession.workingSet.length;
+    const target = practiceSession.targetStreak || 3;
 
-  if (dom.studyProgressBar) {
-    const pct = ((state.currentCardIndex) / state.studySessionCards.length) * 100;
-    dom.studyProgressBar.style.width = `${pct}%`;
+    if (dom.studyProgressText) {
+      dom.studyProgressText.textContent = `${graduated} of ${total} Mastered (${active} active in set)`;
+    }
+
+    if (dom.studyProgressBar) {
+      const totalPoints = total * target;
+      let earnedPoints = graduated * target;
+      for (const c of practiceSession.workingSet) {
+        const cs = practiceSession.cardStates.get(c.id || c._id);
+        if (cs) earnedPoints += Math.min(target, cs.streak);
+      }
+      const pct = Math.min(100, Math.round((earnedPoints / Math.max(1, totalPoints)) * 100));
+      dom.studyProgressBar.style.width = `${pct}%`;
+    }
+
+    const st = practiceSession.cardStates.get(card.id || card._id);
+    updatePracticeMasteryBadges(st ? st.streak : 0, target);
+  } else {
+    if (dom.studyProgressText) {
+      dom.studyProgressText.textContent = `Card ${state.currentCardIndex + 1} of ${state.studySessionCards.length}`;
+    }
+
+    if (dom.studyProgressBar) {
+      const pct = ((state.currentCardIndex) / state.studySessionCards.length) * 100;
+      dom.studyProgressBar.style.width = `${pct}%`;
+    }
+
+    updatePracticeMasteryBadges(0);
   }
 
   if (dom.cardFrontContent) dom.cardFrontContent.innerHTML = renderCardContent(card.front, false);
@@ -252,9 +548,11 @@ export function flipCard() {
 
 export async function submitCardGrade(grade) {
   if (isGradingInProgress) return;
-  if (state.currentCardIndex >= state.studySessionCards.length) return;
 
-  const card = state.studySessionCards[state.currentCardIndex];
+  const card = (currentSessionIsForce && practiceSession)
+    ? practiceSession.currentCard
+    : state.studySessionCards[state.currentCardIndex];
+
   if (!card) return;
 
   isGradingInProgress = true;
@@ -271,12 +569,34 @@ export async function submitCardGrade(grade) {
   const isPracticeOnly = state.studySessionInfo && state.studySessionInfo.recordFSRS === false;
 
   // Push to Undo Stack
-  studyUndoStack.push({
-    cardBefore,
-    cardIndex: state.currentCardIndex,
-    wasPushedAgain: (fsrsRating === Rating.Again),
-    logId: isPracticeOnly ? null : logId
-  });
+  if (currentSessionIsForce && practiceSession) {
+    const cardStatesCopy = new Map();
+    for (const [k, v] of practiceSession.cardStates.entries()) {
+      cardStatesCopy.set(k, { ...v, history: [...(v.history || [])] });
+    }
+    studyUndoStack.push({
+      isPractice: true,
+      cardBefore,
+      practiceSnapshot: {
+        currentTurn: practiceSession.currentTurn,
+        lastCardId: practiceSession.lastCardId,
+        currentCard: practiceSession.currentCard,
+        workingSet: [...practiceSession.workingSet],
+        pendingQueue: [...practiceSession.pendingQueue],
+        graduatedCards: [...practiceSession.graduatedCards],
+        cardStates: cardStatesCopy
+      },
+      logId: isPracticeOnly ? null : logId
+    });
+  } else {
+    studyUndoStack.push({
+      isPractice: false,
+      cardBefore,
+      cardIndex: state.currentCardIndex,
+      wasPushedAgain: (fsrsRating === Rating.Again),
+      logId: isPracticeOnly ? null : logId
+    });
+  }
   updateUndoButtonState();
 
   if (!isPracticeOnly) {
@@ -311,11 +631,19 @@ export async function submitCardGrade(grade) {
     }
 
     // Update in-memory allCards immediately
-    const allIdx = state.allCards.findIndex(c => c.id === card.id);
+    const allIdx = state.allCards.findIndex(c => (c.id || c._id) === (card.id || card._id));
     if (allIdx !== -1) {
       state.allCards[allIdx] = { ...state.allCards[allIdx], ...updated };
     }
     invalidateStatsCache();
+
+    // If in practiceSession, update the card object in workingSet
+    if (currentSessionIsForce && practiceSession) {
+      const wsIdx = practiceSession.workingSet.findIndex(c => (c.id || c._id) === (card.id || card._id));
+      if (wsIdx !== -1) {
+        practiceSession.workingSet[wsIdx] = { ...practiceSession.workingSet[wsIdx], ...updated };
+      }
+    }
 
     try {
       await db.saveCard(updated);
@@ -329,15 +657,35 @@ export async function submitCardGrade(grade) {
   // Visual card exit animation
   animateCardExit(fsrsRating);
 
-  // If 'Again', append this card to the end of the session pool for re-testing
-  if (fsrsRating === Rating.Again) {
-    state.studySessionCards.push({ ...cardBefore });
-  }
+  if (currentSessionIsForce && practiceSession) {
+    processPracticeGrade(practiceSession, card, fsrsRating);
 
-  state.currentCardIndex++;
-  setTimeout(() => {
-    renderCurrentStudyCard();
-  }, 180);
+    if (practiceSession.workingSet.length === 0) {
+      setTimeout(() => {
+        finishStudySession();
+      }, 180);
+      return;
+    }
+
+    const nextCard = pickNextPracticeCard(practiceSession);
+    practiceSession.currentCard = nextCard;
+    state.studySessionCards = nextCard ? [nextCard] : [];
+    state.currentCardIndex = 0;
+
+    setTimeout(() => {
+      renderCurrentStudyCard();
+    }, 180);
+  } else {
+    // Standard daily review
+    if (fsrsRating === Rating.Again) {
+      state.studySessionCards.push({ ...cardBefore });
+    }
+
+    state.currentCardIndex++;
+    setTimeout(() => {
+      renderCurrentStudyCard();
+    }, 180);
+  }
 }
 
 function animateCardExit(rating) {
@@ -364,17 +712,31 @@ export async function undoLastStudyCard() {
 
   if (!last || !last.cardBefore) return;
 
-  // If card was re-appended for 'Again', remove the appended instance from pool
-  if (last.wasPushedAgain && state.studySessionCards.length > last.cardIndex + 1) {
-    const lastItem = state.studySessionCards[state.studySessionCards.length - 1];
-    if (lastItem && lastItem.id === last.cardBefore.id) {
-      state.studySessionCards.pop();
+  if (last.isPractice && practiceSession) {
+    practiceSession.currentTurn = last.practiceSnapshot.currentTurn;
+    practiceSession.lastCardId = last.practiceSnapshot.lastCardId;
+    practiceSession.currentCard = last.practiceSnapshot.currentCard;
+    practiceSession.workingSet = [...last.practiceSnapshot.workingSet];
+    practiceSession.pendingQueue = [...last.practiceSnapshot.pendingQueue];
+    practiceSession.graduatedCards = [...last.practiceSnapshot.graduatedCards];
+    practiceSession.cardStates = last.practiceSnapshot.cardStates;
+
+    state.studySessionCards = last.practiceSnapshot.currentCard ? [last.practiceSnapshot.currentCard] : [];
+    state.currentCardIndex = 0;
+  } else {
+    // If card was re-appended for 'Again', remove the appended instance from pool
+    if (last.wasPushedAgain && state.studySessionCards.length > last.cardIndex + 1) {
+      const lastItem = state.studySessionCards[state.studySessionCards.length - 1];
+      if (lastItem && (lastItem.id || lastItem._id) === (last.cardBefore.id || last.cardBefore._id)) {
+        state.studySessionCards.pop();
+      }
     }
+    state.studySessionCards[last.cardIndex] = last.cardBefore;
+    state.currentCardIndex = last.cardIndex;
   }
 
-  // Restore session card and in-memory allCards
-  state.studySessionCards[last.cardIndex] = last.cardBefore;
-  const allIdx = state.allCards.findIndex(c => c.id === last.cardBefore.id);
+  // Restore session card and in-memory allCards if FSRS was tracked
+  const allIdx = state.allCards.findIndex(c => (c.id || c._id) === (last.cardBefore.id || last.cardBefore._id));
   if (allIdx !== -1) {
     state.allCards[allIdx] = { ...last.cardBefore };
   }
@@ -390,7 +752,6 @@ export async function undoLastStudyCard() {
     console.error("Error saving reverted card during undo:", e);
   }
 
-  state.currentCardIndex = last.cardIndex;
   state.isFlipped = false;
   isGradingInProgress = false;
   renderCurrentStudyCard();
@@ -409,6 +770,8 @@ export function exitStudySession() {
   state.touchMoveY = 0;
   studyUndoStack = [];
   updateUndoButtonState();
+  practiceSession = null;
+  updatePracticeMasteryBadges(0);
 
   if (dom.flashcard) {
     dom.flashcard.style.transition = "none";
@@ -427,13 +790,20 @@ function finishStudySession() {
   onSyncRequest();
 
   const deckName = state.studySessionInfo?.fullName || state.studySessionInfo?.name || "this collection";
-  const count = state.studySessionCards.length;
+  const count = (currentSessionIsForce && practiceSession)
+    ? practiceSession.totalCards
+    : state.studySessionCards.length;
   const isPracticeOnly = state.studySessionInfo && state.studySessionInfo.recordFSRS === false;
 
-  const modalTitle = isPracticeOnly ? "🎯 Practice Completed!" : "🎉 Deck Completed!";
-  const modalMsg = isPracticeOnly
-    ? `Great job! You finished practicing all ${count} cards in ${deckName}. Your FSRS spaced repetition scheduling remained safe and untouched.`
-    : `Great job! You finished all ${count} cards in ${deckName}. Would you like to review this deck again or return to dashboard?`;
+  let modalTitle = "🎉 Deck Completed!";
+  let modalMsg = `Great job! You finished all ${count} cards in ${deckName}. Would you like to review this deck again or return to dashboard?`;
+
+  if (currentSessionIsForce) {
+    modalTitle = "🎯 Practice Completed!";
+    modalMsg = isPracticeOnly
+      ? `Phenomenal work! You mastered all ${count} cards in ${deckName} with local retention streaks. Your long-term FSRS spaced repetition data remained safe and untouched.`
+      : `Phenomenal work! You mastered all ${count} cards in ${deckName} with local retention streaks, and review logs were recorded for FSRS.`;
+  }
 
   showModal(
     modalTitle,

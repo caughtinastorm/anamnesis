@@ -22,6 +22,8 @@ export const dom = {
   cardBackContent: $("card-back-content"),
   cardBackDivider: $("card-back-divider"),
   cardBackDescription: $("card-back-description"),
+  practiceMasteryPillFront: $("practice-mastery-pill-front"),
+  practiceMasteryPillBack: $("practice-mastery-pill-back"),
   studyHintBar: $("study-hint-bar"),
   studyGradingBar: $("study-grading-bar"),
   gradeButtons: $$(".btn-grade"),

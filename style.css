@@ -1167,6 +1167,13 @@ textarea {
 }
 
 /* Card contents labels */
+.card-tag-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
 .card-tag {
   font-size: 0.68rem;
   font-weight: 700;
@@ -1176,6 +1183,55 @@ textarea {
   padding: 3px 10px;
   border-radius: var(--radius-pill);
   background: var(--bg-color);
+}
+
+.card-mastery-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--radius-pill);
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--panel-border);
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.card-mastery-pill .mastery-dots {
+  letter-spacing: 2px;
+  font-size: 0.68rem;
+  line-height: 1;
+}
+
+.card-mastery-pill .mastery-label {
+  font-size: 0.65rem;
+}
+
+.card-mastery-pill.streak-0 {
+  color: var(--text-secondary);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.card-mastery-pill.streak-1 {
+  color: #60a5fa;
+  border-color: rgba(96, 165, 250, 0.4);
+  background: rgba(96, 165, 250, 0.1);
+}
+
+.card-mastery-pill.streak-2 {
+  color: #facc15;
+  border-color: rgba(250, 204, 21, 0.4);
+  background: rgba(250, 204, 21, 0.1);
+}
+
+.card-mastery-pill.streak-3 {
+  color: #4ade80;
+  border-color: rgba(74, 222, 128, 0.45);
+  background: rgba(74, 222, 128, 0.12);
 }
 
 .card-text-wrapper {
