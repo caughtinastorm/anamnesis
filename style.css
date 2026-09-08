@@ -5991,3 +5991,205 @@ html[data-theme="light"] .btn-leech-action:hover {
     justify-content: flex-end;
   }
 }
+
+/* ==========================================================================
+   Analytics Deck Browser & Scope Filter Styling
+   ========================================================================== */
+.analytics-deck-picker-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ==========================================================================
+   Review Collections Explorer Widget (Interactive Directory Navigation)
+   ========================================================================== */
+.review-explorer-card {
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.review-explorer-card .panel-header-with-action {
+  padding: 14px 16px 10px 16px;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.review-explorer-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--panel-border);
+  flex-wrap: wrap;
+}
+
+.review-explorer-address {
+  flex: 1;
+  min-width: 130px;
+  height: 32px;
+}
+
+.review-explorer-search {
+  max-width: 170px;
+  height: 32px;
+}
+
+.review-explorer-viewport {
+  padding: 12px;
+  min-height: 180px;
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.review-explorer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.review-explorer-tile {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+}
+
+.review-explorer-tile:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.review-explorer-tile.is-active-deck {
+  border-color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.review-tile-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.review-tile-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.review-tile-icon {
+  font-size: 1.15rem;
+  flex-shrink: 0;
+}
+
+.review-tile-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.review-tile-title {
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.review-tile-sub {
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+}
+
+.review-tile-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.review-tile-badge.due {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.review-tile-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.btn-review-tile-action {
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-review-tile-action:hover {
+  background: var(--text-primary);
+  color: var(--bg-color);
+}
+
+.btn-review-tile-action.btn-study {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #10b981;
+}
+
+.btn-review-tile-action.btn-study:hover {
+  background: #10b981;
+  color: #000;
+}
+
+.btn-review-tile-action.btn-icon-only {
+  padding: 3px 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.review-explorer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.review-explorer-list .review-explorer-tile {
+  flex-direction: row;
+  align-items: center;
+  padding: 8px 12px;
+}
+
+.review-explorer-list .review-tile-header {
+  flex: 1;
+  align-items: center;
+}
+
+.review-explorer-list .review-tile-actions {
+  margin-top: 0;
+}

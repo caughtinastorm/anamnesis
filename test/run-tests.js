@@ -28,9 +28,10 @@ import {
   plainText,
   getLocalDateString,
   limitText,
-  formatDeckSelectionLabel
+  formatDeckSelectionLabel,
+  matchesDeckSelection
 } from "../js/utils.js";
-import { calculateStreak } from "../js/dashboard.js";
+import { calculateStreak, reviewExplorerState } from "../js/dashboard.js";
 import {
   renderCardContent,
   PRACTICE_CONFIG,
@@ -1085,6 +1086,96 @@ runTest("Service Worker cache manifest includes all newly integrated modules", a
   assert.ok(swCode.includes("./js/analytics-ui.js"), "sw.js must cache js/analytics-ui.js");
   assert.ok(swCode.includes("./js/intro.js"), "sw.js must cache js/intro.js");
   assert.ok(swCode.includes("./js/presets.js"), "sw.js must cache js/presets.js");
+});
+
+console.log("\n=== 13. ANALYTICS COLLECTION FILTER & REVIEW EXPLORER TESTS ===");
+
+runTest("matchesDeckSelection correctly scopes cards by folder, deck, and root wildcard", () => {
+  const c1 = { id: "1", folder: "Japanese", deck: "JLPT N5 Kanji" };
+  const c2 = { id: "2", folder: "Japanese", deck: "Grammar" };
+  const c3 = { id: "3", folder: "Spanish", deck: "Verbs" };
+  const c4 = { id: "4", folder: "", deck: "General" };
+
+  // All Collections
+  assert.equal(matchesDeckSelection(c1, "all"), true);
+  assert.equal(matchesDeckSelection(c4, "all"), true);
+
+  // Folder scope
+  assert.equal(matchesDeckSelection(c1, "folder:Japanese"), true);
+  assert.equal(matchesDeckSelection(c2, "folder:Japanese"), true);
+  assert.equal(matchesDeckSelection(c3, "folder:Japanese"), false);
+  assert.equal(matchesDeckSelection(c4, "folder:Japanese"), false);
+
+  // Deck in folder scope
+  assert.equal(matchesDeckSelection(c1, "deck:Japanese / JLPT N5 Kanji"), true);
+  assert.equal(matchesDeckSelection(c2, "deck:Japanese / JLPT N5 Kanji"), false);
+
+  // Standalone deck scope
+  assert.equal(matchesDeckSelection(c4, "deck:General"), true);
+  assert.equal(matchesDeckSelection(c1, "deck:General"), false);
+});
+
+runTest("Analytics dataset scoping isolates deck-specific cards and associated review logs", () => {
+  const cards = [
+    { id: "c1", folder: "Japanese", deck: "JLPT N5 Kanji" },
+    { id: "c2", folder: "Japanese", deck: "Grammar" },
+    { id: "c3", folder: "Spanish", deck: "Vocabulary" }
+  ];
+
+  const logs = [
+    { card_id: "c1", grade: 3, stability_before: 1 },
+    { card_id: "c2", grade: 1, stability_before: 2 },
+    { card_id: "c3", grade: 4, stability_before: 5 },
+    { card_id: "orphan", folder: "Japanese", deck: "JLPT N5 Kanji", grade: 3 }
+  ];
+
+  const activeFilter = "deck:Japanese / JLPT N5 Kanji";
+
+  // Filter cards
+  const scopedCards = cards.filter(c => matchesDeckSelection(c, activeFilter));
+  assert.equal(scopedCards.length, 1);
+  assert.equal(scopedCards[0].id, "c1");
+
+  // Filter logs
+  const scopedCardIds = new Set(scopedCards.map(c => c.id));
+  const scopedLogs = logs.filter(l => {
+    if (l.card_id && scopedCardIds.has(l.card_id)) return true;
+    return matchesDeckSelection({ folder: l.folder, deck: l.deck }, activeFilter);
+  });
+
+  assert.equal(scopedLogs.length, 2);
+  assert.ok(scopedLogs.some(l => l.card_id === "c1"));
+  assert.ok(scopedLogs.some(l => l.card_id === "orphan"));
+});
+
+runTest("Review Explorer state properly initializes and updates directory navigation and search", () => {
+  assert.ok(reviewExplorerState !== undefined);
+  assert.equal(typeof reviewExplorerState.viewMode, "string");
+
+  // State transitions
+  reviewExplorerState.currentFolder = "Science";
+  assert.equal(reviewExplorerState.currentFolder, "Science");
+
+  reviewExplorerState.searchQuery = "physics";
+  assert.equal(reviewExplorerState.searchQuery, "physics");
+
+  // Reset to root
+  reviewExplorerState.currentFolder = null;
+  reviewExplorerState.searchQuery = "";
+  assert.equal(reviewExplorerState.currentFolder, null);
+  assert.equal(reviewExplorerState.searchQuery, "");
+});
+
+runTest("Review Explorer view mode toggles cleanly between grid and list", () => {
+  reviewExplorerState.viewMode = "grid";
+  assert.equal(reviewExplorerState.viewMode, "grid");
+
+  reviewExplorerState.viewMode = "list";
+  assert.equal(reviewExplorerState.viewMode, "list");
+
+  // Return to default grid mode
+  reviewExplorerState.viewMode = "grid";
+  assert.equal(reviewExplorerState.viewMode, "grid");
 });
 
 console.log(`\nResults: ${testsPassed} passed / ${testsRun} total`);

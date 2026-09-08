@@ -13,11 +13,12 @@
 
 import { state } from "./state.js";
 import { showToast, showModal, switchView } from "./ui.js";
-import { getCardFolder, getCardDeck, escapeHTML, limitText, formatDeckSelectionLabel } from "./utils.js";
+import { getCardFolder, getCardDeck, escapeHTML, limitText, formatDeckSelectionLabel, matchesDeckSelection } from "./utils.js";
 import { getTargetRetention } from "../fsrs.js";
 import * as db from "../db.js";
 import { openEditCardModal } from "./browser.js";
 import { executeResetCardsFSRS } from "./dashboard.js";
+import { openCollectionPicker } from "./picker.js";
 import {
   analyzeDecks,
   analyzeCardFriction,
@@ -40,6 +41,48 @@ let lastAnalyzedErgo = null;
 let lastAnalyzedCal = null;
 
 /**
+ * Set active collection filter for the Analytics view and update GUI controls.
+ * @param {string} selection e.g. "all", "folder:Spanish", "deck:Spanish / Verbs", "deck:Verbs"
+ */
+export function setAnalyticsDeckFilter(selection = "all") {
+  activeDeckFilter = selection || "all";
+  updateAnalyticsDeckPickerUI();
+  renderAnalyticsView();
+}
+
+/**
+ * Update the Deck Browser button title, pill, and clear button
+ */
+function updateAnalyticsDeckPickerUI() {
+  const labelEl = document.getElementById("analytics-deck-filter-label");
+  const countPill = document.getElementById("analytics-deck-count-pill");
+  const clearBtn = document.getElementById("btn-analytics-clear-filter");
+  const selectEl = document.getElementById("analytics-deck-filter");
+
+  const allValidCards = state.allCards ? state.allCards.filter(c => !c.deleted) : [];
+  const count = (activeDeckFilter === "all")
+    ? allValidCards.length
+    : allValidCards.filter(c => matchesDeckSelection(c, activeDeckFilter)).length;
+
+  if (labelEl) {
+    labelEl.textContent = formatDeckSelectionLabel(activeDeckFilter, 28);
+  }
+  if (countPill) {
+    countPill.textContent = `${count} cards`;
+  }
+  if (clearBtn) {
+    if (activeDeckFilter && activeDeckFilter !== "all") {
+      clearBtn.classList.remove("hidden");
+    } else {
+      clearBtn.classList.add("hidden");
+    }
+  }
+  if (selectEl) {
+    selectEl.value = activeDeckFilter;
+  }
+}
+
+/**
  * Initialize Analytics view event listeners and time horizon toggles
  */
 export function initAnalyticsUI() {
@@ -54,12 +97,70 @@ export function initAnalyticsUI() {
     });
   });
 
-  // Collection filter dropdown
+  // GUI Deck Browser button
+  const btnDeckPicker = document.getElementById("btn-analytics-deck-picker");
+  if (btnDeckPicker) {
+    btnDeckPicker.addEventListener("click", () => {
+      let initFolder, initDeck;
+      if (activeDeckFilter && activeDeckFilter !== "all") {
+        if (activeDeckFilter.startsWith("folder:")) {
+          initFolder = activeDeckFilter.replace("folder:", "");
+          initDeck = "all";
+        } else if (activeDeckFilter.startsWith("deck:")) {
+          const raw = activeDeckFilter.replace("deck:", "");
+          const parts = raw.split(" / ");
+          if (parts.length > 1) {
+            initFolder = parts[0];
+            initDeck = parts.slice(1).join(" / ");
+          } else {
+            initDeck = parts[0];
+          }
+        } else if (activeDeckFilter.includes(" / ")) {
+          const parts = activeDeckFilter.split(" / ");
+          initFolder = parts[0];
+          initDeck = parts.slice(1).join(" / ");
+        } else {
+          initDeck = activeDeckFilter;
+        }
+      }
+
+      openCollectionPicker({
+        title: "Filter Analytics by Collection",
+        initialFolder: initFolder,
+        initialDeck: initDeck,
+        allowRoot: true,
+        onSelect: (folder, deck) => {
+          let sel = "all";
+          if (deck === "all" && folder) {
+            sel = `folder:${folder}`;
+          } else if (deck === "all" || (!folder && !deck)) {
+            sel = "all";
+          } else if (folder) {
+            sel = `deck:${folder} / ${deck}`;
+          } else {
+            sel = `deck:${deck}`;
+          }
+          setAnalyticsDeckFilter(sel);
+        }
+      });
+    });
+  }
+
+  // Clear filter button
+  const btnClearFilter = document.getElementById("btn-analytics-clear-filter");
+  if (btnClearFilter) {
+    btnClearFilter.addEventListener("click", (e) => {
+      e.stopPropagation();
+      setAnalyticsDeckFilter("all");
+      showToast("Cleared collection filter: All Collections", "info");
+    });
+  }
+
+  // Legacy select dropdown listener for compatibility
   const deckFilterEl = document.getElementById("analytics-deck-filter");
   if (deckFilterEl) {
     deckFilterEl.addEventListener("change", (e) => {
-      activeDeckFilter = e.target.value || "all";
-      renderAnalyticsView();
+      setAnalyticsDeckFilter(e.target.value || "all");
     });
   }
 
@@ -93,20 +194,34 @@ export async function renderAnalyticsView(forceRefresh = false) {
     const targetRetention = getTargetRetention();
 
     // Fetch cards and historical review logs from IndexedDB
-    const cards = state.allCards ? state.allCards.filter(c => !c.deleted) : [];
-    const reviewLogs = await db.getAllReviewLogs();
+    const allValidCards = state.allCards ? state.allCards.filter(c => !c.deleted) : [];
+    const allReviewLogs = await db.getAllReviewLogs();
 
-    // Populate deck filter select dropdown if needed
-    populateAnalyticsDeckDropdown(cards);
+    // Scope cards and review logs according to the selected collection
+    let cards = allValidCards;
+    let reviewLogs = allReviewLogs;
 
-    // Run data-science analytics calculations
+    if (activeDeckFilter && activeDeckFilter !== "all") {
+      cards = allValidCards.filter(c => matchesDeckSelection(c, activeDeckFilter));
+      const cardIdSet = new Set(cards.map(c => c.id || c._id));
+      reviewLogs = allReviewLogs.filter(l => {
+        if (l.card_id && cardIdSet.has(l.card_id)) return true;
+        return matchesDeckSelection({ folder: l.folder, deck: l.deck }, activeDeckFilter);
+      });
+    }
+
+    // Update GUI button state
+    updateAnalyticsDeckPickerUI();
+    populateAnalyticsDeckDropdown(allValidCards);
+
+    // Run data-science analytics calculations on scoped dataset
     const deckAnalysis = analyzeDecks(cards, reviewLogs, {
       targetRetention,
       timeHorizonDays: activeTimeHorizon
     });
 
     const cardFriction = analyzeCardFriction(cards, reviewLogs, {
-      selectedDeck: activeDeckFilter,
+      selectedDeck: "all", // Already scoped above
       limit: 25
     });
 
@@ -320,10 +435,7 @@ function renderPrescriptions(prescriptions = []) {
 
 function handlePrescriptionAction(actionType, target) {
   if (actionType === "filter_deck") {
-    activeDeckFilter = target;
-    const select = document.getElementById("analytics-deck-filter");
-    if (select) select.value = target;
-    renderAnalyticsView();
+    setAnalyticsDeckFilter(target);
     scrollToId("analytics-leech-radar-section");
   } else if (actionType === "scroll_leech") {
     scrollToId("analytics-leech-radar-section");
@@ -420,13 +532,11 @@ function renderDeckHealthTable(decks = []) {
       </td>
     `;
 
-    // Row click filters to this deck's leech radar
+    // Row click filters analytics to this deck
     tr.addEventListener("click", () => {
-      activeDeckFilter = deck.key;
-      const select = document.getElementById("analytics-deck-filter");
-      if (select) select.value = deck.key;
-      renderAnalyticsView();
-      scrollToId("analytics-leech-radar-section");
+      setAnalyticsDeckFilter(deck.key);
+      showToast(`Filtered Analytics to "${deck.deck}"`, "info");
+      scrollToId("analytics-kpi-retention");
     });
 
     tbody.appendChild(tr);

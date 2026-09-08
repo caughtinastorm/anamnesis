@@ -24,11 +24,31 @@ export function refreshDashboard() {
 }
 
 /**
+ * Review Collections Explorer State
+ */
+export const reviewExplorerState = {
+  currentFolder: null, // null = root (all folders + standalone decks); string = active folder name
+  searchQuery: "",
+  viewMode: "grid" // "grid" | "list"
+};
+
+/**
  * Set the active deck/collection filter across the application.
  * @param {string} selection e.g. "all", "folder:Spanish", "deck:Spanish / Verbs", "deck:Verbs"
  */
 export function setActiveDeckSelection(selection = "all") {
   state.selectedDeck = selection || "all";
+
+  // If selection is inside a folder, auto-open that folder in review explorer
+  if (selection.startsWith("folder:")) {
+    reviewExplorerState.currentFolder = selection.slice(7);
+  } else if (selection.startsWith("deck:")) {
+    const raw = selection.slice(5);
+    const parts = raw.split(" / ");
+    if (parts.length > 1) {
+      reviewExplorerState.currentFolder = parts[0];
+    }
+  }
 
   // Sync hidden deckSelect dropdown for backwards compatibility
   if (dom.deckSelect && dom.deckSelect.options) {
@@ -44,6 +64,7 @@ export function setActiveDeckSelection(selection = "all") {
 
   calculateStats();
   updateUIStats();
+  renderFoldersTree();
   if (selection && selection !== "all") {
     showToast(`Active Collection: ${formatDeckSelectionLabel(selection)}`, "info");
   }
@@ -337,6 +358,48 @@ export function initDashboardPickerButton() {
     });
   }
 
+  // Review Explorer Toolbar Controls
+  const btnReviewUp = document.getElementById("btn-review-explorer-up");
+  if (btnReviewUp) {
+    btnReviewUp.addEventListener("click", () => {
+      if (reviewExplorerState.searchQuery) {
+        reviewExplorerState.searchQuery = "";
+        const searchInput = document.getElementById("review-explorer-search-input");
+        if (searchInput) searchInput.value = "";
+      } else if (reviewExplorerState.currentFolder !== null) {
+        reviewExplorerState.currentFolder = null;
+      }
+      renderFoldersTree();
+    });
+  }
+
+  const reviewSearchInput = document.getElementById("review-explorer-search-input");
+  if (reviewSearchInput) {
+    reviewSearchInput.addEventListener("input", (e) => {
+      reviewExplorerState.searchQuery = (e.target.value || "").trim().toLowerCase();
+      renderFoldersTree();
+    });
+  }
+
+  const btnReviewGrid = document.getElementById("btn-review-view-grid");
+  const btnReviewList = document.getElementById("btn-review-view-list");
+  if (btnReviewGrid) {
+    btnReviewGrid.addEventListener("click", () => {
+      reviewExplorerState.viewMode = "grid";
+      btnReviewGrid.classList.add("active");
+      if (btnReviewList) btnReviewList.classList.remove("active");
+      renderFoldersTree();
+    });
+  }
+  if (btnReviewList) {
+    btnReviewList.addEventListener("click", () => {
+      reviewExplorerState.viewMode = "list";
+      btnReviewList.classList.add("active");
+      if (btnReviewGrid) btnReviewGrid.classList.remove("active");
+      renderFoldersTree();
+    });
+  }
+
   const btnEmptyLoadN5 = document.getElementById("btn-empty-load-n5-kanji");
   if (btnEmptyLoadN5) {
     btnEmptyLoadN5.addEventListener("click", async () => {
@@ -352,9 +415,88 @@ export function initDashboardPickerButton() {
   }
 }
 
+/**
+ * Render the Review Collections Explorer widget
+ */
 export function renderFoldersTree() {
-  if (!dom.foldersTreeContainer) return;
-  dom.foldersTreeContainer.innerHTML = "";
+  const container = dom.foldersTreeContainer || document.getElementById("folders-tree-container");
+  if (!container) return;
+
+  const breadcrumbsEl = document.getElementById("review-explorer-breadcrumbs");
+  const btnUp = document.getElementById("btn-review-explorer-up");
+  const isAtRoot = reviewExplorerState.currentFolder === null && !reviewExplorerState.searchQuery;
+
+  if (btnUp) {
+    btnUp.disabled = isAtRoot;
+  }
+
+  // Update Breadcrumbs
+  if (breadcrumbsEl) {
+    breadcrumbsEl.innerHTML = "";
+
+    // Root chip: All Collections
+    const rootChip = document.createElement("button");
+    rootChip.type = "button";
+    rootChip.className = `breadcrumb-chip ${isAtRoot ? "active" : ""}`;
+    rootChip.innerHTML = `<svg class="chip-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><span>All Collections</span>`;
+    rootChip.title = "View all collections";
+    rootChip.addEventListener("click", () => {
+      reviewExplorerState.currentFolder = null;
+      reviewExplorerState.searchQuery = "";
+      const searchInput = document.getElementById("review-explorer-search-input");
+      if (searchInput) searchInput.value = "";
+      renderFoldersTree();
+    });
+    breadcrumbsEl.appendChild(rootChip);
+
+    // Active Folder Chip
+    if (reviewExplorerState.currentFolder) {
+      const sep = document.createElement("span");
+      sep.className = "breadcrumb-sep";
+      sep.textContent = "›";
+      breadcrumbsEl.appendChild(sep);
+
+      const folderChip = document.createElement("button");
+      folderChip.type = "button";
+      folderChip.className = `breadcrumb-chip ${!reviewExplorerState.searchQuery ? "active" : ""}`;
+      folderChip.innerHTML = `<svg class="chip-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg><span>${escapeHTML(reviewExplorerState.currentFolder)}</span>`;
+      folderChip.title = `Folder: ${reviewExplorerState.currentFolder}`;
+      folderChip.addEventListener("click", () => {
+        reviewExplorerState.searchQuery = "";
+        const searchInput = document.getElementById("review-explorer-search-input");
+        if (searchInput) searchInput.value = "";
+        renderFoldersTree();
+      });
+      breadcrumbsEl.appendChild(folderChip);
+    }
+
+    // Active Search Query Chip
+    if (reviewExplorerState.searchQuery) {
+      const sep = document.createElement("span");
+      sep.className = "breadcrumb-sep";
+      sep.textContent = "›";
+      breadcrumbsEl.appendChild(sep);
+
+      const searchChip = document.createElement("button");
+      searchChip.type = "button";
+      searchChip.className = "breadcrumb-chip active";
+      searchChip.innerHTML = `<svg class="chip-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span>"${escapeHTML(reviewExplorerState.searchQuery)}"</span>`;
+      searchChip.title = "Click to clear search";
+      searchChip.addEventListener("click", () => {
+        reviewExplorerState.searchQuery = "";
+        const searchInput = document.getElementById("review-explorer-search-input");
+        if (searchInput) searchInput.value = "";
+        renderFoldersTree();
+      });
+      breadcrumbsEl.appendChild(searchChip);
+    }
+  }
+
+  container.className = `folders-tree-container review-explorer-viewport ${
+    reviewExplorerState.viewMode === "list" ? "review-explorer-list" : "review-explorer-grid"
+  }`;
+  container.innerHTML = "";
+
   const now = Date.now();
   const folderMap = new Map();
   const standaloneMap = new Map();
@@ -368,261 +510,307 @@ export function renderFoldersTree() {
       if (!folderMap.has(folder)) folderMap.set(folder, new Map());
       const dm = folderMap.get(folder);
       if (!dm.has(deck)) dm.set(deck, { total: 0, due: 0 });
-      const s = dm.get(deck); s.total++; if (isDue) s.due++;
+      const s = dm.get(deck);
+      s.total++;
+      if (isDue) s.due++;
     } else {
       const d = deck || "Default";
       if (!standaloneMap.has(d)) standaloneMap.set(d, { total: 0, due: 0 });
-      const s = standaloneMap.get(d); s.total++; if (isDue) s.due++;
+      const s = standaloneMap.get(d);
+      s.total++;
+      if (isDue) s.due++;
     }
   });
 
   if (folderMap.size === 0 && standaloneMap.size === 0) {
-    dom.foldersTreeContainer.innerHTML = "<p class='help-text' style='padding: 10px 0;'>No collections created yet. Add cards or import decks to begin.</p>";
+    container.innerHTML = "<p class='help-text' style='padding: 14px 10px; width: 100%;'>No collections created yet. Add cards or import decks to begin.</p>";
     return;
   }
 
-  // Folders with sub-decks
+  const query = reviewExplorerState.searchQuery.toLowerCase();
+
+  // Mode 1: Search Filter Active across all collections
+  if (query) {
+    let matchedCount = 0;
+
+    // Matching Folders
+    Array.from(folderMap.keys()).sort().forEach(folder => {
+      const dm = folderMap.get(folder);
+      let totalCards = 0, totalDue = 0;
+      dm.forEach(s => { totalCards += s.total; totalDue += s.due; });
+
+      if (folder.toLowerCase().includes(query)) {
+        matchedCount++;
+        container.appendChild(createFolderTile(folder, totalCards, totalDue, dm.size));
+      }
+    });
+
+    // Matching Sub-decks inside folders
+    Array.from(folderMap.keys()).sort().forEach(folder => {
+      const dm = folderMap.get(folder);
+      Array.from(dm.keys()).sort().forEach(deck => {
+        if (deck.toLowerCase().includes(query)) {
+          matchedCount++;
+          const s = dm.get(deck);
+          container.appendChild(createDeckTile(folder, deck, s.total, s.due));
+        }
+      });
+    });
+
+    // Matching Standalone Decks
+    Array.from(standaloneMap.keys()).sort().forEach(deck => {
+      if (deck.toLowerCase().includes(query)) {
+        matchedCount++;
+        const s = standaloneMap.get(deck);
+        container.appendChild(createDeckTile(null, deck, s.total, s.due));
+      }
+    });
+
+    if (matchedCount === 0) {
+      container.innerHTML = `<p class='help-text' style='padding: 14px 10px; width: 100%;'>No collections match "<strong>${escapeHTML(query)}</strong>".</p>`;
+    }
+    return;
+  }
+
+  // Mode 2: Drilled down into a folder
+  if (reviewExplorerState.currentFolder !== null) {
+    const folder = reviewExplorerState.currentFolder;
+    if (!folderMap.has(folder)) {
+      reviewExplorerState.currentFolder = null;
+      renderFoldersTree();
+      return;
+    }
+
+    const dm = folderMap.get(folder);
+    Array.from(dm.keys()).sort().forEach(deck => {
+      const s = dm.get(deck);
+      container.appendChild(createDeckTile(folder, deck, s.total, s.due));
+    });
+    return;
+  }
+
+  // Mode 3: Root Level (Folders + Standalone Decks)
+  // 1. Folders
   Array.from(folderMap.keys()).sort().forEach(folder => {
     const dm = folderMap.get(folder);
     let totalCards = 0, totalDue = 0;
     dm.forEach(s => { totalCards += s.total; totalDue += s.due; });
+    container.appendChild(createFolderTile(folder, totalCards, totalDue, dm.size));
+  });
 
-    const node = document.createElement("div"); node.className = "folder-node";
-    const header = document.createElement("div"); header.className = "folder-header-row";
-    const titleWrap = document.createElement("div"); titleWrap.className = "folder-title-wrap";
-    titleWrap.innerHTML = `<svg class="folder-icon-svg" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg><span>${escapeHTML(folder)}</span><span class="folder-count-badge">${totalCards} cards${totalDue > 0 ? ` • ${totalDue} due` : ""}</span>`;
-    
-    titleWrap.addEventListener("click", () => {
-      setActiveDeckSelection(`folder:${folder}`);
-      showToast(`Selected folder "${folder}"`, "info");
-    });
+  // 2. Standalone Collections
+  Array.from(standaloneMap.keys()).sort().forEach(deck => {
+    const s = standaloneMap.get(deck);
+    container.appendChild(createDeckTile(null, deck, s.total, s.due));
+  });
+}
 
-    const actWrap = document.createElement("div"); actWrap.className = "folder-actions-wrap";
-    
-    if (totalDue > 0) {
-      const btnStudy = document.createElement("button");
-      btnStudy.className = "btn-folder-action";
-      btnStudy.textContent = `Study (${totalDue})`;
-      btnStudy.title = `Study due cards in folder ${folder}`;
-      btnStudy.addEventListener("click", async e => {
-        e.stopPropagation();
-        setActiveDeckSelection(`folder:${folder}`);
-        switchView("view-review");
-        const { startStudySession } = await import("./study.js");
-        startStudySession(false);
-      });
-      actWrap.appendChild(btnStudy);
-    }
+/**
+ * Create an interactive folder tile for the Review Explorer
+ */
+function createFolderTile(folder, totalCards, totalDue, subdeckCount) {
+  const isSelected = state.selectedDeck === `folder:${folder}`;
+  const tile = document.createElement("div");
+  tile.className = `review-explorer-tile ${isSelected ? "is-active-deck" : ""}`;
+  tile.title = `Click to open folder "${folder}"`;
 
-    const btnPracticeFolder = document.createElement("button");
-    btnPracticeFolder.className = "btn-folder-action";
-    btnPracticeFolder.textContent = "Practice All";
-    btnPracticeFolder.title = `Practice all ${totalCards} cards in ${folder}`;
-    btnPracticeFolder.addEventListener("click", async e => {
+  const header = document.createElement("div");
+  header.className = "review-tile-header";
+
+  const titleGroup = document.createElement("div");
+  titleGroup.className = "review-tile-title-group";
+  titleGroup.innerHTML = `
+    <div class="review-tile-icon">📁</div>
+    <div class="review-tile-text">
+      <div class="review-tile-title">${escapeHTML(folder)}</div>
+      <div class="review-tile-sub">${subdeckCount} collection${subdeckCount === 1 ? "" : "s"}</div>
+    </div>
+  `;
+
+  const badge = document.createElement("span");
+  badge.className = `review-tile-badge ${totalDue > 0 ? "due" : ""}`;
+  badge.textContent = `${totalCards} cards${totalDue > 0 ? ` • ${totalDue} due` : ""}`;
+
+  header.appendChild(titleGroup);
+  header.appendChild(badge);
+  tile.appendChild(header);
+
+  const actions = document.createElement("div");
+  actions.className = "review-tile-actions";
+
+  const btnOpen = document.createElement("button");
+  btnOpen.type = "button";
+  btnOpen.className = "btn-review-tile-action";
+  btnOpen.textContent = "Open ↳";
+  btnOpen.title = `Open folder "${folder}"`;
+  btnOpen.addEventListener("click", (e) => {
+    e.stopPropagation();
+    reviewExplorerState.currentFolder = folder;
+    reviewExplorerState.searchQuery = "";
+    const searchInput = document.getElementById("review-explorer-search-input");
+    if (searchInput) searchInput.value = "";
+    renderFoldersTree();
+  });
+  actions.appendChild(btnOpen);
+
+  if (totalDue > 0) {
+    const btnStudy = document.createElement("button");
+    btnStudy.type = "button";
+    btnStudy.className = "btn-review-tile-action btn-study";
+    btnStudy.textContent = `Study (${totalDue})`;
+    btnStudy.title = `Study due cards in folder "${folder}"`;
+    btnStudy.addEventListener("click", async (e) => {
       e.stopPropagation();
       setActiveDeckSelection(`folder:${folder}`);
       switchView("view-review");
       const { startStudySession } = await import("./study.js");
-      startStudySession(true);
+      startStudySession(false);
     });
-    actWrap.appendChild(btnPracticeFolder);
+    actions.appendChild(btnStudy);
+  }
 
-    const btnResetFolder = document.createElement("button");
-    btnResetFolder.className = "btn-folder-action btn-folder-reset-fsrs";
-    btnResetFolder.title = `Reset FSRS data for folder "${folder}"`;
-    btnResetFolder.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>`;
-    btnResetFolder.addEventListener("click", e => {
-      e.stopPropagation();
-      promptResetFolderFSRS(folder, totalCards);
-    });
-    actWrap.appendChild(btnResetFolder);
+  const btnPractice = document.createElement("button");
+  btnPractice.type = "button";
+  btnPractice.className = "btn-review-tile-action";
+  btnPractice.textContent = "Practice";
+  btnPractice.title = `Practice all ${totalCards} cards in "${folder}"`;
+  btnPractice.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    setActiveDeckSelection(`folder:${folder}`);
+    switchView("view-review");
+    const { startStudySession } = await import("./study.js");
+    startStudySession(true);
+  });
+  actions.appendChild(btnPractice);
 
-    const btnDeleteFolder = document.createElement("button");
-    btnDeleteFolder.className = "btn-folder-action btn-folder-delete";
-    btnDeleteFolder.title = `Delete folder "${folder}" and all its collections`;
-    btnDeleteFolder.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
-    btnDeleteFolder.addEventListener("click", e => {
-      e.stopPropagation();
-      deleteFolder(folder, totalCards);
-    });
-    actWrap.appendChild(btnDeleteFolder);
+  const btnReset = document.createElement("button");
+  btnReset.type = "button";
+  btnReset.className = "btn-review-tile-action btn-icon-only";
+  btnReset.title = `Reset FSRS spaced repetition data for folder "${folder}"`;
+  btnReset.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>`;
+  btnReset.addEventListener("click", (e) => {
+    e.stopPropagation();
+    promptResetFolderFSRS(folder, totalCards);
+  });
+  actions.appendChild(btnReset);
 
-    header.appendChild(titleWrap);
-    header.appendChild(actWrap);
-    node.appendChild(header);
+  const btnDelete = document.createElement("button");
+  btnDelete.type = "button";
+  btnDelete.className = "btn-review-tile-action btn-icon-only";
+  btnDelete.title = `Delete folder "${folder}" and all its collections`;
+  btnDelete.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
+  btnDelete.addEventListener("click", (e) => {
+    e.stopPropagation();
+    deleteFolder(folder, totalCards);
+  });
+  actions.appendChild(btnDelete);
 
-    const dl = document.createElement("div"); dl.className = "folder-decks-list";
-    Array.from(dm.keys()).sort().forEach(deck => {
-      const s = dm.get(deck);
-      const row = document.createElement("div"); row.className = "deck-tree-item";
-      
-      const leftWrap = document.createElement("div");
-      leftWrap.className = "deck-tree-left";
-      
-      const name = document.createElement("span");
-      name.className = "deck-tree-name";
-      name.innerHTML = `↳ ${escapeHTML(deck)}`;
-      name.title = `Select collection ${deck}`;
-      name.addEventListener("click", () => {
-        setActiveDeckSelection(`deck:${folder} / ${deck}`);
-        showToast(`Selected collection "${deck}"`, "info");
-      });
+  tile.appendChild(actions);
 
-      const count = document.createElement("span");
-      count.className = "deck-count-pill";
-      count.textContent = `${s.total} cards${s.due > 0 ? ` (${s.due} due)` : ""}`;
-
-      leftWrap.appendChild(name);
-      leftWrap.appendChild(count);
-
-      const actGroup = document.createElement("div");
-      actGroup.className = "deck-tree-actions";
-
-      if (s.due > 0) {
-        const btnDeckStudy = document.createElement("button");
-        btnDeckStudy.className = "btn-deck-action";
-        btnDeckStudy.innerHTML = `Study (${s.due})`;
-        btnDeckStudy.title = `Study due cards in ${deck}`;
-        btnDeckStudy.addEventListener("click", async (e) => {
-          e.stopPropagation();
-          setActiveDeckSelection(`deck:${folder} / ${deck}`);
-          switchView("view-review");
-          const { startStudySession } = await import("./study.js");
-          startStudySession(false);
-        });
-        actGroup.appendChild(btnDeckStudy);
-      }
-
-      const btnDeckPractice = document.createElement("button");
-      btnDeckPractice.className = "btn-deck-action practice-all";
-      btnDeckPractice.innerHTML = "Practice";
-      btnDeckPractice.title = `Practice all ${s.total} cards in ${deck}`;
-      btnDeckPractice.addEventListener("click", async (e) => {
-        e.stopPropagation();
-        setActiveDeckSelection(`deck:${folder} / ${deck}`);
-        switchView("view-review");
-        const { startStudySession } = await import("./study.js");
-        startStudySession(true);
-      });
-      actGroup.appendChild(btnDeckPractice);
-
-      const btnDeckReset = document.createElement("button");
-      btnDeckReset.className = "btn-deck-action btn-deck-reset-fsrs";
-      btnDeckReset.title = `Reset FSRS data for collection "${deck}"`;
-      btnDeckReset.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>`;
-      btnDeckReset.addEventListener("click", (e) => {
-        e.stopPropagation();
-        promptResetDeckFSRS(folder, deck, s.total);
-      });
-      actGroup.appendChild(btnDeckReset);
-
-      const btnDeckDelete = document.createElement("button");
-      btnDeckDelete.className = "btn-deck-action btn-deck-delete";
-      btnDeckDelete.title = `Delete collection "${deck}"`;
-      btnDeckDelete.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
-      btnDeckDelete.addEventListener("click", (e) => {
-        e.stopPropagation();
-        deleteDeck(folder, deck, s.total);
-      });
-      actGroup.appendChild(btnDeckDelete);
-
-      row.appendChild(leftWrap);
-      row.appendChild(actGroup);
-      dl.appendChild(row);
-    });
-    node.appendChild(dl);
-    dom.foldersTreeContainer.appendChild(node);
+  tile.addEventListener("click", () => {
+    reviewExplorerState.currentFolder = folder;
+    reviewExplorerState.searchQuery = "";
+    const searchInput = document.getElementById("review-explorer-search-input");
+    if (searchInput) searchInput.value = "";
+    renderFoldersTree();
   });
 
-  // Standalone Decks
-  if (standaloneMap.size > 0) {
-    const node = document.createElement("div"); node.className = "folder-node";
-    const header = document.createElement("div"); header.className = "folder-header-row";
-    const titleWrap = document.createElement("div"); titleWrap.className = "folder-title-wrap";
-    titleWrap.innerHTML = `<svg class="folder-icon-svg" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg><span>Standalone Collections</span>`;
-    header.appendChild(titleWrap); node.appendChild(header);
-    const dl = document.createElement("div"); dl.className = "folder-decks-list";
-    Array.from(standaloneMap.keys()).sort().forEach(deck => {
-      const s = standaloneMap.get(deck);
-      const row = document.createElement("div"); row.className = "deck-tree-item";
-      
-      const leftWrap = document.createElement("div");
-      leftWrap.className = "deck-tree-left";
+  return tile;
+}
 
-      const name = document.createElement("span");
-      name.className = "deck-tree-name";
-      name.textContent = deck;
-      name.title = `Select collection ${deck}`;
-      name.addEventListener("click", () => {
-        setActiveDeckSelection(`deck:${deck}`);
-        showToast(`Selected collection "${deck}"`, "info");
-      });
+/**
+ * Create an interactive deck tile for the Review Explorer
+ */
+function createDeckTile(folder, deck, total, due) {
+  const selectionKey = folder ? `deck:${folder} / ${deck}` : `deck:${deck}`;
+  const isSelected = state.selectedDeck === selectionKey;
+  const tile = document.createElement("div");
+  tile.className = `review-explorer-tile ${isSelected ? "is-active-deck" : ""}`;
+  tile.title = `Select collection "${deck}"`;
 
-      const count = document.createElement("span");
-      count.className = "deck-count-pill";
-      count.textContent = `${s.total} cards${s.due > 0 ? ` (${s.due} due)` : ""}`;
+  const header = document.createElement("div");
+  header.className = "review-tile-header";
 
-      leftWrap.appendChild(name);
-      leftWrap.appendChild(count);
+  const titleGroup = document.createElement("div");
+  titleGroup.className = "review-tile-title-group";
+  titleGroup.innerHTML = `
+    <div class="review-tile-icon">🗃️</div>
+    <div class="review-tile-text">
+      <div class="review-tile-title">${escapeHTML(deck)}</div>
+      <div class="review-tile-sub">${folder ? escapeHTML(folder) : "Standalone collection"}</div>
+    </div>
+  `;
 
-      const actGroup = document.createElement("div");
-      actGroup.className = "deck-tree-actions";
+  const badge = document.createElement("span");
+  badge.className = `review-tile-badge ${due > 0 ? "due" : ""}`;
+  badge.textContent = `${total} cards${due > 0 ? ` • ${due} due` : ""}`;
 
-      if (s.due > 0) {
-        const btnDeckStudy = document.createElement("button");
-        btnDeckStudy.className = "btn-deck-action";
-        btnDeckStudy.innerHTML = `Study (${s.due})`;
-        btnDeckStudy.title = `Study due cards in ${deck}`;
-        btnDeckStudy.addEventListener("click", async (e) => {
-          e.stopPropagation();
-          setActiveDeckSelection(`deck:${deck}`);
-          switchView("view-review");
-          const { startStudySession } = await import("./study.js");
-          startStudySession(false);
-        });
-        actGroup.appendChild(btnDeckStudy);
-      }
+  header.appendChild(titleGroup);
+  header.appendChild(badge);
+  tile.appendChild(header);
 
-      const btnDeckPractice = document.createElement("button");
-      btnDeckPractice.className = "btn-deck-action practice-all";
-      btnDeckPractice.innerHTML = "Practice";
-      btnDeckPractice.title = `Practice all ${s.total} cards in ${deck}`;
-      btnDeckPractice.addEventListener("click", async (e) => {
-        e.stopPropagation();
-        setActiveDeckSelection(`deck:${deck}`);
-        switchView("view-review");
-        const { startStudySession } = await import("./study.js");
-        startStudySession(true);
-      });
-      actGroup.appendChild(btnDeckPractice);
+  const actions = document.createElement("div");
+  actions.className = "review-tile-actions";
 
-      const btnDeckReset = document.createElement("button");
-      btnDeckReset.className = "btn-deck-action btn-deck-reset-fsrs";
-      btnDeckReset.title = `Reset FSRS data for collection "${deck}"`;
-      btnDeckReset.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>`;
-      btnDeckReset.addEventListener("click", (e) => {
-        e.stopPropagation();
-        promptResetDeckFSRS(null, deck, s.total);
-      });
-      actGroup.appendChild(btnDeckReset);
-
-      const btnDeckDelete = document.createElement("button");
-      btnDeckDelete.className = "btn-deck-action btn-deck-delete";
-      btnDeckDelete.title = `Delete collection "${deck}"`;
-      btnDeckDelete.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
-      btnDeckDelete.addEventListener("click", (e) => {
-        e.stopPropagation();
-        deleteDeck(null, deck, s.total);
-      });
-      actGroup.appendChild(btnDeckDelete);
-
-      row.appendChild(leftWrap);
-      row.appendChild(actGroup);
-      dl.appendChild(row);
+  if (due > 0) {
+    const btnStudy = document.createElement("button");
+    btnStudy.type = "button";
+    btnStudy.className = "btn-review-tile-action btn-study";
+    btnStudy.textContent = `Study (${due})`;
+    btnStudy.title = `Study due cards in "${deck}"`;
+    btnStudy.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      setActiveDeckSelection(selectionKey);
+      switchView("view-review");
+      const { startStudySession } = await import("./study.js");
+      startStudySession(false);
     });
-    node.appendChild(dl);
-    dom.foldersTreeContainer.appendChild(node);
+    actions.appendChild(btnStudy);
   }
+
+  const btnPractice = document.createElement("button");
+  btnPractice.type = "button";
+  btnPractice.className = "btn-review-tile-action";
+  btnPractice.textContent = "Practice";
+  btnPractice.title = `Practice all ${total} cards in "${deck}"`;
+  btnPractice.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    setActiveDeckSelection(selectionKey);
+    switchView("view-review");
+    const { startStudySession } = await import("./study.js");
+    startStudySession(true);
+  });
+  actions.appendChild(btnPractice);
+
+  const btnReset = document.createElement("button");
+  btnReset.type = "button";
+  btnReset.className = "btn-review-tile-action btn-icon-only";
+  btnReset.title = `Reset FSRS spaced repetition data for "${deck}"`;
+  btnReset.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>`;
+  btnReset.addEventListener("click", (e) => {
+    e.stopPropagation();
+    promptResetDeckFSRS(folder, deck, total);
+  });
+  actions.appendChild(btnReset);
+
+  const btnDelete = document.createElement("button");
+  btnDelete.type = "button";
+  btnDelete.className = "btn-review-tile-action btn-icon-only";
+  btnDelete.title = `Delete collection "${deck}"`;
+  btnDelete.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
+  btnDelete.addEventListener("click", (e) => {
+    e.stopPropagation();
+    deleteDeck(folder, deck, total);
+  });
+  actions.appendChild(btnDelete);
+
+  tile.appendChild(actions);
+
+  tile.addEventListener("click", () => {
+    setActiveDeckSelection(selectionKey);
+  });
+
+  return tile;
 }
 
 export function deleteDeck(folderName, deckName, count) {

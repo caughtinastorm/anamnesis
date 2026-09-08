@@ -197,18 +197,43 @@
                 </div>
               </div>
 
-              <!-- Collections Quick Study Panel -->
-              <div class="dashboard-card collections-tree-card" id="dashboard-collections-panel">
+              <!-- Collections Explorer Panel for Review -->
+              <div class="dashboard-card collections-tree-card review-explorer-card" id="dashboard-collections-panel">
                 <div class="panel-header-with-action">
                   <div>
-                    <span class="heatmap-title">Collections &amp; Decks</span>
-                    <p class="panel-subtext">Click any deck to study due cards or practice anytime.</p>
+                    <span class="heatmap-title">Collections Explorer</span>
+                    <p class="panel-subtext">Browse folders and collections without visual clutter.</p>
                   </div>
-                  <button type="button" id="btn-dashboard-all-decks" class="btn btn-secondary btn-sm" title="View all collections in Explorer">
-                    Explorer View
+                  <button type="button" id="btn-dashboard-all-decks" class="btn btn-secondary btn-sm" title="Open Full Manager in Decks view">
+                    Full Explorer ↗
                   </button>
                 </div>
-                <div id="folders-tree-container" class="folders-tree-container">
+                <!-- Review Explorer Navigation Toolbar -->
+                <div class="review-explorer-toolbar">
+                  <div class="explorer-nav-buttons">
+                    <button type="button" id="btn-review-explorer-up" class="btn-explorer-nav" title="Up to Parent / All Collections" disabled>
+                      <svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                    </button>
+                  </div>
+                  <div class="explorer-address-bar review-explorer-address">
+                    <div id="review-explorer-breadcrumbs" class="explorer-breadcrumbs">
+                      <!-- Breadcrumb chips generated via JS -->
+                    </div>
+                  </div>
+                  <div class="explorer-search-box review-explorer-search">
+                    <svg class="search-icon-svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input type="text" id="review-explorer-search-input" placeholder="Search collections...">
+                  </div>
+                  <div class="explorer-view-toggle review-explorer-toggle">
+                    <button type="button" id="btn-review-view-grid" class="btn-view-mode active" title="Grid / Tile View">
+                      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    </button>
+                    <button type="button" id="btn-review-view-list" class="btn-view-mode" title="Details / List View">
+                      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                    </button>
+                  </div>
+                </div>
+                <div id="folders-tree-container" class="folders-tree-container review-explorer-viewport">
                   <!-- Dynamically populated folders and decks -->
                 </div>
               </div>
@@ -630,8 +655,17 @@
             </div>
           </div>
           <div class="analytics-toolbar-right">
-            <label for="analytics-deck-filter" class="toolbar-label">Collection:</label>
-            <select id="analytics-deck-filter" class="select-input select-analytics">
+            <span class="toolbar-label">Collection:</span>
+            <div class="analytics-deck-picker-wrap">
+              <button type="button" id="btn-analytics-deck-picker" class="gui-picker-filter-btn" title="Browse and filter by collection">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <span id="analytics-deck-filter-label">📁 All Collections</span>
+                <span id="analytics-deck-count-pill" class="gui-picker-badge">0 cards</span>
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <button type="button" id="btn-analytics-clear-filter" class="gui-picker-clear-btn hidden" title="Clear filter to All Collections">✕ Clear</button>
+            </div>
+            <select id="analytics-deck-filter" class="hidden">
               <option value="all">📁 All Collections</option>
             </select>
           </div>
