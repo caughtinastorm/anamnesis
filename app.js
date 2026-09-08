@@ -48,10 +48,20 @@ function initRouting() {
 
     const studyActive = dom.subviewStudy?.classList.contains("active");
     if (studyActive && targetView !== "view-review") {
-      showModal("Exit Study Session?", "Your session progress will be saved.", () => {
-        exitStudySession();
-        switchView(targetView);
-      });
+      showModal(
+        "Exit Study Session?",
+        "Your session progress will be saved. Would you like to leave this session?",
+        () => {
+          exitStudySession();
+          switchView(targetView);
+        },
+        null,
+        {
+          confirmText: "Exit Session",
+          confirmClass: "btn btn-primary",
+          cancelText: "Stay in Session"
+        }
+      );
     } else {
       switchView(targetView);
     }
@@ -60,10 +70,20 @@ function initRouting() {
   const handleLogoClick = () => {
     const studyActive = dom.subviewStudy?.classList.contains("active");
     if (studyActive) {
-      showModal("Exit Study Session?", "Return to dashboard?", () => {
-        exitStudySession();
-        switchView("view-review");
-      });
+      showModal(
+        "Exit Study Session?",
+        "Your progress will be preserved. Return to dashboard?",
+        () => {
+          exitStudySession();
+          switchView("view-review");
+        },
+        null,
+        {
+          confirmText: "Return to Dashboard",
+          confirmClass: "btn btn-primary",
+          cancelText: "Stay in Session"
+        }
+      );
     } else {
       switchView("view-review");
     }

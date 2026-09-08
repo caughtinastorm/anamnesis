@@ -116,13 +116,40 @@ export function scrollToElement(el) {
   setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
 }
 
-export function showModal(title, body, onConfirm, onCancel = null) {
-  if (!dom.modalContainer) return;
-  dom.modalTitle.textContent = title;
-  dom.modalBody.textContent = body;
+export function showModal(title, body, onConfirm, onCancel = null, options = {}) {
+  const container = dom.modalContainer || document.getElementById("modal-container");
+  if (!container) return;
+  const titleEl = dom.modalTitle || document.getElementById("modal-title");
+  const bodyEl = dom.modalBody || document.getElementById("modal-body");
+  const btnCancel = dom.modalBtnCancel || document.getElementById("modal-btn-cancel");
+  const btnConfirm = dom.modalBtnConfirm || document.getElementById("modal-btn-confirm");
+
+  if (titleEl) titleEl.textContent = title;
+  if (bodyEl) {
+    if (options.isHTML) {
+      bodyEl.innerHTML = body;
+    } else {
+      bodyEl.textContent = body;
+    }
+  }
+
   state.modalConfirmCallback = onConfirm;
   state.modalCancelCallback = onCancel;
-  dom.modalContainer.classList.remove("hidden");
+  state.modalDismissCallback = options.onDismiss || null;
+
+  if (btnCancel) {
+    btnCancel.textContent = options.cancelText || "Cancel";
+    btnCancel.className = options.cancelClass || "btn btn-secondary";
+    btnCancel.style.display = options.hideCancel ? "none" : "";
+  }
+
+  if (btnConfirm) {
+    btnConfirm.textContent = options.confirmText || "Confirm";
+    btnConfirm.className = options.confirmClass || "btn btn-danger";
+    btnConfirm.style.display = options.hideConfirm ? "none" : "";
+  }
+
+  container.classList.remove("hidden");
 }
 
 export function showPromptModal(title, message, defaultValue = "", onConfirm, onCancel = null) {
@@ -211,24 +238,51 @@ export function showPracticeModeModal(onPracticeOnly, onTrackFSRS, onCancel = nu
 }
 
 export function initModalListeners() {
-  if (dom.modalBtnCancel) {
-    dom.modalBtnCancel.addEventListener("click", () => {
-      dom.modalContainer.classList.add("hidden");
-      const cancelCb = state.modalCancelCallback;
-      state.modalConfirmCallback = null;
-      state.modalCancelCallback = null;
-      if (cancelCb) cancelCb();
-    });
-  }
-  if (dom.modalBtnConfirm) {
-    dom.modalBtnConfirm.addEventListener("click", () => {
-      dom.modalContainer.classList.add("hidden");
-      const confirmCb = state.modalConfirmCallback;
-      state.modalConfirmCallback = null;
-      state.modalCancelCallback = null;
+  const container = dom.modalContainer || document.getElementById("modal-container");
+  const btnCancel = dom.modalBtnCancel || document.getElementById("modal-btn-cancel");
+  const btnConfirm = dom.modalBtnConfirm || document.getElementById("modal-btn-confirm");
+
+  const closeModal = (action) => {
+    if (!container) return;
+    container.classList.add("hidden");
+    const confirmCb = state.modalConfirmCallback;
+    const cancelCb = state.modalCancelCallback;
+    const dismissCb = state.modalDismissCallback;
+    state.modalConfirmCallback = null;
+    state.modalCancelCallback = null;
+    state.modalDismissCallback = null;
+
+    if (action === "confirm") {
       if (confirmCb) confirmCb();
+    } else if (action === "cancel") {
+      if (cancelCb) cancelCb();
+    } else {
+      if (dismissCb) {
+        dismissCb();
+      } else if (cancelCb) {
+        cancelCb();
+      }
+    }
+  };
+
+  if (btnCancel) {
+    btnCancel.addEventListener("click", () => closeModal("cancel"));
+  }
+  if (btnConfirm) {
+    btnConfirm.addEventListener("click", () => closeModal("confirm"));
+  }
+
+  if (container) {
+    container.addEventListener("click", (e) => {
+      if (e.target === container) closeModal("dismiss");
     });
   }
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && container && !container.classList.contains("hidden")) {
+      closeModal("dismiss");
+    }
+  });
 
   const promptInput = dom.promptModalInput || document.getElementById("prompt-modal-input");
   const promptConfirm = dom.promptModalBtnConfirm || document.getElementById("prompt-modal-btn-confirm");

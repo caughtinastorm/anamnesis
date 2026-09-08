@@ -31,6 +31,8 @@ import {
   formatDeckSelectionLabel,
   matchesDeckSelection
 } from "../js/utils.js";
+import { showModal } from "../js/ui.js";
+import { state } from "../js/state.js";
 import { calculateStreak, reviewExplorerState } from "../js/dashboard.js";
 import {
   renderCardContent,
@@ -1176,6 +1178,61 @@ runTest("Review Explorer view mode toggles cleanly between grid and list", () =>
   // Return to default grid mode
   reviewExplorerState.viewMode = "grid";
   assert.equal(reviewExplorerState.viewMode, "grid");
+});
+
+runTest("showModal supports custom button labels, explicit actions, and dismiss handling for completed sessions", () => {
+  let confirmed = false;
+  let cancelled = false;
+  let dismissed = false;
+
+  const mockModal = { classList: { remove() {}, add() {}, contains() { return false; } } };
+  const mockTitle = { textContent: "" };
+  const mockBody = { textContent: "", innerHTML: "" };
+  const mockBtnConfirm = { textContent: "", className: "", style: {} };
+  const mockBtnCancel = { textContent: "", className: "", style: {} };
+
+  globalThis.document = {
+    getElementById(id) {
+      if (id === "modal-container") return mockModal;
+      if (id === "modal-title") return mockTitle;
+      if (id === "modal-body") return mockBody;
+      if (id === "modal-btn-confirm") return mockBtnConfirm;
+      if (id === "modal-btn-cancel") return mockBtnCancel;
+      return null;
+    }
+  };
+
+  showModal(
+    "🎉 Review Completed!",
+    "Great job! You finished reviewing all 10 cards.",
+    () => { confirmed = true; },
+    () => { cancelled = true; },
+    {
+      confirmText: "Return to Dashboard",
+      confirmClass: "btn btn-primary",
+      cancelText: "Review Again",
+      cancelClass: "btn btn-secondary",
+      onDismiss: () => { dismissed = true; }
+    }
+  );
+
+  assert.equal(mockTitle.textContent, "🎉 Review Completed!");
+  assert.equal(mockBtnConfirm.textContent, "Return to Dashboard");
+  assert.equal(mockBtnConfirm.className, "btn btn-primary");
+  assert.equal(mockBtnCancel.textContent, "Review Again");
+  assert.equal(mockBtnCancel.className, "btn btn-secondary");
+
+  assert.equal(typeof state.modalConfirmCallback, "function");
+  state.modalConfirmCallback();
+  assert.equal(confirmed, true);
+
+  assert.equal(typeof state.modalCancelCallback, "function");
+  state.modalCancelCallback();
+  assert.equal(cancelled, true);
+
+  assert.equal(typeof state.modalDismissCallback, "function");
+  state.modalDismissCallback();
+  assert.equal(dismissed, true);
 });
 
 console.log(`\nResults: ${testsPassed} passed / ${testsRun} total`);

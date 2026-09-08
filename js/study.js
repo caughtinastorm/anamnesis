@@ -1010,24 +1010,33 @@ function finishStudySession() {
     : state.studySessionCards.length;
   const isPracticeOnly = state.studySessionInfo && state.studySessionInfo.recordFSRS === false;
 
-  let modalTitle = "🎉 Deck Completed!";
-  let modalMsg = `Great job! You finished all ${count} cards in ${deckName}. Would you like to review this deck again or return to dashboard?`;
+  let modalTitle = "🎉 Review Completed!";
+  let modalMsg = `Great job! You finished reviewing all ${count} cards in "${deckName}". Spaced repetition schedules and review logs have been recorded.`;
 
   if (currentSessionIsForce) {
     modalTitle = "🎯 Practice Completed!";
     modalMsg = isPracticeOnly
-      ? `Phenomenal work! You mastered all ${count} cards in ${deckName} with local retention streaks. Your long-term FSRS spaced repetition data remained safe and untouched.`
-      : `Phenomenal work! You mastered all ${count} cards in ${deckName} with local retention streaks, and review logs were recorded for FSRS.`;
+      ? `Phenomenal work! You mastered all ${count} cards in "${deckName}" with local retention streaks. Your long-term FSRS spaced repetition data remained safe and untouched.`
+      : `Phenomenal work! You mastered all ${count} cards in "${deckName}" with local retention streaks, and review logs were recorded for FSRS.`;
   }
 
   showModal(
     modalTitle,
     modalMsg,
     () => {
-      restartStudySession();
+      exitStudySession();
     },
     () => {
-      exitStudySession();
+      restartStudySession();
+    },
+    {
+      confirmText: "Return to Dashboard",
+      confirmClass: "btn btn-primary",
+      cancelText: currentSessionIsForce ? "Practice Again" : "Review Again",
+      cancelClass: "btn btn-secondary",
+      onDismiss: () => {
+        exitStudySession();
+      }
     }
   );
 }
@@ -1188,9 +1197,19 @@ export function initStudyEventListeners() {
   if (dom.btnStartReview) dom.btnStartReview.addEventListener("click", () => startStudySession(false));
   if (dom.btnForceReview) dom.btnForceReview.addEventListener("click", () => startStudySession(true));
   if (dom.btnRestartStudy) dom.btnRestartStudy.addEventListener("click", () => {
-    showModal("Restart Review Session?", "Do you want to restart reviewing this deck from the beginning?", () => {
-      restartStudySession();
-    });
+    showModal(
+      "Restart Review Session?",
+      "Do you want to restart reviewing this collection from the beginning?",
+      () => {
+        restartStudySession();
+      },
+      null,
+      {
+        confirmText: "Restart Session",
+        confirmClass: "btn btn-primary",
+        cancelText: "Keep Reviewing"
+      }
+    );
   });
 
   const skipBtn = document.getElementById("btn-skip-card") || dom.btnSkipCard;
