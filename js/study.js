@@ -13,6 +13,7 @@ let currentSessionPool = [];
 let currentSessionIsForce = false;
 let isGradingInProgress = false;
 let studyUndoStack = [];
+let currentCardStartTime = 0;
 
 export const PRACTICE_CONFIG = {
   BATCH_SIZE: 4,
@@ -527,6 +528,7 @@ export function renderCurrentStudyCard() {
   state.touchMoveX = 0;
   state.touchMoveY = 0;
   isGradingInProgress = false;
+  currentCardStartTime = Date.now();
 
   if (currentSessionIsForce && practiceSession) {
     const total = practiceSession.totalCards;
@@ -643,6 +645,7 @@ export async function submitCardGrade(grade) {
   else if (grade === 4) fsrsRating = Rating.Easy;
 
   const now = Date.now();
+  const durationMs = currentCardStartTime > 0 ? Math.max(100, Math.min(300000, now - currentCardStartTime)) : 0;
   const cardBefore = JSON.parse(JSON.stringify(card));
   const logId = 'log_' + now + '_' + Math.random().toString(36).slice(2, 6);
   const isPracticeOnly = state.studySessionInfo && state.studySessionInfo.recordFSRS === false;
@@ -704,7 +707,11 @@ export async function submitCardGrade(grade) {
         difficulty_after: updated.fsrs_stats?.difficulty || 0,
         interval: updated.fsrs_stats?.interval || 0,
         state_before: cardBefore.fsrs_stats?.state ?? 0,
-        state_after: updated.fsrs_stats?.state ?? 0
+        state_after: updated.fsrs_stats?.state ?? 0,
+        duration_ms: durationMs,
+        deck: card.deck || "Default",
+        folder: card.folder || "",
+        mode: currentSessionIsForce ? "practice" : "scheduled"
       });
     } catch (e) {
       console.warn("Failed to log review history:", e);
@@ -732,6 +739,30 @@ export async function submitCardGrade(grade) {
     }
 
     recordDailyReview(card.id, now);
+  } else {
+    // Record practice mode session attempt for method analytics
+    try {
+      db.saveReviewLog({
+        id: logId,
+        card_id: card.id,
+        timestamp: now,
+        grade: fsrsRating,
+        elapsed_days: 0,
+        stability_before: cardBefore.fsrs_stats?.stability || 0,
+        stability_after: cardBefore.fsrs_stats?.stability || 0,
+        difficulty_before: cardBefore.fsrs_stats?.difficulty || 0,
+        difficulty_after: cardBefore.fsrs_stats?.difficulty || 0,
+        interval: cardBefore.fsrs_stats?.interval || 0,
+        state_before: cardBefore.fsrs_stats?.state ?? 0,
+        state_after: cardBefore.fsrs_stats?.state ?? 0,
+        duration_ms: durationMs,
+        deck: card.deck || "Default",
+        folder: card.folder || "",
+        mode: "practice_buffer"
+      });
+    } catch (e) {
+      console.warn("Failed to log practice review history:", e);
+    }
   }
 
   // Visual card exit animation

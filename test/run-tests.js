@@ -44,6 +44,17 @@ import { parseAnkiText, normalizeAnkiDeck, expandClozeCards, cleanHtmlTags } fro
 import { sortCardsLogically } from "../js/explorer-actions.js";
 import { INTRO_STEPS } from "../js/intro.js";
 import { JLPT_N5_KANJI_DECK, STARTER_FOLDER, STARTER_DECK } from "../js/presets.js";
+import {
+  wilsonScoreInterval,
+  calculateLeechSeverity,
+  calculateCardMemoryROI,
+  calculateEfficiencyScore,
+  analyzeDecks,
+  analyzeCardFriction,
+  analyzeErgonomics,
+  calculateModelCalibration,
+  generatePrescriptions
+} from "../js/analytics.js";
 
 let testsRun = 0;
 let testsPassed = 0;
@@ -768,6 +779,234 @@ runTest("Every JLPT N5 Kanji card has valid front, back, and description without
     assert.ok(card.description && card.description.includes("Mnemonic:"), `Card description missing Mnemonic: ${card.front}`);
     assert.ok(card.description && card.description.includes("Examples:"), `Card description missing Examples: ${card.front}`);
   }
+});
+
+console.log("\n=== 11. DATA-SCIENCE COGNITIVE ANALYTICS & RETENTION TESTS ===");
+
+runTest("wilsonScoreInterval returns zero bounds for empty trials", () => {
+  const ci = wilsonScoreInterval(0, 0);
+  assert.equal(ci.center, 0);
+  assert.equal(ci.lower, 0);
+  assert.equal(ci.upper, 0);
+  assert.equal(ci.margin, 0);
+  assert.equal(ci.formatted, "0.0% (±0.0%)");
+});
+
+runTest("wilsonScoreInterval computes mathematically sound 95% CI bounds", () => {
+  // 90 passes out of 100 trials
+  const ci = wilsonScoreInterval(90, 100);
+  assert.equal(ci.p, 0.9);
+  // Lower bound should be around 0.824, Upper bound around 0.948
+  assert.ok(ci.lower > 0.81 && ci.lower < 0.84, `Lower bound unexpected: ${ci.lower}`);
+  assert.ok(ci.upper > 0.93 && ci.upper < 0.96, `Upper bound unexpected: ${ci.upper}`);
+  assert.ok(ci.margin > 0.05 && ci.margin < 0.07);
+
+  // Compare with small sample: 9 passes out of 10 trials
+  const ciSmall = wilsonScoreInterval(9, 10);
+  // Small sample margin should be substantially wider
+  assert.ok(ciSmall.margin > ci.margin * 2, "Small sample CI must have wider margin than 100 trials");
+  assert.ok(ciSmall.lower < 0.65, `Small sample lower bound should reflect high uncertainty: ${ciSmall.lower}`);
+});
+
+runTest("calculateLeechSeverity accounts for lapses, difficulty, and attenuates with stability", () => {
+  // 0 lapses -> 0 LSI
+  assert.equal(calculateLeechSeverity(0, 8.0, 1.0), 0);
+
+  // 5 lapses, high difficulty (8.0), low stability (0.5 days)
+  const lsiHighFriction = calculateLeechSeverity(5, 8.0, 0.5);
+  assert.ok(lsiHighFriction > 2.5, `High friction card should have high LSI: ${lsiHighFriction}`);
+
+  // 5 lapses, same difficulty (8.0), but card finally reached high stability (30 days)
+  const lsiMature = calculateLeechSeverity(5, 8.0, 30.0);
+  assert.ok(lsiMature < lsiHighFriction * 0.4, `Mature card LSI must attenuate with stability: ${lsiMature}`);
+});
+
+runTest("calculateEfficiencyScore scales logically with retention and stability velocity", () => {
+  const highEff = calculateEfficiencyScore({
+    retentionRate: 0.92,
+    targetRetention: 0.90,
+    stabilityVelocity: 3.5,
+    avgDifficulty: 4.2,
+    avgDurationMs: 3200
+  });
+  assert.ok(highEff.score >= 85, `Score should be A or A+: ${highEff.score}`);
+  assert.ok(highEff.grade === "A" || highEff.grade === "A+");
+
+  const lowEff = calculateEfficiencyScore({
+    retentionRate: 0.65,
+    targetRetention: 0.90,
+    stabilityVelocity: 0.2,
+    avgDifficulty: 8.8,
+    avgDurationMs: 14000
+  });
+  assert.ok(lowEff.score < 60, `Low retention deck should have low score: ${lowEff.score}`);
+  assert.ok(lowEff.grade === "D" || lowEff.grade === "C");
+});
+
+runTest("analyzeDecks groups cards and review logs, computing retention, velocity, and health", () => {
+  const mockCards = [
+    { id: "c1", deck: "Spanish", folder: "Languages", fsrs_stats: { state: 2, stability: 12, difficulty: 4.5, lapses: 0, repetitions: 4 } },
+    { id: "c2", deck: "Spanish", folder: "Languages", fsrs_stats: { state: 2, stability: 15, difficulty: 5.0, lapses: 1, repetitions: 5 } },
+    { id: "c3", deck: "Kanji", folder: "Languages", fsrs_stats: { state: 3, stability: 1.2, difficulty: 8.5, lapses: 5, repetitions: 7 } },
+    { id: "c4", deck: "Kanji", folder: "Languages", fsrs_stats: { state: 1, stability: 2.0, difficulty: 7.8, lapses: 4, repetitions: 6 } },
+    { id: "c5", deck: "Default", fsrs_stats: { state: 0, stability: 0, difficulty: 0, lapses: 0, repetitions: 0 } }
+  ];
+
+  const now = Date.now();
+  const mockLogs = [
+    // Spanish reviews: 10 passes, 1 fail = 90.9% retention
+    ...Array.from({ length: 10 }, (_, i) => ({
+      id: `ls_${i}`, card_id: "c1", grade: 3, timestamp: now - (i * 3600000), stability_before: 5, stability_after: 8, duration_ms: 3000, folder: "Languages", deck: "Spanish"
+    })),
+    { id: "ls_10", card_id: "c2", grade: 1, timestamp: now - 80000, stability_before: 10, stability_after: 2, duration_ms: 5000, folder: "Languages", deck: "Spanish" },
+    
+    // Kanji reviews: 3 passes, 7 fails = 30.0% retention
+    ...Array.from({ length: 3 }, (_, i) => ({
+      id: `lk_p_${i}`, card_id: "c3", grade: 3, timestamp: now - (i * 7200000), stability_before: 1, stability_after: 2, duration_ms: 9000, folder: "Languages", deck: "Kanji"
+    })),
+    ...Array.from({ length: 7 }, (_, i) => ({
+      id: `lk_f_${i}`, card_id: "c4", grade: 1, timestamp: now - (i * 7200000) - 1000, stability_before: 2, stability_after: 0.5, duration_ms: 11000, folder: "Languages", deck: "Kanji"
+    }))
+  ];
+
+  const result = analyzeDecks(mockCards, mockLogs, { targetRetention: 0.90 });
+
+  assert.equal(result.decks.length, 3, "Should produce 3 distinct collections");
+  
+  const spanish = result.decks.find(d => d.deck === "Spanish");
+  assert.ok(spanish, "Spanish deck must exist");
+  assert.equal(spanish.totalReviews, 11);
+  assert.equal(spanish.passedReviews, 10);
+  assert.equal(spanish.failedReviews, 1);
+  assert.ok(Math.abs(spanish.empiricalRetention - 0.909) < 0.01);
+  assert.ok(spanish.wilsonCI.lower > 0.60);
+  assert.equal(spanish.healthStatus, "optimal");
+
+  const kanji = result.decks.find(d => d.deck === "Kanji");
+  assert.ok(kanji, "Kanji deck must exist");
+  assert.equal(kanji.totalReviews, 10);
+  assert.equal(kanji.passedReviews, 3);
+  assert.equal(kanji.failedReviews, 7);
+  assert.equal(kanji.empiricalRetention, 0.3);
+  assert.equal(kanji.healthStatus, "critical_friction");
+  assert.ok(kanji.leechCount >= 1, "Kanji deck must flag leeches");
+
+  // Summary rollup checks
+  assert.equal(result.summary.totalCards, 5);
+  assert.equal(result.summary.totalReviews, 21);
+  assert.equal(result.summary.passedReviews, 13);
+  assert.equal(result.summary.failedReviews, 8);
+});
+
+runTest("analyzeCardFriction correctly detects leeches, treadmills, and slow response latency", () => {
+  const cards = [
+    { id: "easy_card", front: "Hola", back: "Hello", fsrs_stats: { lapses: 0, repetitions: 5, stability: 25, difficulty: 2.0 } },
+    { id: "leech_card", front: "Complicado", back: "Complicated", fsrs_stats: { lapses: 6, repetitions: 8, stability: 1.1, difficulty: 9.0 } },
+    { id: "treadmill_card", front: "Caminata", back: "Walk", fsrs_stats: { lapses: 1, repetitions: 7, stability: 2.5, difficulty: 6.0 } }
+  ];
+
+  const logs = [
+    { card_id: "leech_card", grade: 1, duration_ms: 12000, timestamp: Date.now() },
+    { card_id: "leech_card", grade: 1, duration_ms: 10000, timestamp: Date.now() - 1000 },
+    { card_id: "treadmill_card", grade: 3, duration_ms: 4000, timestamp: Date.now() }
+  ];
+
+  const friction = analyzeCardFriction(cards, logs);
+  assert.ok(friction.length >= 2, "Should return at least 2 friction cards");
+
+  const top = friction[0];
+  assert.equal(top.id, "leech_card");
+  assert.ok(top.lsi > 2.0, "Top friction card must have high LSI");
+  assert.ok(top.flags.includes("leech_trap") || top.flags.includes("slow_dwell"));
+
+  const treadmill = friction.find(c => c.id === "treadmill_card");
+  assert.ok(treadmill);
+  assert.ok(treadmill.flags.includes("memory_treadmill"));
+});
+
+runTest("analyzeErgonomics calculates 24-hour circadian profile and timeliness breakdown", () => {
+  const now = new Date(2026, 8, 6, 10, 30, 0).getTime(); // 10:30 AM
+  const mockLogs = [
+    // 10:00 AM reviews (high pass)
+    ...Array.from({ length: 6 }, (_, i) => ({
+      id: `l_m_${i}`, timestamp: new Date(2026, 8, 6, 10, i * 5, 0).getTime(), grade: 3, elapsed_days: 1.0, interval: 1.0, duration_ms: 3000
+    })),
+    // 23:00 PM reviews (low pass)
+    ...Array.from({ length: 6 }, (_, i) => ({
+      id: `l_n_${i}`, timestamp: new Date(2026, 8, 6, 23, i * 5, 0).getTime(), grade: (i % 2 === 0 ? 1 : 2), elapsed_days: 3.5, interval: 1.0, duration_ms: 8000
+    }))
+  ];
+
+  const ergo = analyzeErgonomics(mockLogs);
+  assert.equal(ergo.circadian.hours.length, 24);
+
+  const h10 = ergo.circadian.hours[10];
+  assert.equal(h10.reviews, 6);
+  assert.equal(h10.retention, 1.0);
+
+  const h23 = ergo.circadian.hours[23];
+  assert.equal(h23.reviews, 6);
+  assert.equal(h23.retention, 0.5);
+
+  assert.equal(ergo.circadian.peakHour, 10);
+  assert.equal(ergo.circadian.fatigueHour, 23);
+
+  // Timeliness: h10 was on-time (ratio 1.0), h23 was severely overdue (ratio 3.5)
+  assert.equal(ergo.timeliness.on_time.reviews, 6);
+  assert.equal(ergo.timeliness.on_time.retention, 1.0);
+  assert.equal(ergo.timeliness.overdue_severe.reviews, 6);
+  assert.equal(ergo.timeliness.overdue_severe.retention, 0.5);
+});
+
+runTest("calculateModelCalibration evaluates Brier score and decile reliability bins", () => {
+  const mockLogs = [
+    // Card with stability 10 days, elapsed 1 day -> predicted retrievability ~98%
+    { grade: 3, elapsed_days: 1.0, stability_before: 10.0 },
+    { grade: 3, elapsed_days: 1.0, stability_before: 10.0 },
+    // Card with stability 1 day, elapsed 10 days -> predicted retrievability ~40-60%
+    { grade: 1, elapsed_days: 10.0, stability_before: 1.0 },
+    { grade: 1, elapsed_days: 12.0, stability_before: 1.0 }
+  ];
+
+  const cal = calculateModelCalibration(mockLogs);
+  assert.ok(cal.totalEvaluated >= 2);
+  assert.ok(cal.brierScore >= 0 && cal.brierScore <= 1.0);
+  assert.equal(cal.bins.length, 5);
+});
+
+runTest("generatePrescriptions provides actionable alerts for failing decks and leeches", () => {
+  const mockDeckAnalytics = {
+    decks: [
+      { key: "Failing Deck", deck: "Failing Deck", totalReviews: 20, empiricalRetention: 0.65, healthStatus: "critical_friction", leechCount: 5 }
+    ],
+    summary: { efficiencyGrade: "D" }
+  };
+
+  const mockLeeches = [
+    { id: "1", front: "Word A", lapses: 5 },
+    { id: "2", front: "Word B", lapses: 4 },
+    { id: "3", front: "Word C", lapses: 3 }
+  ];
+
+  const mockErgo = {
+    circadian: { peakWindow: "09:00 – 11:00", peakRetention: 95.0, fatigueWindow: "23:00 – 01:00", fatigueRetention: 68.0 },
+    timeliness: {
+      on_time: { reviews: 15, retention: 0.92 },
+      overdue_severe: { reviews: 10, retention: 0.60 }
+    }
+  };
+
+  const prescriptions = generatePrescriptions({
+    deckAnalytics: mockDeckAnalytics,
+    cardFriction: mockLeeches,
+    ergonomics: mockErgo,
+    targetRetention: 0.90
+  });
+
+  assert.ok(prescriptions.length >= 3, `Expected at least 3 prescriptions, got ${prescriptions.length}`);
+  assert.ok(prescriptions.some(p => p.category === "Deck Friction"));
+  assert.ok(prescriptions.some(p => p.category === "Circadian Optimization"));
+  assert.ok(prescriptions.some(p => p.category === "Habit Friction"));
 });
 
 console.log(`\nResults: ${testsPassed} passed / ${testsRun} total`);

@@ -3,7 +3,7 @@
  * Implements Network-First caching with offline fallback.
  */
 
-const CACHE_NAME = "anamnesis-v37";
+const CACHE_NAME = "anamnesis-v38";
 const FONT_CACHE_NAME = "anamnesis-fonts-v1";
 const ASSETS_TO_CACHE = [
   "./",
@@ -34,7 +34,11 @@ const ASSETS_TO_CACHE = [
   "./js/explorer-state.js",
   "./js/explorer-actions.js",
   "./js/cards.js",
-  "./js/picker.js"
+  "./js/picker.js",
+  "./js/intro.js",
+  "./js/presets.js",
+  "./js/analytics.js",
+  "./js/analytics-ui.js"
 ];
 
 self.addEventListener("install", event => {

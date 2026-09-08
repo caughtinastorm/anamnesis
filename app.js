@@ -17,6 +17,7 @@ import { initExplorer, onSyncNeeded as explorerOnSync, renderExplorer } from "./
 import { initCollectionPicker } from "./js/picker.js";
 import { initIntroTour, checkAutoStartIntro } from "./js/intro.js";
 import { checkAndSeedStarterDecks } from "./js/presets.js";
+import { initAnalyticsUI, renderAnalyticsView } from "./js/analytics-ui.js";
 
 // Wire up sync callbacks so all modules trigger debounced background sync
 const requestSync = (delayMs = 1200) => requestDebouncedSync(delayMs);
@@ -32,6 +33,7 @@ onCardsRefreshed(refreshDashboard);  // populateDeckDropdown, calculateStats, re
 onCardsRefreshed(refreshImport);     // populateImportDestinationSuggestions
 onCardsRefreshed(renderExplorer);    // Explorer sidebar tree + canvas
 onCardsRefreshed(refreshBrowser);    // Browser deck filter + card table
+onCardsRefreshed(renderAnalyticsView); // Recompute data-science analytics
 
 // ==========================================================================
 // Routing
@@ -115,6 +117,7 @@ async function initApp() {
     initCollectionPicker();
     initDashboardPickerButton();
     initIntroTour();
+    initAnalyticsUI();
 
     registerServiceWorker();
 

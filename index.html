@@ -601,7 +601,189 @@
         </div>
       </section>
 
-      <!-- VIEW 3: IMPORT -->
+      <!-- VIEW 3: COGNITIVE ANALYTICS & REFLECTION ENGINE -->
+      <section id="view-analytics" class="app-view">
+        <div class="view-header">
+          <div class="view-header-content">
+            <h2>Cognitive Analytics &amp; Reflection</h2>
+            <p>Data-science grade memory profiling powered by FSRS-5 stability, retrievability, and dwell telemetry.</p>
+          </div>
+          <div class="view-header-badges">
+            <button type="button" id="btn-refresh-analytics" class="btn btn-secondary btn-sm" title="Recompute analytics">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l.56-.56"/>
+              </svg>
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        <!-- Analytics Controls & Horizon Filter Toolbar -->
+        <div class="card-panel analytics-toolbar-panel">
+          <div class="analytics-toolbar-left">
+            <span class="toolbar-label">Horizon:</span>
+            <div class="analytics-horizon-pill-group">
+              <button type="button" class="analytics-horizon-btn" data-days="7">7 Days</button>
+              <button type="button" class="analytics-horizon-btn" data-days="30">30 Days</button>
+              <button type="button" class="analytics-horizon-btn" data-days="90">90 Days</button>
+              <button type="button" class="analytics-horizon-btn active" data-days="">All Time</button>
+            </div>
+          </div>
+          <div class="analytics-toolbar-right">
+            <label for="analytics-deck-filter" class="toolbar-label">Collection:</label>
+            <select id="analytics-deck-filter" class="select-input select-analytics">
+              <option value="all">📁 All Collections</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- KPI Cards Grid (4 Cards) -->
+        <div class="analytics-kpi-grid">
+          <div class="analytics-kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-label">Empirical Retention</span>
+              <span id="analytics-kpi-retention-ci" class="kpi-badge neutral">95% CI</span>
+            </div>
+            <div class="kpi-value" id="analytics-kpi-retention">—</div>
+            <div class="kpi-subtext">True observed pass rate across reviews</div>
+          </div>
+
+          <div class="analytics-kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-label">Target Calibration</span>
+              <span id="analytics-kpi-cal-status" class="kpi-badge neutral">Calibrated</span>
+            </div>
+            <div class="kpi-value" id="analytics-kpi-cal-delta">—</div>
+            <div class="kpi-subtext">Actual retention relative to FSRS target</div>
+          </div>
+
+          <div class="analytics-kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-label">Memory Half-Life Gain</span>
+              <span class="kpi-badge info">ΔS Velocity</span>
+            </div>
+            <div class="kpi-value" id="analytics-kpi-velocity">0.0d</div>
+            <div class="kpi-subtext" id="analytics-kpi-velocity-sub">Days of stability gained / review</div>
+          </div>
+
+          <div class="analytics-kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-label">Memory Traps</span>
+              <span class="kpi-badge warning">Leech Radar</span>
+            </div>
+            <div class="kpi-value" id="analytics-kpi-leeches">0</div>
+            <div class="kpi-subtext" id="analytics-kpi-leeches-sub">High-friction words identified</div>
+          </div>
+        </div>
+
+        <!-- Prescriptive Reflection & Diagnostic Action Alerts -->
+        <div class="analytics-section-title-row">
+          <h3>🧠 Cognitive Prescriptions &amp; Reflection</h3>
+          <span class="section-subtext">Automated diagnostic interventions to optimize your study ROI</span>
+        </div>
+        <div id="analytics-prescriptions-container" class="prescriptions-container">
+          <!-- Populated dynamically -->
+        </div>
+
+        <!-- Interactive Deck Health & Retention Matrix Table -->
+        <div class="analytics-section-title-row" style="margin-top: var(--space-6);">
+          <h3>📊 Deck Retention &amp; Cognitive Health Matrix</h3>
+          <span class="section-subtext">Click any column header to sort • Click a row to inspect leeches</span>
+        </div>
+        <div class="card-panel deck-health-table-panel">
+          <div class="table-responsive-wrapper">
+            <table class="analytics-table" id="analytics-deck-table">
+              <thead>
+                <tr>
+                  <th class="deck-table-th-sortable" data-sort="deck">Collection</th>
+                  <th class="deck-table-th-sortable" data-sort="totalCards">Cards</th>
+                  <th class="deck-table-th-sortable sorted-desc" data-sort="totalReviews">Reviews</th>
+                  <th class="deck-table-th-sortable" data-sort="empiricalRetention">Retention (95% CI)</th>
+                  <th class="deck-table-th-sortable" data-sort="avgStability">Avg Half-Life</th>
+                  <th class="deck-table-th-sortable" data-sort="stabilityVelocity">Velocity</th>
+                  <th class="deck-table-th-sortable" data-sort="avgDifficulty">Difficulty</th>
+                  <th class="deck-table-th-sortable" data-sort="efficiencyScore">Efficiency</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="analytics-deck-table-body">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Dual Column Analytics: Circadian Ergonomics & Model Reliability -->
+        <div class="analytics-dual-grid" style="margin-top: var(--space-6);">
+          <!-- Left: 24h Circadian Recall Profile -->
+          <div class="card-panel chart-card" id="analytics-circadian-section">
+            <div class="chart-header">
+              <div>
+                <h3>⏰ Circadian Recall Profile (24 Hours)</h3>
+                <p>Hour-by-hour retention curve and active review volume</p>
+              </div>
+              <div id="circadian-window-insight" class="circadian-insights-wrap"></div>
+            </div>
+            <div id="analytics-circadian-chart-wrap" class="chart-content-wrap">
+              <!-- SVG chart rendered via JS -->
+            </div>
+            <div class="chart-legend-row">
+              <span class="legend-item"><span class="legend-dot" style="background: rgba(255,255,255,0.2);"></span> Volume</span>
+              <span class="legend-item"><span class="legend-dot" style="background: #ffffff;"></span> Recall Accuracy</span>
+              <span class="legend-item"><span class="legend-dot" style="background: #10b981;"></span> Peak Window</span>
+              <span class="legend-item"><span class="legend-dot" style="background: #ef4444;"></span> Fatigue Window</span>
+            </div>
+          </div>
+
+          <!-- Right: FSRS-5 Reliability & Calibration Diagram -->
+          <div class="card-panel chart-card" id="analytics-calibration-section">
+            <div class="chart-header">
+              <div>
+                <h3>🎯 FSRS-5 Model Calibration</h3>
+                <p>Predicted Retrievability (R) vs. Observed Recall</p>
+              </div>
+              <span id="calibration-rating-badge" class="kpi-badge neutral">Brier: 0.0000</span>
+            </div>
+            <div id="analytics-calibration-chart-wrap" class="chart-content-wrap">
+              <!-- SVG chart rendered via JS -->
+            </div>
+            <div class="chart-legend-row">
+              <span class="legend-item"><span class="legend-dot" style="background: rgba(255,255,255,0.3); border: 1px dashed #fff;"></span> Perfect Calibration Line</span>
+              <span class="legend-item"><span class="legend-dot" style="background: #10b981;"></span> Observed Decile Bins</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Timeliness / Overdue Decay Breakdown -->
+        <div class="card-panel timeliness-panel" style="margin-top: var(--space-6);">
+          <div class="panel-header">
+            <div>
+              <h3>⏳ Timeliness &amp; Overdue Retention Decay</h3>
+              <p>Quantifying the memory forgetting penalty when reviews fall behind schedule</p>
+            </div>
+          </div>
+          <div id="analytics-timeliness-wrap" class="timeliness-wrap">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Word-Level Memory Traps & Leech Radar -->
+        <div class="analytics-section-title-row" id="analytics-leech-radar-section" style="margin-top: var(--space-6);">
+          <div class="section-title-with-badge">
+            <h3>🪤 Memory Traps &amp; Leech Radar</h3>
+            <span class="kpi-badge warning" id="leech-radar-count-badge">0</span>
+          </div>
+          <span class="section-subtext">Individual cards causing high cognitive friction, repeated lapses, or excessive response latency</span>
+        </div>
+        <div class="card-panel leech-radar-panel">
+          <div id="analytics-leech-list" class="leech-list">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+      </section>
+
+      <!-- VIEW 4: IMPORT -->
       <section id="view-import" class="app-view">
         <div class="view-header">
           <h2>Import Decks</h2>
@@ -940,6 +1122,14 @@ Gracias,Thank you,greeting,Common polite phrase
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
         </svg>
         <span class="nav-label">Decks</span>
+      </button>
+      <button class="nav-item" data-view="view-analytics">
+        <svg class="nav-icon-svg" viewBox="0 0 24 24">
+          <line x1="18" y1="20" x2="18" y2="10"/>
+          <line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+        <span class="nav-label">Analytics</span>
       </button>
       <button class="nav-item" data-view="view-import">
         <svg class="nav-icon-svg" viewBox="0 0 24 24">

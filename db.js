@@ -224,10 +224,22 @@ export async function getReviewLogs(cardId = null, limit = 200) {
       const results = request.result || [];
       // Sort newest first
       results.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-      resolve(results.slice(0, limit));
+      if (limit !== null && limit !== undefined && limit > 0) {
+        resolve(results.slice(0, limit));
+      } else {
+        resolve(results);
+      }
     };
     request.onerror = () => reject(request.error);
   });
+}
+
+/**
+ * Retrieve all review logs without limit
+ * @returns {Promise<Array>} List of all historical review logs
+ */
+export async function getAllReviewLogs() {
+  return getReviewLogs(null, null);
 }
 
 /**
