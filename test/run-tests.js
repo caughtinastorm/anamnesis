@@ -383,9 +383,39 @@ runTest("sanitizeGistId extracts clean hex ID from URL, fragments, and queries",
   assert.equal(sanitizeGistId("https://gist.github.com/user/e30c449339485f8c6b738927498c0d9a"), "e30c449339485f8c6b738927498c0d9a");
   assert.equal(sanitizeGistId("https://gist.github.com/user/e30c449339485f8c6b738927498c0d9a#file-flashcards-json"), "e30c449339485f8c6b738927498c0d9a");
   assert.equal(sanitizeGistId("https://gist.github.com/user/e30c449339485f8c6b738927498c0d9a?foo=bar/"), "e30c449339485f8c6b738927498c0d9a");
+  assert.equal(sanitizeGistId("https://gist.github.com/12345678901234567890/e30c449339485f8c6b738927498c0d9a"), "e30c449339485f8c6b738927498c0d9a");
   assert.equal(sanitizeGistId("  e30c449339485f8c6b738927498c0d9a  "), "e30c449339485f8c6b738927498c0d9a");
   assert.equal(sanitizeGistId(""), "");
   assert.equal(sanitizeGistId(null), "");
+});
+
+runTest("getCardTimestamp handles fallbacks, string conversion, and NaN safety", () => {
+  assert.equal(getCardTimestamp(null), 0);
+  assert.equal(getCardTimestamp({}), 0);
+  assert.equal(getCardTimestamp({ created_at: 1000 }), 1000);
+  assert.equal(getCardTimestamp({ fsrs_stats: { last_review: 2000 }, created_at: 1000 }), 2000);
+  assert.equal(getCardTimestamp({ updated_at: 3000, created_at: 1000 }), 3000);
+  assert.equal(getCardTimestamp({ last_modified: 4000, updated_at: 3000 }), 4000);
+  assert.equal(getCardTimestamp({ last_modified: "5000" }), 5000);
+  assert.equal(getCardTimestamp({ last_modified: "invalid" }), 0);
+});
+
+runTest("cardsDiffer detects duplicate IDs and non-array arguments", () => {
+  assert.equal(cardsDiffer(null, []), true);
+  assert.equal(cardsDiffer([], null), true);
+  // Duplicate IDs in b
+  const a = [{ id: "1", front: "A", last_modified: 100 }, { id: "2", front: "B", last_modified: 100 }];
+  const b = [{ id: "1", front: "A", last_modified: 100 }, { id: "1", front: "A", last_modified: 100 }];
+  assert.equal(cardsDiffer(a, b), true);
+});
+
+runTest("mergeCards prioritizes deletion tombstone when timestamps are equal", () => {
+  const now = Date.now();
+  const local = [{ id: "1", front: "Active", deleted: false, last_modified: now }];
+  const remote = [{ id: "1", front: "Deleted", deleted: true, last_modified: now }];
+  const merged = mergeCards(local, remote);
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0].deleted, true, "Tombstone should win on equal timestamp to prevent zombie resurrect");
 });
 
 console.log("\n=== 6. SERVER PATH RESOLUTION SECURITY TESTS ===");
@@ -1007,6 +1037,54 @@ runTest("generatePrescriptions provides actionable alerts for failing decks and 
   assert.ok(prescriptions.some(p => p.category === "Deck Friction"));
   assert.ok(prescriptions.some(p => p.category === "Circadian Optimization"));
   assert.ok(prescriptions.some(p => p.category === "Habit Friction"));
+});
+
+console.log("\n=== 12. COGNITIVE ANALYTICS BOUNDARIES & SERVICE WORKER AUDIT ===");
+
+runTest("wilsonScoreInterval handles extreme boundary conditions (0/0, 0/100, 100/100, large N)", () => {
+  const empty = wilsonScoreInterval(0, 0);
+  assert.equal(empty.center, 0);
+  assert.equal(empty.lower, 0);
+  assert.equal(empty.upper, 0);
+
+  const perfect = wilsonScoreInterval(10, 10);
+  assert.ok(perfect.upper <= 1.0);
+  assert.ok(perfect.lower > 0.65);
+
+  const zeroRate = wilsonScoreInterval(0, 10);
+  assert.ok(zeroRate.lower >= 0);
+  assert.ok(zeroRate.upper < 0.35);
+
+  const largeN = wilsonScoreInterval(9000, 10000);
+  assert.ok(largeN.margin < 0.01);
+});
+
+runTest("calculateLeechSeverity strictly attenuates for mature stable memories", () => {
+  // Same lapses (4) and difficulty (8.0), but stability 0.1d vs 60d
+  const volatileLeech = calculateLeechSeverity(4, 8.0, 0.1, 4);
+  const matureCard = calculateLeechSeverity(4, 8.0, 60.0, 15);
+  assert.ok(volatileLeech > matureCard * 2, `Volatile LSI (${volatileLeech}) should be significantly higher than mature (${matureCard})`);
+  assert.equal(calculateLeechSeverity(0, 8.0, 0.1, 0), 0, "Zero lapses must always yield 0 LSI");
+});
+
+runTest("calculateModelCalibration handles logs with zero stability without NaN errors", () => {
+  const blankLogs = [
+    { grade: 3, elapsed_days: 0, stability_before: 0 },
+    { grade: 1, elapsed_days: 2, stability_before: null }
+  ];
+  const cal = calculateModelCalibration(blankLogs);
+  assert.equal(cal.totalEvaluated, 0);
+  assert.equal(cal.brierScore, 0);
+  assert.equal(isNaN(cal.brierScore), false);
+});
+
+runTest("Service Worker cache manifest includes all newly integrated modules", async () => {
+  const fs = await import("fs");
+  const swCode = fs.readFileSync(path.resolve("c:/Users/12/Desktop/app/sw.js"), "utf8");
+  assert.ok(swCode.includes("./js/analytics.js"), "sw.js must cache js/analytics.js");
+  assert.ok(swCode.includes("./js/analytics-ui.js"), "sw.js must cache js/analytics-ui.js");
+  assert.ok(swCode.includes("./js/intro.js"), "sw.js must cache js/intro.js");
+  assert.ok(swCode.includes("./js/presets.js"), "sw.js must cache js/presets.js");
 });
 
 console.log(`\nResults: ${testsPassed} passed / ${testsRun} total`);

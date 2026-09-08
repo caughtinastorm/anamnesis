@@ -12,17 +12,18 @@
 const CREDENTIALS_KEY = 'flashcard_sync_credentials';
 const LAST_SYNC_KEY = 'flashcard_last_sync_time';
 const LAST_ETAG_KEY = 'flashcard_sync_etag';
+const LAST_FILENAME_KEY = 'flashcard_sync_filename';
 
 export function sanitizeGistId(raw) {
   if (!raw) return '';
   let trimmed = String(raw).trim();
   trimmed = trimmed.split('#')[0].split('?')[0].replace(/\/+$/, '');
+  if (trimmed.includes('/')) {
+    const parts = trimmed.split('/').filter(Boolean);
+    trimmed = parts[parts.length - 1] || '';
+  }
   const match = trimmed.match(/([a-f0-9]{20,32})/i);
   if (match) return match[1];
-  if (trimmed.includes('/')) {
-    const parts = trimmed.split('/');
-    return parts[parts.length - 1];
-  }
   return trimmed;
 }
 
@@ -54,6 +55,7 @@ export function clearSyncCredentials() {
     localStorage.removeItem(CREDENTIALS_KEY);
     localStorage.removeItem(LAST_SYNC_KEY);
     localStorage.removeItem(LAST_ETAG_KEY);
+    localStorage.removeItem(LAST_FILENAME_KEY);
   }
 }
 
@@ -81,6 +83,16 @@ export function saveLastSyncEtag(etag) {
   } else {
     localStorage.removeItem(LAST_ETAG_KEY);
   }
+}
+
+export function getLastSyncFilename() {
+  if (typeof localStorage === 'undefined') return 'flashcards.json';
+  return localStorage.getItem(LAST_FILENAME_KEY) || 'flashcards.json';
+}
+
+export function saveLastSyncFilename(filename) {
+  if (typeof localStorage === 'undefined' || !filename) return;
+  localStorage.setItem(LAST_FILENAME_KEY, filename);
 }
 
 /**
@@ -125,6 +137,22 @@ function getHeaders(pat, etag = '') {
     headers['If-None-Match'] = etag;
   }
   return headers;
+}
+
+/**
+ * Clean Headers for GitHub Raw Content / CDN downloads
+ */
+function getRawHeaders(pat) {
+  const cleanPat = (pat || '').trim();
+  const tokenHeader = (cleanPat.startsWith('ghp_') || cleanPat.startsWith('github_pat_'))
+    ? `Bearer ${cleanPat}`
+    : (cleanPat.startsWith('Bearer ') || cleanPat.startsWith('token '))
+      ? cleanPat
+      : `token ${cleanPat}`;
+  return {
+    'Authorization': tokenHeader,
+    'Accept': 'application/json, text/plain, */*'
+  };
 }
 
 /**
@@ -268,19 +296,25 @@ async function updateGist(pat, gistId, cards, targetFilename = 'flashcards.json'
  */
 export function getCardTimestamp(card) {
   if (!card) return 0;
-  return card.last_modified || card.updated_at || card.fsrs_stats?.last_review || card.created_at || 0;
+  const ts = Number(card.last_modified || card.updated_at || card.fsrs_stats?.last_review || card.created_at || 0);
+  return isNaN(ts) ? 0 : ts;
 }
 
 /**
  * Check if two cards lists have structural, content, or scheduling differences
  */
 export function cardsDiffer(a = [], b = []) {
+  if (!Array.isArray(a) || !Array.isArray(b)) return true;
   if (a.length !== b.length) return true;
   const bMap = new Map();
-  b.forEach(c => { if (c && c.id) bMap.set(c.id, c); });
+  for (const c of b) {
+    if (!c || !c.id) return true;
+    bMap.set(c.id, c);
+  }
+  if (bMap.size !== b.length) return true; // duplicate IDs in b
 
   for (const cardA of a) {
-    if (!cardA || !cardA.id) continue;
+    if (!cardA || !cardA.id) return true;
     const cardB = bMap.get(cardA.id);
     if (!cardB) return true;
     if (Boolean(cardA.deleted) !== Boolean(cardB.deleted)) return true;
@@ -325,7 +359,7 @@ export function mergeCards(localCards = [], remoteCards = [], maxTombstoneAgeDay
   const tombstoneCutoff = Date.now() - (maxTombstoneAgeDays * 24 * 60 * 60 * 1000);
 
   // Populate with remote cards first
-  remoteCards.forEach(card => {
+  (remoteCards || []).forEach(card => {
     if (card && card.id) {
       if (card.deleted && getCardTimestamp(card) < tombstoneCutoff) return;
       cardMap.set(card.id, card);
@@ -333,7 +367,7 @@ export function mergeCards(localCards = [], remoteCards = [], maxTombstoneAgeDay
   });
 
   // Merge local cards
-  localCards.forEach(localCard => {
+  (localCards || []).forEach(localCard => {
     if (!localCard || !localCard.id) return;
     if (localCard.deleted && getCardTimestamp(localCard) < tombstoneCutoff) return;
 
@@ -342,8 +376,15 @@ export function mergeCards(localCards = [], remoteCards = [], maxTombstoneAgeDay
       const localMod = getCardTimestamp(localCard);
       const remoteMod = getCardTimestamp(remoteCard);
 
-      if (localMod >= remoteMod) {
+      if (localMod > remoteMod) {
         cardMap.set(localCard.id, localCard);
+      } else if (localMod === remoteMod) {
+        // Equal timestamps: prefer deletion tombstone if present, else local
+        if (localCard.deleted || remoteCard.deleted) {
+          cardMap.set(localCard.id, localCard.deleted ? localCard : remoteCard);
+        } else {
+          cardMap.set(localCard.id, localCard);
+        }
       }
     } else {
       cardMap.set(localCard.id, localCard);
@@ -398,8 +439,10 @@ export async function syncCards(localCards = []) {
       }
 
       // Local has changes that remote lacks: push to remote
-      const { data: updatedGist, etag: newEtag } = await updateGist(pat, cleanGistId, localCards);
-      const newSyncTime = Math.max(Date.now(), new Date(updatedGist.updated_at).getTime());
+      const targetFilename = getLastSyncFilename();
+      const { data: updatedGist, etag: newEtag } = await updateGist(pat, cleanGistId, localCards, targetFilename);
+      const remoteTime = updatedGist?.updated_at ? new Date(updatedGist.updated_at).getTime() : 0;
+      const newSyncTime = Math.max(Date.now(), isNaN(remoteTime) ? 0 : remoteTime);
       saveLastSyncTime(newSyncTime);
       saveLastSyncEtag(newEtag);
       return { cards: localCards, status: 'pushed_to_remote', changed: false };
@@ -426,13 +469,14 @@ export async function syncCards(localCards = []) {
     } else {
       targetFilename = file.filename || targetFilename;
     }
+    saveLastSyncFilename(targetFilename);
 
     let remoteData = [];
     if (file) {
       if (file.truncated && file.raw_url) {
         // Truncated raw file (>300KB) requires Authorization header for private gists!
         const rawRes = await fetchWithTimeout(file.raw_url, {
-          headers: getHeaders(pat),
+          headers: getRawHeaders(pat),
           cache: 'no-store'
         });
         if (!rawRes.ok) throw new Error(`Failed to fetch raw gist data (${rawRes.status})`);
@@ -467,13 +511,15 @@ export async function syncCards(localCards = []) {
     if (remoteNeedsUpdate) {
       // Push merged cards to Gist using the detected filename
       const { data: updatedGist, etag: updatedEtag } = await updateGist(pat, cleanGistId, merged, targetFilename);
-      const newSyncTime = Math.max(Date.now(), new Date(updatedGist.updated_at).getTime());
+      const remoteTime = updatedGist?.updated_at ? new Date(updatedGist.updated_at).getTime() : 0;
+      const newSyncTime = Math.max(Date.now(), isNaN(remoteTime) ? 0 : remoteTime);
       saveLastSyncTime(newSyncTime);
       saveLastSyncEtag(updatedEtag);
       return { cards: merged, status: 'merged_with_remote', changed: localNeedsUpdate };
     } else {
       // Remote already had everything; save current ETag & timestamp
-      const newSyncTime = Math.max(Date.now(), new Date(gist.updated_at).getTime());
+      const remoteTime = gist?.updated_at ? new Date(gist.updated_at).getTime() : 0;
+      const newSyncTime = Math.max(Date.now(), isNaN(remoteTime) ? 0 : remoteTime);
       saveLastSyncTime(newSyncTime);
       saveLastSyncEtag(etag);
       return { cards: merged, status: localNeedsUpdate ? 'pulled_from_remote' : 'no_change', changed: localNeedsUpdate };

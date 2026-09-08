@@ -669,7 +669,7 @@ export async function submitCardGrade(grade) {
         graduatedCards: [...practiceSession.graduatedCards],
         cardStates: cardStatesCopy
       },
-      logId: isPracticeOnly ? null : logId
+      logId: logId
     });
   } else {
     studyUndoStack.push({
@@ -677,7 +677,7 @@ export async function submitCardGrade(grade) {
       cardBefore,
       cardIndex: state.currentCardIndex,
       wasPushedAgain: (fsrsRating === Rating.Again),
-      logId: isPracticeOnly ? null : logId
+      logId: logId
     });
   }
   updateUndoButtonState();

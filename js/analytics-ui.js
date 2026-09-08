@@ -349,7 +349,7 @@ function renderDeckHealthTable(decks = []) {
   if (!tbody) return;
 
   if (!decks || decks.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" class="table-empty-cell">No collections found in your library.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="table-empty-cell">No collections found in your library.</td></tr>`;
     return;
   }
 
