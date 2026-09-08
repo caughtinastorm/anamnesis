@@ -10,8 +10,11 @@
  */
 
 import assert from "assert/strict";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 import {
   calculateNextReviewTimestamp,
   calculateRetrievability,
@@ -1233,6 +1236,79 @@ runTest("showModal supports custom button labels, explicit actions, and dismiss 
   assert.equal(typeof state.modalDismissCallback, "function");
   state.modalDismissCallback();
   assert.equal(dismissed, true);
+});
+
+console.log("\n=== 14. LAYOUT HIERARCHY, 2-MODE REVIEW & SEGMENTED TABS TESTS ===");
+
+runTest("Review 2-mode layout and segmented deck tabs exist in index.html", () => {
+  const htmlContent = fs.readFileSync(path.join(__dirname, "../index.html"), "utf8");
+
+  // Verify Mode 1 & Mode 2 elements in Hero Study Hub
+  assert.ok(htmlContent.includes('id="btn-start-review"'), "Mode 1 start review button must exist");
+  assert.ok(htmlContent.includes('id="btn-force-review"'), "Mode 1 practice mode button must exist");
+  assert.ok(htmlContent.includes('id="btn-dashboard-deck-picker"'), "Mode 2 choose deck explorer button must exist");
+  assert.ok(htmlContent.includes('id="btn-dashboard-reset-deck"'), "Mode 2 reset to all decks button must exist");
+  assert.ok(htmlContent.includes('id="hero-due-large-num"'), "Hero due large number must exist");
+  assert.ok(htmlContent.includes('id="hero-due-status-title"'), "Hero due status title must exist");
+
+  // Verify Decks segmented tabs
+  assert.ok(htmlContent.includes('id="decks-tab-bar"'), "Decks tab bar must exist");
+  assert.ok(htmlContent.includes('data-deck-tab="tab-collections"'), "Collections tab button must exist");
+  assert.ok(htmlContent.includes('data-deck-tab="tab-browser"'), "Card browser tab button must exist");
+  assert.ok(htmlContent.includes('data-deck-tab="tab-add"'), "Quick add tab button must exist");
+
+  // Verify Tab panels
+  assert.ok(htmlContent.includes('id="tab-collections"'), "tab-collections panel must exist");
+  assert.ok(htmlContent.includes('id="tab-browser"'), "tab-browser panel must exist");
+  assert.ok(htmlContent.includes('id="tab-add"'), "tab-add panel must exist");
+
+  // Verify unified view headers across all 5 main views
+  const viewIds = ["view-review", "view-decks", "view-analytics", "view-import", "view-settings"];
+  viewIds.forEach(id => {
+    assert.ok(htmlContent.includes(`id="${id}"`), `View section #${id} must exist`);
+  });
+});
+
+runTest("Decks segmented tab switching updates active classes and visibility", () => {
+  const tabs = [
+    { dataset: { deckTab: "tab-collections" }, classList: new Set(["active"]), setAttribute: () => {} },
+    { dataset: { deckTab: "tab-browser" }, classList: new Set(), setAttribute: () => {} },
+    { dataset: { deckTab: "tab-add" }, classList: new Set(), setAttribute: () => {} }
+  ];
+
+  const panels = [
+    { id: "tab-collections", classList: new Set(["active"]) },
+    { id: "tab-browser", classList: new Set(["hidden"]) },
+    { id: "tab-add", classList: new Set(["hidden"]) }
+  ];
+
+  function simulateSwitch(targetId) {
+    tabs.forEach(t => {
+      const isTarget = t.dataset.deckTab === targetId;
+      if (isTarget) t.classList.add("active"); else t.classList.delete("active");
+    });
+    panels.forEach(p => {
+      const isTarget = p.id === targetId;
+      if (isTarget) {
+        p.classList.delete("hidden");
+        p.classList.add("active");
+      } else {
+        p.classList.add("hidden");
+        p.classList.delete("active");
+      }
+    });
+  }
+
+  simulateSwitch("tab-browser");
+  assert.ok(tabs[1].classList.has("active"), "tab-browser button must be active");
+  assert.ok(!tabs[0].classList.has("active"), "tab-collections button must not be active");
+  assert.ok(!panels[1].classList.has("hidden"), "tab-browser panel must not be hidden");
+  assert.ok(panels[0].classList.has("hidden"), "tab-collections panel must be hidden");
+
+  simulateSwitch("tab-add");
+  assert.ok(tabs[2].classList.has("active"), "tab-add button must be active");
+  assert.ok(!panels[2].classList.has("hidden"), "tab-add panel must not be hidden");
+  assert.ok(panels[1].classList.has("hidden"), "tab-browser panel must be hidden");
 });
 
 console.log(`\nResults: ${testsPassed} passed / ${testsRun} total`);

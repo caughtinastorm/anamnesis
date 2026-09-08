@@ -263,6 +263,15 @@ export function updateDashboardPickerDisplay() {
     resetFsrsBtn.classList.toggle("hidden", currentVal === "all");
     resetFsrsBtn.style.display = currentVal === "all" ? "none" : "inline-flex";
   }
+
+  const heroDueNumEl = document.getElementById("hero-due-large-num");
+  const heroDueTitleEl = document.getElementById("hero-due-status-title");
+  if (heroDueNumEl) {
+    heroDueNumEl.textContent = due;
+  }
+  if (heroDueTitleEl) {
+    heroDueTitleEl.textContent = due > 0 ? "Cards Due for Review" : "All Caught Up!";
+  }
 }
 
 export function initDashboardPickerButton() {

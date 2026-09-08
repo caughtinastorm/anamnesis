@@ -86,7 +86,8 @@ export function initExplorer() {
     navigateTo,
     loadCardsFromDB,
     onSyncRequest: () => onSyncRequest(),
-    getExplorerData
+    getExplorerData,
+    switchDecksTab
   });
 
   // Navigation
@@ -119,7 +120,43 @@ export function initExplorer() {
   if (btnStudyCurrent)   btnStudyCurrent.addEventListener("click", () => handleStudyCurrent(false));
   if (btnPracticeCurrent) btnPracticeCurrent.addEventListener("click", () => handleStudyCurrent(true));
 
+  initDecksTabs();
   updateViewModeButtons();
+}
+
+/**
+ * Segmented Tab Switching for Decks View (Collections | All Cards | Quick Add)
+ */
+export function initDecksTabs() {
+  const tabBar = document.getElementById("decks-tab-bar");
+  if (!tabBar) return;
+
+  const tabs = tabBar.querySelectorAll(".btn-deck-tab");
+  tabs.forEach(tab => {
+    tab.addEventListener("click", () => {
+      const targetId = tab.dataset.deckTab;
+      switchDecksTab(targetId);
+    });
+  });
+}
+
+export function switchDecksTab(targetId) {
+  const tabBar = document.getElementById("decks-tab-bar");
+  if (!tabBar) return;
+
+  const tabs = tabBar.querySelectorAll(".btn-deck-tab");
+  tabs.forEach(tab => {
+    const isTarget = tab.dataset.deckTab === targetId;
+    tab.classList.toggle("active", isTarget);
+    tab.setAttribute("aria-selected", isTarget ? "true" : "false");
+  });
+
+  const panels = document.querySelectorAll(".deck-tab-panel");
+  panels.forEach(panel => {
+    const isTarget = panel.id === targetId;
+    panel.classList.toggle("hidden", !isTarget);
+    panel.classList.toggle("active", isTarget);
+  });
 }
 
 export function setViewMode(mode) {
@@ -805,8 +842,11 @@ function renderDeckDetailCanvas(folder, deck, stats) {
   detailView.querySelector("#btn-hero-add-card")?.addEventListener("click", () => {
     if (dom.quickFolder) dom.quickFolder.value = folder || "";
     if (dom.quickDeck)   dom.quickDeck.value   = deck;
-    const panel = document.getElementById("btn-quick-add")?.closest(".card-panel");
-    if (panel) panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    switchDecksTab("tab-add");
+    const quickFront = document.getElementById("quick-front");
+    if (quickFront) {
+      setTimeout(() => quickFront.focus(), 50);
+    }
   });
 
   detailView.querySelector("#btn-hero-export")?.addEventListener("click", () => {

@@ -130,115 +130,63 @@
             </div>
           </div>
 
-          <!-- Balanced 2-Column Dashboard Main Layout -->
-          <div class="dashboard-main-grid">
-            
-            <!-- Left Column: Active Collection & Primary Study Actions -->
-            <div class="dashboard-card deck-control-card">
-              <div class="dashboard-deck-picker-header">
-                <div>
-                  <span class="input-label">Active Collection</span>
-                  <span class="deck-picker-hint">Choose collection to study</span>
-                </div>
-                <div class="deck-picker-actions">
-                  <button type="button" id="btn-dashboard-reset-deck" class="gui-picker-clear-btn hidden" title="Reset filter to All Collections">✕ Clear</button>
-                  <button type="button" id="btn-dashboard-reset-fsrs" class="gui-picker-clear-btn hidden" title="Erase FSRS memory data and review history for this collection" style="color: #f87171; border-color: rgba(239, 68, 68, 0.25);">🔄 Reset FSRS</button>
-                  <button type="button" id="btn-dashboard-export-deck" class="gui-picker-clear-btn" title="Export Current Collection to CSV">📥 Export</button>
+          <!-- Hero Study Hub: 2 Clear Modes (Review All or Choose Deck with Explorer) -->
+          <div class="dashboard-card hero-study-card">
+            <!-- Mode 2 & Collection Scope Bar -->
+            <div class="study-selection-banner">
+              <div class="study-selection-info">
+                <span class="study-selection-label">Collection:</span>
+                <span id="dashboard-deck-name" class="study-selection-name">📁 All Collections</span>
+                <span id="dashboard-deck-due-pill" class="study-selection-badge">0 due</span>
+              </div>
+              <div class="study-selection-actions">
+                <button type="button" id="btn-dashboard-deck-picker" class="btn btn-secondary btn-sm btn-choose-deck" title="Open Explorer to choose a specific collection">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                  Choose Deck ↗
+                </button>
+                <button type="button" id="btn-dashboard-reset-deck" class="btn-clear-selection hidden" title="Reset filter to All Collections">✕ All Decks</button>
+                <button type="button" id="btn-dashboard-reset-fsrs" class="btn-clear-selection hidden" style="color: #f87171; border-color: rgba(239, 68, 68, 0.25);" title="Reset FSRS data for this collection">🔄 Reset FSRS</button>
+                <button type="button" id="btn-dashboard-export-deck" class="btn-clear-selection" title="Export this collection to CSV">📥 Export</button>
+              </div>
+            </div>
+
+            <!-- Main Due Status & Primary Actions (Mode 1) -->
+            <div class="hero-study-body">
+              <div class="hero-due-display">
+                <div class="hero-due-number" id="hero-due-large-num">0</div>
+                <div class="hero-due-meta">
+                  <div class="hero-due-title" id="hero-due-status-title">Cards Due Today</div>
+                  <div class="hero-due-desc" id="dashboard-deck-stats">Entire Flashcard Library</div>
                 </div>
               </div>
 
-              <!-- Visual GUI Collection Picker -->
-              <button type="button" id="btn-dashboard-deck-picker" class="gui-picker-btn" title="Browse and switch collections">
-                <div class="gui-picker-left">
-                  <div class="gui-picker-icon-wrap">
-                    <svg class="gui-picker-icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                  </div>
-                  <div class="gui-picker-text-wrap">
-                    <span id="dashboard-deck-name" class="gui-picker-title">📁 All Collections</span>
-                    <span id="dashboard-deck-stats" class="gui-picker-sub">Entire Flashcard Library</span>
-                  </div>
-                </div>
-                <div class="gui-picker-right">
-                  <span id="dashboard-deck-due-pill" class="gui-picker-badge">0 due</span>
-                  <svg class="gui-picker-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-                </div>
-              </button>
-
-              <select id="deck-select" class="hidden">
-                <option value="all">📁 All Collections</option>
-              </select>
-              
-              <div class="deck-actions-row">
-                <button id="btn-start-review" class="btn btn-primary btn-full btn-lg">
-                  <svg class="btn-icon-svg" viewBox="0 0 24 24">
-                    <polygon points="5 3 19 12 5 21 5 3"/>
-                  </svg>
-                  Start Due Review
+              <!-- Primary Study Actions -->
+              <div class="hero-study-actions">
+                <button id="btn-start-review" class="btn btn-primary btn-hero-study">
+                  <svg class="btn-icon-svg" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  <span>Start Due Review</span>
                 </button>
-                <button id="btn-force-review" class="btn btn-secondary btn-full btn-lg">
-                  <svg class="btn-icon-svg" viewBox="0 0 24 24">
-                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-                  </svg>
-                  Practice Mode
+                <button id="btn-force-review" class="btn btn-secondary btn-hero-practice">
+                  <svg class="btn-icon-svg" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                  <span>Practice Mode</span>
                 </button>
               </div>
             </div>
 
-            <!-- Right Column: Consistency Heatmap & Collections Quick Panel -->
-            <div class="dashboard-right-col">
-              <!-- Activity Consistency Heatmap Card -->
-              <div class="dashboard-card activity-heatmap-card">
-                <div class="heatmap-header">
-                  <span class="heatmap-title">Study Consistency</span>
-                  <span class="heatmap-subtitle" id="heatmap-reviews-count">0 reviews recorded</span>
-                </div>
-                <div class="heatmap-grid" id="dashboard-heatmap-grid">
-                  <!-- 60-day heatmap squares rendered via JS -->
-                </div>
-              </div>
+            <select id="deck-select" class="hidden">
+              <option value="all">📁 All Collections</option>
+            </select>
+          </div>
 
-              <!-- Collections Explorer Panel for Review -->
-              <div class="dashboard-card collections-tree-card review-explorer-card" id="dashboard-collections-panel">
-                <div class="panel-header-with-action">
-                  <div>
-                    <span class="heatmap-title">Collections Explorer</span>
-                    <p class="panel-subtext">Browse folders and collections without visual clutter.</p>
-                  </div>
-                  <button type="button" id="btn-dashboard-all-decks" class="btn btn-secondary btn-sm" title="Open Full Manager in Decks view">
-                    Full Explorer ↗
-                  </button>
-                </div>
-                <!-- Review Explorer Navigation Toolbar -->
-                <div class="review-explorer-toolbar">
-                  <div class="explorer-nav-buttons">
-                    <button type="button" id="btn-review-explorer-up" class="btn-explorer-nav" title="Up to Parent / All Collections" disabled>
-                      <svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
-                    </button>
-                  </div>
-                  <div class="explorer-address-bar review-explorer-address">
-                    <div id="review-explorer-breadcrumbs" class="explorer-breadcrumbs">
-                      <!-- Breadcrumb chips generated via JS -->
-                    </div>
-                  </div>
-                  <div class="explorer-search-box review-explorer-search">
-                    <svg class="search-icon-svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                    <input type="text" id="review-explorer-search-input" placeholder="Search collections...">
-                  </div>
-                  <div class="explorer-view-toggle review-explorer-toggle">
-                    <button type="button" id="btn-review-view-grid" class="btn-view-mode active" title="Grid / Tile View">
-                      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                    </button>
-                    <button type="button" id="btn-review-view-list" class="btn-view-mode" title="Details / List View">
-                      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-                    </button>
-                  </div>
-                </div>
-                <div id="folders-tree-container" class="folders-tree-container review-explorer-viewport">
-                  <!-- Dynamically populated folders and decks -->
-                </div>
-              </div>
+          <!-- Activity Consistency Heatmap Card (Full Width) -->
+          <div class="dashboard-card activity-heatmap-card">
+            <div class="heatmap-header">
+              <span class="heatmap-title">Study Consistency</span>
+              <span class="heatmap-subtitle" id="heatmap-reviews-count">0 reviews recorded</span>
             </div>
-
+            <div class="heatmap-grid" id="dashboard-heatmap-grid">
+              <!-- 60-day heatmap squares rendered via JS -->
+            </div>
           </div>
 
           <!-- Empty State Display -->
@@ -383,245 +331,269 @@
       <!-- VIEW 2: DECKS & FOLDERS (Windows Explorer Style Deck Manager) -->
       <section id="view-decks" class="app-view">
         <div class="view-header">
-          <h2>Decks &amp; Folders</h2>
-          <p>Windows-style collection explorer. Browse, create, study, and manage your flashcard hierarchy.</p>
-        </div>
-
-        <!-- Windows File Explorer Widget Card -->
-        <div class="card-panel win-explorer-panel" id="win-explorer">
-          <!-- Explorer Navigation & Address Bar Ribbon -->
-          <div class="explorer-header-toolbar">
-            <!-- Navigation Action Buttons (Back / Forward / Up / Refresh) -->
-            <div class="explorer-nav-buttons">
-              <button id="btn-explorer-back" class="btn-explorer-nav" title="Back (Alt+Left)" disabled>
-                <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-              </button>
-              <button id="btn-explorer-forward" class="btn-explorer-nav" title="Forward (Alt+Right)" disabled>
-                <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-              </button>
-              <button id="btn-explorer-up" class="btn-explorer-nav" title="Up to parent folder (Alt+Up)" disabled>
-                <svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
-              </button>
-              <button id="btn-explorer-refresh" class="btn-explorer-nav" title="Refresh">
-                <svg viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l.56-.56"/></svg>
-              </button>
-            </div>
-
-            <!-- Windows Explorer Address Bar / Breadcrumbs -->
-            <div class="explorer-address-bar">
-              <div id="explorer-breadcrumbs" class="explorer-breadcrumbs">
-                <!-- Dynamically generated breadcrumb chips -->
-              </div>
-            </div>
-
-            <!-- Explorer Search Box -->
-            <div class="explorer-search-box">
-              <svg class="search-icon-svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input type="text" id="explorer-search-input" placeholder="Search this folder...">
-            </div>
-
-            <!-- View Switcher (Grid / Details) -->
-            <div class="explorer-view-toggle">
-              <button id="btn-view-grid" class="btn-view-mode active" title="Grid / Large Tiles View">
-                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-              </button>
-              <button id="btn-view-details" class="btn-view-mode" title="Details / Table List View">
-                <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-              </button>
-            </div>
-          </div>
-
-          <!-- Explorer Command Ribbon (Actions) -->
-          <div class="explorer-command-bar">
-            <button id="btn-explorer-new-deck" class="btn-command">
-              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              <span>New Deck</span>
-            </button>
-            <button id="btn-explorer-new-folder" class="btn-command">
-              <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-              <span>New Folder</span>
-            </button>
-            <button id="btn-explorer-import" class="btn-command">
-              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              <span>Import Cards Here</span>
-            </button>
-            <button id="btn-explorer-export" class="btn-command">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              <span>Export</span>
-            </button>
-            <button id="btn-explorer-add-card" class="btn-command">
-              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-              <span>Quick Add</span>
-            </button>
-            <div class="command-bar-divider"></div>
-            <button id="btn-explorer-study" class="btn-command btn-command-primary">
-              <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-              <span>Study Due</span>
-            </button>
-            <button id="btn-explorer-practice" class="btn-command">
-              <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-              <span>Practice All</span>
-            </button>
-          </div>
-
-          <!-- Explorer Body Container (Sidebar Tree + Main Viewport) -->
-          <div class="explorer-body">
-            <!-- Left Sidebar Navigation Pane -->
-            <aside class="explorer-sidebar">
-              <div class="sidebar-header-title">Quick Access &amp; Tree</div>
-              <div id="explorer-tree-root" class="explorer-tree">
-                <!-- Dynamically rendered tree -->
-              </div>
-            </aside>
-
-            <!-- Main Content Area -->
-            <main class="explorer-main">
-              <div id="explorer-canvas" class="explorer-canvas">
-                <!-- Dynamically rendered folder & deck items -->
-              </div>
-            </main>
-          </div>
-
-          <!-- Explorer Status Bar -->
-          <div class="explorer-status-bar">
-            <span id="explorer-status-text">Loading collections...</span>
+          <div class="view-header-content">
+            <h2>Decks &amp; Folders</h2>
+            <p>Windows-style collection explorer. Browse, create, study, and manage your flashcard hierarchy.</p>
           </div>
         </div>
 
-        <!-- Native Quick Add Card Form -->
-        <div class="card-panel">
-          <div class="panel-header">
-            <h3>Quick Add Card</h3>
-            <p>Insert a single card with optional folder hierarchy.</p>
-          </div>
-          <div class="form-grid-two-col">
-            <div class="form-group">
-              <label for="quick-folder" class="input-label">Folder (e.g. Spanish, Medical)</label>
-              <input type="text" id="quick-folder" list="folder-suggestions" placeholder="e.g. Spanish (Optional)">
-              <datalist id="folder-suggestions">
-                <!-- Dynamically populated -->
-              </datalist>
+        <!-- Segmented Tab Navigation for Decks & Cards -->
+        <div class="decks-nav-tabs" id="decks-tab-bar" role="tablist">
+          <button type="button" class="btn-deck-tab active" data-deck-tab="tab-collections" role="tab" aria-selected="true" aria-controls="tab-collections">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            <span>Collections &amp; Folders</span>
+          </button>
+          <button type="button" class="btn-deck-tab" data-deck-tab="tab-browser" role="tab" aria-selected="false" aria-controls="tab-browser">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            <span>All Cards Browser</span>
+          </button>
+          <button type="button" class="btn-deck-tab" data-deck-tab="tab-add" role="tab" aria-selected="false" aria-controls="tab-add">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>Quick Add Card</span>
+          </button>
+        </div>
+
+        <!-- Tab 1: Windows File Explorer Widget Card -->
+        <div id="tab-collections" class="deck-tab-panel active" role="tabpanel">
+          <div class="card-panel win-explorer-panel" id="win-explorer">
+            <!-- Explorer Navigation & Address Bar Ribbon -->
+            <div class="explorer-header-toolbar">
+              <!-- Navigation Action Buttons (Back / Forward / Up / Refresh) -->
+              <div class="explorer-nav-buttons">
+                <button id="btn-explorer-back" class="btn-explorer-nav" title="Back (Alt+Left)" disabled>
+                  <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                </button>
+                <button id="btn-explorer-forward" class="btn-explorer-nav" title="Forward (Alt+Right)" disabled>
+                  <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </button>
+                <button id="btn-explorer-up" class="btn-explorer-nav" title="Up to parent folder (Alt+Up)" disabled>
+                  <svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                </button>
+                <button id="btn-explorer-refresh" class="btn-explorer-nav" title="Refresh">
+                  <svg viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l.56-.56"/></svg>
+                </button>
+              </div>
+
+              <!-- Windows Explorer Address Bar / Breadcrumbs -->
+              <div class="explorer-address-bar">
+                <div id="explorer-breadcrumbs" class="explorer-breadcrumbs">
+                  <!-- Dynamically generated breadcrumb chips -->
+                </div>
+              </div>
+
+              <!-- Explorer Search Box -->
+              <div class="explorer-search-box">
+                <svg class="search-icon-svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="explorer-search-input" placeholder="Search this folder...">
+              </div>
+
+              <!-- View Switcher (Grid / Details) -->
+              <div class="explorer-view-toggle">
+                <button id="btn-view-grid" class="btn-view-mode active" title="Grid / Large Tiles View">
+                  <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                </button>
+                <button id="btn-view-details" class="btn-view-mode" title="Details / Table List View">
+                  <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                </button>
+              </div>
             </div>
-            <div class="form-group">
-              <label for="quick-deck" class="input-label">Collection / Deck</label>
-              <input type="text" id="quick-deck" list="deck-suggestions" placeholder="e.g. Verbs or Default" value="Default">
-              <datalist id="deck-suggestions">
-                <!-- Dynamically populated -->
-              </datalist>
+
+            <!-- Explorer Command Ribbon (Actions) -->
+            <div class="explorer-command-bar">
+              <button id="btn-explorer-new-deck" class="btn-command">
+                <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>New Deck</span>
+              </button>
+              <button id="btn-explorer-new-folder" class="btn-command">
+                <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <span>New Folder</span>
+              </button>
+              <button id="btn-explorer-import" class="btn-command">
+                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>Import Cards Here</span>
+              </button>
+              <button id="btn-explorer-export" class="btn-command">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <span>Export</span>
+              </button>
+              <button id="btn-explorer-add-card" class="btn-command">
+                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                <span>Quick Add</span>
+              </button>
+              <div class="command-bar-divider"></div>
+              <button id="btn-explorer-study" class="btn-command btn-command-primary">
+                <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <span>Study Due</span>
+              </button>
+              <button id="btn-explorer-practice" class="btn-command">
+                <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                <span>Practice All</span>
+              </button>
+            </div>
+
+            <!-- Explorer Body Container (Sidebar Tree + Main Viewport) -->
+            <div class="explorer-body">
+              <!-- Left Sidebar Navigation Pane -->
+              <aside class="explorer-sidebar">
+                <div class="sidebar-header-title">Quick Access &amp; Tree</div>
+                <div id="explorer-tree-root" class="explorer-tree">
+                  <!-- Dynamically rendered tree -->
+                </div>
+              </aside>
+
+              <!-- Main Content Area -->
+              <main class="explorer-main">
+                <div id="explorer-canvas" class="explorer-canvas">
+                  <!-- Dynamically rendered folder & deck items -->
+                </div>
+              </main>
+            </div>
+
+            <!-- Explorer Status Bar -->
+            <div class="explorer-status-bar">
+              <span id="explorer-status-text">Loading collections...</span>
             </div>
           </div>
-          <div class="form-group">
-            <label for="quick-front" class="input-label">Front (Question / Kanji)</label>
-            <input type="text" id="quick-front" placeholder="e.g. 漢字 or Question text">
-          </div>
-          <div class="form-group">
-            <label for="quick-sub" class="input-label">Sub-text (Kana helper / top hint)</label>
-            <input type="text" id="quick-sub" placeholder="e.g. かんじ or Kana pronunciation">
-          </div>
-          <div class="form-group">
-            <label for="quick-back" class="input-label">Back (Answer / English)</label>
-            <input type="text" id="quick-back" placeholder="e.g. Chinese characters or Answer text">
-          </div>
-          <div class="form-grid-two-col">
-            <div class="form-group">
-              <label for="quick-description" class="input-label">Description (Optional detailed notes)</label>
-              <input type="text" id="quick-description" placeholder="e.g. Example sentence or detailed explanation">
+        </div>
+
+        <!-- Tab 2: All Cards Browser Panel -->
+        <div id="tab-browser" class="deck-tab-panel hidden" role="tabpanel">
+          <div class="card-panel browser-panel" id="card-browser-panel">
+            <div class="panel-header browser-header-row">
+              <div>
+                <h3>All Cards Browser</h3>
+                <p id="browser-total-count">Search, edit, and manage individual flashcards.</p>
+              </div>
             </div>
-            <div class="form-group">
-              <label for="quick-lang" class="input-label">Audio Speech Language</label>
-              <select id="quick-lang" class="select-input">
-                <option value="">Auto-Detect / Global Default</option>
-                <option value="en-US">English (en-US)</option>
-                <option value="es-ES">Spanish (es-ES)</option>
-                <option value="ja-JP">Japanese (ja-JP)</option>
-                <option value="fr-FR">French (fr-FR)</option>
-                <option value="de-DE">German (de-DE)</option>
-                <option value="ru-RU">Russian (ru-RU)</option>
-                <option value="zh-CN">Chinese (zh-CN)</option>
-                <option value="it-IT">Italian (it-IT)</option>
-                <option value="pt-BR">Portuguese (pt-BR)</option>
-                <option value="ko-KR">Korean (ko-KR)</option>
+            
+            <div class="browser-controls-row">
+              <div class="search-input-wrap">
+                <svg class="search-icon-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"/>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input type="text" id="browser-search-input" placeholder="Search cards by front, back, deck, folder...">
+              </div>
+              <button type="button" id="btn-browser-deck-picker" class="gui-picker-filter-btn" title="Filter by collection">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <span id="browser-deck-filter-label">📁 All Collections</span>
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <select id="browser-deck-filter" class="hidden">
+                <option value="all">📁 All Collections</option>
               </select>
             </div>
-          </div>
-          <div class="form-action-row">
-            <button id="btn-quick-add" class="btn btn-primary">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="12" y1="5" x2="12" y2="19"/>
-                <line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-              Add Card
-            </button>
+
+            <!-- Floating / Sticky Bulk Actions Toolbar -->
+            <div id="browser-bulk-toolbar" class="browser-bulk-toolbar hidden">
+              <div class="bulk-toolbar-info">
+                <span id="bulk-selected-count" class="bulk-count-pill">0 selected</span>
+              </div>
+              <div class="bulk-toolbar-actions">
+                <button id="btn-bulk-move" class="btn btn-secondary btn-sm" title="Move selected cards to another collection">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                  Move...
+                </button>
+                <button id="btn-bulk-reset" class="btn btn-secondary btn-sm" title="Reset FSRS scheduling progress to new">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                  Reset FSRS
+                </button>
+                <button id="btn-bulk-delete" class="btn btn-danger btn-sm" title="Delete selected cards">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  Delete
+                </button>
+                <button id="btn-bulk-deselect" class="btn btn-secondary btn-sm" title="Clear selection">✕</button>
+              </div>
+            </div>
+
+            <div class="browser-table-container table-container" id="browser-table-scroll-container">
+              <table class="preview-table browser-table">
+                <thead>
+                  <tr>
+                    <th style="width: 5%; text-align: center;">
+                      <input type="checkbox" id="browser-select-all" title="Select all cards in current view" class="table-checkbox">
+                    </th>
+                    <th style="width: 20%;">Collection</th>
+                    <th style="width: 30%;">Front</th>
+                    <th style="width: 27%;">Back</th>
+                    <th style="width: 10%;">Status</th>
+                    <th style="width: 8%; text-align: right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="browser-cards-tbody">
+                  <!-- Dynamically rendered via virtual/infinite scroll -->
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-      
-        <!-- Card Browser & Management Panel -->
-        <div class="card-panel browser-panel" id="card-browser-panel">
-          <div class="panel-header browser-header-row">
-            <div>
-              <h3>All Cards Browser</h3>
-              <p id="browser-total-count">Search, edit, and manage individual flashcards.</p>
-            </div>
-          </div>
-          
-          <div class="browser-controls-row">
-            <div class="search-input-wrap">
-              <svg class="search-icon-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="11" cy="11" r="8"/>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-              </svg>
-              <input type="text" id="browser-search-input" placeholder="Search cards by front, back, deck, folder...">
-            </div>
-            <button type="button" id="btn-browser-deck-picker" class="gui-picker-filter-btn" title="Filter by collection">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-              <span id="browser-deck-filter-label">📁 All Collections</span>
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-            </button>
-            <select id="browser-deck-filter" class="hidden">
-              <option value="all">📁 All Collections</option>
-            </select>
-          </div>
 
-          <!-- Floating / Sticky Bulk Actions Toolbar -->
-          <div id="browser-bulk-toolbar" class="browser-bulk-toolbar hidden">
-            <div class="bulk-toolbar-info">
-              <span id="bulk-selected-count" class="bulk-count-pill">0 selected</span>
+        <!-- Tab 3: Native Quick Add Card Form -->
+        <div id="tab-add" class="deck-tab-panel hidden" role="tabpanel">
+          <div class="card-panel">
+            <div class="panel-header">
+              <h3>Quick Add Card</h3>
+              <p>Insert a single card with optional folder hierarchy.</p>
             </div>
-            <div class="bulk-toolbar-actions">
-              <button id="btn-bulk-move" class="btn btn-secondary btn-sm" title="Move selected cards to another collection">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                Move...
-              </button>
-              <button id="btn-bulk-reset" class="btn btn-secondary btn-sm" title="Reset FSRS scheduling progress to new">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-                Reset FSRS
-              </button>
-              <button id="btn-bulk-delete" class="btn btn-danger btn-sm" title="Delete selected cards">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                Delete
-              </button>
-              <button id="btn-bulk-deselect" class="btn btn-secondary btn-sm" title="Clear selection">✕</button>
+            <div class="form-grid-two-col">
+              <div class="form-group">
+                <label for="quick-folder" class="input-label">Folder (e.g. Spanish, Medical)</label>
+                <input type="text" id="quick-folder" list="folder-suggestions" placeholder="e.g. Spanish (Optional)">
+                <datalist id="folder-suggestions">
+                  <!-- Dynamically populated -->
+                </datalist>
+              </div>
+              <div class="form-group">
+                <label for="quick-deck" class="input-label">Collection / Deck</label>
+                <input type="text" id="quick-deck" list="deck-suggestions" placeholder="e.g. Verbs or Default" value="Default">
+                <datalist id="deck-suggestions">
+                  <!-- Dynamically populated -->
+                </datalist>
+              </div>
             </div>
-          </div>
-
-          <div class="browser-table-container table-container" id="browser-table-scroll-container">
-            <table class="preview-table browser-table">
-              <thead>
-                <tr>
-                  <th style="width: 5%; text-align: center;">
-                    <input type="checkbox" id="browser-select-all" title="Select all cards in current view" class="table-checkbox">
-                  </th>
-                  <th style="width: 20%;">Collection</th>
-                  <th style="width: 30%;">Front</th>
-                  <th style="width: 27%;">Back</th>
-                  <th style="width: 10%;">Status</th>
-                  <th style="width: 8%; text-align: right;">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="browser-cards-tbody">
-                <!-- Dynamically rendered via virtual/infinite scroll -->
-              </tbody>
-            </table>
+            <div class="form-group">
+              <label for="quick-front" class="input-label">Front (Question / Kanji)</label>
+              <input type="text" id="quick-front" placeholder="e.g. 漢字 or Question text">
+            </div>
+            <div class="form-group">
+              <label for="quick-sub" class="input-label">Sub-text (Kana helper / top hint)</label>
+              <input type="text" id="quick-sub" placeholder="e.g. かんじ or Kana pronunciation">
+            </div>
+            <div class="form-group">
+              <label for="quick-back" class="input-label">Back (Answer / English)</label>
+              <input type="text" id="quick-back" placeholder="e.g. Chinese characters or Answer text">
+            </div>
+            <div class="form-grid-two-col">
+              <div class="form-group">
+                <label for="quick-description" class="input-label">Description (Optional detailed notes)</label>
+                <input type="text" id="quick-description" placeholder="e.g. Example sentence or detailed explanation">
+              </div>
+              <div class="form-group">
+                <label for="quick-lang" class="input-label">Audio Speech Language</label>
+                <select id="quick-lang" class="select-input">
+                  <option value="">Auto-Detect / Global Default</option>
+                  <option value="en-US">English (en-US)</option>
+                  <option value="es-ES">Spanish (es-ES)</option>
+                  <option value="ja-JP">Japanese (ja-JP)</option>
+                  <option value="fr-FR">French (fr-FR)</option>
+                  <option value="de-DE">German (de-DE)</option>
+                  <option value="ru-RU">Russian (ru-RU)</option>
+                  <option value="zh-CN">Chinese (zh-CN)</option>
+                  <option value="it-IT">Italian (it-IT)</option>
+                  <option value="pt-BR">Portuguese (pt-BR)</option>
+                  <option value="ko-KR">Korean (ko-KR)</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-action-row">
+              <button id="btn-quick-add" class="btn btn-primary">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Add Card
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -820,8 +792,10 @@
       <!-- VIEW 4: IMPORT -->
       <section id="view-import" class="app-view">
         <div class="view-header">
-          <h2>Import Decks</h2>
-          <p>Upload native Anki packages (.apkg), text exports, or pure card CSV spreadsheets.</p>
+          <div class="view-header-content">
+            <h2>Import Decks</h2>
+            <p>Upload native Anki packages (.apkg), text exports, or pure card CSV spreadsheets.</p>
+          </div>
         </div>
 
         <!-- Preloaded Starter Decks Panel -->
@@ -974,8 +948,10 @@ Gracias,Thank you,greeting,Common polite phrase
       <!-- VIEW 4: SETTINGS -->
       <section id="view-settings" class="app-view">
         <div class="view-header">
-          <h2>Settings</h2>
-          <p>Configure device syncing, themes, and manage database.</p>
+          <div class="view-header-content">
+            <h2>Settings</h2>
+            <p>Configure device syncing, themes, and manage database.</p>
+          </div>
         </div>
 
         <div class="settings-grid">

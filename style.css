@@ -301,23 +301,42 @@ html[data-theme="light"] .app-header {
   padding-bottom: calc(var(--safe-bottom) + 76px);
 }
 
-/* Sub-titles */
+/* View header with content and optional badges/actions */
 .view-header {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
   margin-bottom: 4px;
+}
+
+.view-header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
 }
 
 .view-header h2 {
   font-size: 1.4rem;
   font-weight: 700;
   letter-spacing: -0.02em;
+  margin: 0;
 }
 
 .view-header p {
   color: var(--text-secondary);
   font-size: 0.85rem;
+  margin: 0;
+}
+
+.view-header-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 /* Subviews (Dashboard & study) */
@@ -741,11 +760,8 @@ input[type="range"]::-moz-range-thumb {
  * DASHBOARD & REVIEW VIEW
  * ========================================================================== */
 #view-review.active {
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
   padding: 14px 16px calc(var(--safe-bottom) + 80px) 16px;
-  gap: 14px;
-  height: 100%;
+  gap: 16px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -821,6 +837,284 @@ input[type="range"]::-moz-range-thumb {
   font-weight: 600;
   color: var(--text-secondary);
   letter-spacing: 0.02em;
+}
+
+/* ── Hero Study Hub (Review View) ── */
+.hero-study-card {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.study-selection-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 18px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.study-selection-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.study-selection-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.study-selection-name {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 320px;
+}
+
+.study-selection-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+  border: 1px solid var(--panel-border);
+  flex-shrink: 0;
+}
+
+.study-selection-badge.has-due {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.study-selection-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-choose-deck {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--btn-secondary-bg);
+  border: 1px solid var(--panel-border);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.btn-choose-deck:hover {
+  background: var(--btn-secondary-hover);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.btn-clear-selection {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  border: 1px solid var(--panel-border);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.btn-clear-selection:hover {
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.hero-study-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 30px 24px;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.hero-due-display {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.hero-due-number {
+  font-size: 3.8rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: var(--text-primary);
+  min-width: 50px;
+}
+
+.hero-due-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hero-due-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.hero-due-desc {
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+}
+
+.hero-study-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn-hero-study {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 28px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  border-radius: var(--radius-pill);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border: 1px solid transparent;
+  cursor: pointer;
+  box-shadow: 0 0 24px rgba(255, 255, 255, 0.12);
+  transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-hero-study:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 32px rgba(255, 255, 255, 0.22);
+}
+
+.btn-hero-study .btn-icon-svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.btn-hero-practice {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 22px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--panel-border);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-hero-practice:hover {
+  background: var(--btn-secondary-hover);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.btn-hero-practice .btn-icon-svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+}
+
+/* ── Segmented Tab Navigation (Decks View) ── */
+.decks-nav-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-pill);
+  width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.decks-nav-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.btn-deck-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s, background 0.15s;
+}
+
+.btn-deck-tab:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.btn-deck-tab.active {
+  background: var(--text-primary);
+  color: var(--bg-color);
+  font-weight: 700;
+}
+
+.deck-tab-panel {
+  width: 100%;
+}
+.deck-tab-panel.hidden {
+  display: none !important;
+}
+.deck-tab-panel.active {
+  display: block;
+  animation: fade-in-simplistic 0.15s ease forwards;
+}
+
+.deck-tab-panel .win-explorer-panel,
+.deck-tab-panel .browser-panel {
+  margin-bottom: 0;
 }
 
 /* ACTIVITY CONSISTENCY HEATMAP */
@@ -2225,17 +2519,23 @@ html[data-theme="light"] .format-badge {
     padding-bottom: 40px;
   }
 
-  /* ── Review view: strictly 100% fit-to-screen NO SCROLL ── */
-  #view-review.active {
-    padding: 32px 40px;
-    gap: 20px;
-    overflow-y: auto !important;
-    height: 100%;
-    box-sizing: border-box;
+  /* ── Desktop View Containers: Unified 1040px Centered Layout with Consistent Spacing ── */
+  #view-review.active,
+  #view-decks.active,
+  #view-analytics.active,
+  #view-import.active,
+  #view-settings.active {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    gap: 24px;
+    max-width: 1040px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 32px 32px 48px;
+    box-sizing: border-box;
+    align-items: stretch;
   }
+
   .subview {
     flex: 1;
     min-height: 0;
@@ -2250,10 +2550,8 @@ html[data-theme="light"] .format-badge {
     gap: 24px;
     display: none;
     flex-direction: column;
-    max-width: 1040px;
     width: 100%;
-    margin: 0 auto;
-    flex: 1;
+    margin: 0;
   }
   #subview-dashboard.active {
     display: flex;
@@ -2415,40 +2713,22 @@ html[data-theme="light"] .format-badge {
     width: 100%;
   }
 
-  /* ── Decks & Folders: dedicated explorer layout ── */
-  #view-decks.active {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-    max-width: 1040px;
-    margin: 0 auto;
-    width: 100%;
+  /* ── Decks & Folders: dedicated explorer & browser layout ── */
+  .deck-tab-panel #win-explorer .explorer-body {
+    min-height: 480px;
+    max-height: calc(100vh - 280px);
+    height: 560px;
   }
-  #view-decks .view-header { width: 100%; }
+  .deck-tab-panel .browser-table-container {
+    max-height: calc(100vh - 340px);
+    min-height: 420px;
+  }
 
   /* ── Import: dedicated clean view ── */
-  #view-import.active {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-    max-width: 1040px;
-    margin: 0 auto;
-    width: 100%;
-  }
   #view-import .import-preview-section { max-height: none; }
   .table-container { max-height: 380px; }
 
   /* ── Settings: standardized 2-column layout ── */
-  #view-settings.active {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-    max-width: 1040px;
-    margin: 0 auto;
-    width: 100%;
-  }
-  #view-settings .view-header { width: 100%; }
-
   .settings-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -3005,13 +3285,7 @@ html[data-theme="light"] .btn-table-action:hover {
   gap: 8px;
 }
 
-/* Desktop Grid Placement for Card Browser */
-@media (min-width: 769px) {
-  #view-decks.active > #card-browser-panel {
-    grid-column: span 2;
-    margin-top: 8px;
-  }
-}
+
 
 
 .deck-tree-actions {

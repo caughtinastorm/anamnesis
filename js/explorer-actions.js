@@ -29,16 +29,18 @@ let _navigateTo = null;
 let _loadCardsFromDB = null;
 let _onSyncRequest = null;
 let _getExplorerData = null;
+let _switchDecksTab = null;
 
 /**
  * Called once by explorer.js during initExplorer() to inject navigation helpers.
- * @param {{ navigateTo: Function, loadCardsFromDB: Function, onSyncRequest: Function, getExplorerData: Function }} deps
+ * @param {{ navigateTo: Function, loadCardsFromDB: Function, onSyncRequest: Function, getExplorerData: Function, switchDecksTab: Function }} deps
  */
-export function initExplorerActions({ navigateTo, loadCardsFromDB, onSyncRequest, getExplorerData }) {
+export function initExplorerActions({ navigateTo, loadCardsFromDB, onSyncRequest, getExplorerData, switchDecksTab }) {
   _navigateTo = navigateTo;
   _loadCardsFromDB = loadCardsFromDB;
   _onSyncRequest = onSyncRequest;
   _getExplorerData = getExplorerData;
+  _switchDecksTab = switchDecksTab;
   initExportModal();
 }
 
@@ -102,7 +104,15 @@ export function handleAddCardHere() {
 
   if (dom.quickFolder) dom.quickFolder.value = targetFolder;
   if (dom.quickDeck) dom.quickDeck.value = targetDeck;
-  scrollToElement(document.getElementById("btn-quick-add")?.closest(".card-panel"));
+  if (_switchDecksTab) {
+    _switchDecksTab("tab-add");
+  } else {
+    scrollToElement(document.getElementById("btn-quick-add")?.closest(".card-panel"));
+  }
+  const quickFront = document.getElementById("quick-front");
+  if (quickFront) {
+    setTimeout(() => quickFront.focus(), 50);
+  }
   showToast(`Ready to add card into ${targetFolder ? `${targetFolder} / ` : ""}${targetDeck}`, "info");
 }
 
