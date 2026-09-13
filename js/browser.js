@@ -27,6 +27,7 @@ let browserTableScrollContainer;
 let browserSelectAll;
 let browserBulkToolbar;
 let bulkSelectedCount;
+let btnBulkPractice;
 let btnBulkMove;
 let btnBulkReset;
 let btnBulkDelete;
@@ -67,6 +68,7 @@ export function initCardBrowser() {
   browserSelectAll = document.getElementById("browser-select-all");
   browserBulkToolbar = document.getElementById("browser-bulk-toolbar");
   bulkSelectedCount = document.getElementById("bulk-selected-count");
+  btnBulkPractice = document.getElementById("btn-bulk-practice");
   btnBulkMove = document.getElementById("btn-bulk-move");
   btnBulkReset = document.getElementById("btn-bulk-reset");
   btnBulkDelete = document.getElementById("btn-bulk-delete");
@@ -121,6 +123,10 @@ export function initCardBrowser() {
 
   if (btnBulkReset) {
     btnBulkReset.addEventListener("click", handleBulkResetFSRS);
+  }
+
+  if (btnBulkPractice) {
+    btnBulkPractice.addEventListener("click", handleBulkPractice);
   }
 
   if (btnBulkMove) {
@@ -536,6 +542,22 @@ function clearSelection() {
     browserSelectAll.indeterminate = false;
   }
   updateBulkToolbar();
+}
+
+async function handleBulkPractice() {
+  const count = selectedCardIds.size;
+  if (count === 0) return;
+
+  const cards = state.allCards.filter(c => selectedCardIds.has(c.id) && !c.deleted);
+  if (cards.length === 0) {
+    showToast("No active flashcards selected", "error");
+    return;
+  }
+
+  const { switchView } = await import("./ui.js");
+  const { startStudySession } = await import("./study.js");
+  switchView("view-review");
+  startStudySession(true, cards, `Practice Selection (${cards.length})`);
 }
 
 async function handleBulkDelete() {

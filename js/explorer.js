@@ -259,9 +259,57 @@ export function getExplorerData() {
 
 export function renderExplorer() {
   updateNavButtonStates();
+  updateExplorerToolbar();
   renderBreadcrumbs();
   renderSidebarTree();
   renderExplorerCanvas();
+}
+
+export function updateExplorerToolbar() {
+  if (!btnStudyCurrent || !btnPracticeCurrent) return;
+  const path = explorerState.currentPath;
+  const { folderMap, standaloneMap } = getExplorerData();
+
+  let due = 0;
+  let total = 0;
+  let labelScope = "All";
+
+  if (path.length === 2) {
+    const s = folderMap.get(path[0])?.get(path[1]);
+    due = s?.due || 0;
+    total = s?.total || 0;
+    labelScope = "Deck";
+  } else if (path.length === 1) {
+    if (folderMap.has(path[0])) {
+      const dm = folderMap.get(path[0]);
+      dm?.forEach(s => { due += s.due; total += s.total; });
+      labelScope = "Folder";
+    } else {
+      const s = standaloneMap.get(path[0]);
+      due = s?.due || 0;
+      total = s?.total || 0;
+      labelScope = "Deck";
+    }
+  } else {
+    folderMap.forEach(dm => dm.forEach(s => { due += s.due; total += s.total; }));
+    standaloneMap.forEach(s => { due += s.due; total += s.total; });
+    labelScope = "All";
+  }
+
+  const studySpan = btnStudyCurrent.querySelector("span");
+  if (studySpan) {
+    studySpan.textContent = due > 0 ? `Study (${due})` : "Study (0 Due)";
+  }
+  btnStudyCurrent.title = due > 0
+    ? `Study ${due} due cards in this ${labelScope.toLowerCase()}`
+    : `No cards due in this ${labelScope.toLowerCase()}`;
+
+  const practiceSpan = btnPracticeCurrent.querySelector("span");
+  if (practiceSpan) {
+    practiceSpan.textContent = `Practice ${labelScope} (${total})`;
+  }
+  btnPracticeCurrent.title = `Practice all ${total} cards in this ${labelScope.toLowerCase()} (FSRS optional)`;
+  btnPracticeCurrent.disabled = (total === 0);
 }
 
 // -----------------------------------------------------------------------
@@ -374,6 +422,11 @@ function renderSidebarTree() {
       navigateTo([folderName]);
     });
 
+    folderRow.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      showItemContextMenu(e, { type: "folder", name: folderName, total: folderTotal, due: folderDue });
+    });
+
     folderNode.appendChild(folderRow);
 
     if (isExpanded) {
@@ -396,6 +449,10 @@ function renderSidebarTree() {
           </div>
         `;
         deckRow.addEventListener("click", () => navigateTo([folderName, deckName]));
+        deckRow.addEventListener("contextmenu", (e) => {
+          e.preventDefault();
+          showItemContextMenu(e, { type: "deck", folder: folderName, name: deckName, total: stats.total, due: stats.due });
+        });
         sublist.appendChild(deckRow);
       });
 
@@ -428,6 +485,10 @@ function renderSidebarTree() {
         </div>
       `;
       deckRow.addEventListener("click", () => navigateTo([deckName]));
+      deckRow.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        showItemContextMenu(e, { type: "deck", folder: null, name: deckName, total: stats.total, due: stats.due });
+      });
       treeRootEl.appendChild(deckRow);
     });
   }
@@ -569,6 +630,9 @@ function renderGridCanvas(items) {
         <button class="tile-btn tile-btn-primary btn-study-item" title="Study Due Flashcards">
           ${dueCount > 0 ? `Study (${dueCount})` : "Review"}
         </button>
+        <button class="tile-btn tile-btn-icon btn-practice-item" title="Practice Mode (${totalCount} cards)">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </button>
         <button class="tile-btn tile-btn-icon btn-import-item" title="Import Cards into this collection">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         </button>
@@ -591,6 +655,11 @@ function renderGridCanvas(items) {
       }
     });
 
+    card.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      showItemContextMenu(e, item);
+    });
+
     card.querySelector(".btn-study-item")?.addEventListener("click", async (e) => {
       e.stopPropagation();
       let sel = "all";
@@ -603,6 +672,20 @@ function renderGridCanvas(items) {
       switchView("view-review");
       const { startStudySession } = await import("./study.js");
       startStudySession(item.due === 0);
+    });
+
+    card.querySelector(".btn-practice-item")?.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      let sel = "all";
+      if (isFolder) {
+        sel = `folder:${item.name}`;
+      } else {
+        sel = item.folder ? `deck:${item.folder} / ${item.name}` : `deck:${item.name}`;
+      }
+      setActiveDeckSelection(sel);
+      switchView("view-review");
+      const { startStudySession } = await import("./study.js");
+      startStudySession(true);
     });
 
     card.querySelector(".btn-import-item")?.addEventListener("click", (e) => {
@@ -681,6 +764,9 @@ function renderDetailsCanvas(items) {
           <button class="btn-table-action btn-study-action" title="Study">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
           </button>
+          <button class="btn-table-action btn-practice-action" title="Practice Mode (${item.total || 0} cards)">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </button>
           <button class="btn-table-action btn-import-action" title="Import Here">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           </button>
@@ -704,6 +790,11 @@ function renderDetailsCanvas(items) {
       }
     });
 
+    row.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      showItemContextMenu(e, item);
+    });
+
     row.querySelector(".btn-study-action")?.addEventListener("click", async (e) => {
       e.stopPropagation();
       let sel = "all";
@@ -716,6 +807,20 @@ function renderDetailsCanvas(items) {
       switchView("view-review");
       const { startStudySession } = await import("./study.js");
       startStudySession(item.due === 0);
+    });
+
+    row.querySelector(".btn-practice-action")?.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      let sel = "all";
+      if (isFolder) {
+        sel = `folder:${item.name}`;
+      } else {
+        sel = item.folder ? `deck:${item.folder} / ${item.name}` : `deck:${item.name}`;
+      }
+      setActiveDeckSelection(sel);
+      switchView("view-review");
+      const { startStudySession } = await import("./study.js");
+      startStudySession(true);
     });
 
     row.querySelector(".btn-import-action")?.addEventListener("click", (e) => {
@@ -774,9 +879,13 @@ function renderDeckDetailCanvas(folder, deck, stats) {
         </div>
       </div>
       <div class="deck-hero-actions">
-        <button id="btn-hero-study" class="btn btn-primary">
+        <button id="btn-hero-study" class="btn ${due > 0 ? "btn-primary" : "btn-secondary"}" ${cards.length === 0 ? "disabled" : ""}>
           <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          ${due > 0 ? `Study (${due} Due)` : "Review All Cards"}
+          ${due > 0 ? `Study (${due} Due)` : "Review Due (0)"}
+        </button>
+        <button id="btn-hero-practice" class="btn ${due > 0 ? "btn-secondary" : "btn-primary"} btn-hero-practice-deck" ${cards.length === 0 ? "disabled" : ""} title="Practice all cards in this collection with active buffer">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Practice Deck (${total})
         </button>
         <button id="btn-hero-import" class="btn btn-secondary">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -832,6 +941,14 @@ function renderDeckDetailCanvas(folder, deck, stats) {
     switchView("view-review");
     const { startStudySession } = await import("./study.js");
     startStudySession(due === 0);
+  });
+
+  detailView.querySelector("#btn-hero-practice")?.addEventListener("click", async () => {
+    const sel = folder ? `deck:${folder} / ${deck}` : `deck:${deck}`;
+    setActiveDeckSelection(sel);
+    switchView("view-review");
+    const { startStudySession } = await import("./study.js");
+    startStudySession(true);
   });
 
 

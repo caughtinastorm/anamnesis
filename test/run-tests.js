@@ -1311,6 +1311,28 @@ runTest("Decks segmented tab switching updates active classes and visibility", (
   assert.ok(panels[1].classList.has("hidden"), "tab-browser panel must be hidden");
 });
 
+runTest("Deck Practice Mode buttons exist in Explorer, Hero, and Context Menu", () => {
+  const explorerContent = fs.readFileSync(path.join(__dirname, "../js/explorer.js"), "utf8");
+  const actionsContent = fs.readFileSync(path.join(__dirname, "../js/explorer-actions.js"), "utf8");
+  const htmlContent = fs.readFileSync(path.join(__dirname, "../index.html"), "utf8");
+
+  // Hero Deck Practice button
+  assert.ok(explorerContent.includes('id="btn-hero-practice"'), "Deck detail hero must include Practice Deck button");
+  assert.ok(explorerContent.includes('Practice Deck (${total})'), "Deck detail hero must display total cards count in practice button");
+
+  // Explorer Grid Tile Practice button
+  assert.ok(explorerContent.includes('btn-practice-item'), "Grid tiles must have a quick practice action button");
+
+  // Explorer Details Table Practice button
+  assert.ok(explorerContent.includes('btn-practice-action'), "Details table rows must have a quick practice action button");
+
+  // Explorer Context Menu Practice action
+  assert.ok(actionsContent.includes('menu-practice'), "Context menu must include Practice Mode action");
+
+  // Browser Bulk Toolbar Practice button
+  assert.ok(htmlContent.includes('id="btn-bulk-practice"'), "Card browser bulk toolbar must include Practice button");
+});
+
 console.log(`\nResults: ${testsPassed} passed / ${testsRun} total`);
 if (testsPassed === testsRun) {
   console.log("🎉 ALL TESTS PASSED SUCCESSFULLY!\n");

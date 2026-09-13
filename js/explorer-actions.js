@@ -159,6 +159,10 @@ export function showItemContextMenu(e, item) {
       <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
       Study (${item.due || 0} Due)
     </button>
+    <button class="menu-item menu-practice">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Practice Mode (${item.total || 0} Cards)
+    </button>
     <button class="menu-item menu-import">
       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       Import Cards Here
@@ -217,6 +221,20 @@ export function showItemContextMenu(e, item) {
     switchView("view-review");
     const { startStudySession } = await import("./study.js");
     startStudySession(item.due === 0);
+  });
+
+  menu.querySelector(".menu-practice")?.addEventListener("click", async () => {
+    closeMenu();
+    let sel = "all";
+    if (isFolder) {
+      sel = `folder:${item.name}`;
+    } else {
+      sel = item.folder ? `deck:${item.folder} / ${item.name}` : `deck:${item.name}`;
+    }
+    setActiveDeckSelection(sel);
+    switchView("view-review");
+    const { startStudySession } = await import("./study.js");
+    startStudySession(true);
   });
 
   menu.querySelector(".menu-import")?.addEventListener("click", () => {
