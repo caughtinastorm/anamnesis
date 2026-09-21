@@ -77,7 +77,7 @@
             </div>
             <div class="view-header-badges">
               <div class="hero-streak-badge" id="hero-streak-badge" title="Consecutive active review streak">
-                <span class="streak-flame">🔥</span>
+                
                 <span id="stat-streak-days">0</span>d Streak
               </div>
               <div class="header-status-pill">
@@ -136,7 +136,7 @@
             <div class="study-selection-banner">
               <div class="study-selection-info">
                 <span class="study-selection-label">Collection:</span>
-                <span id="dashboard-deck-name" class="study-selection-name">📁 All Collections</span>
+                <span id="dashboard-deck-name" class="study-selection-name">All Collections</span>
                 <span id="dashboard-deck-due-pill" class="study-selection-badge">0 due</span>
               </div>
               <div class="study-selection-actions">
@@ -145,8 +145,8 @@
                   Choose Deck ↗
                 </button>
                 <button type="button" id="btn-dashboard-reset-deck" class="btn-clear-selection hidden" title="Reset filter to All Collections">✕ All Decks</button>
-                <button type="button" id="btn-dashboard-reset-fsrs" class="btn-clear-selection hidden" style="color: #f87171; border-color: rgba(239, 68, 68, 0.25);" title="Reset FSRS data for this collection">🔄 Reset FSRS</button>
-                <button type="button" id="btn-dashboard-export-deck" class="btn-clear-selection" title="Export this collection to CSV">📥 Export</button>
+                <button type="button" id="btn-dashboard-reset-fsrs" class="btn-clear-selection hidden" style="color: #f87171; border-color: rgba(239, 68, 68, 0.25);" title="Reset FSRS data for this collection">Reset FSRS</button>
+                <button type="button" id="btn-dashboard-export-deck" class="btn-clear-selection" title="Export this collection to CSV">Export</button>
               </div>
             </div>
 
@@ -174,7 +174,7 @@
             </div>
 
             <select id="deck-select" class="hidden">
-              <option value="all">📁 All Collections</option>
+              <option value="all">All Collections</option>
             </select>
           </div>
 
@@ -200,7 +200,7 @@
             <p>Your collection is empty. Use Quick Add, Import, or load our preloaded JLPT N5 Kanji deck.</p>
             <div style="margin-top: 14px; display: flex; justify-content: center; gap: 10px;">
               <button type="button" id="btn-empty-load-n5-kanji" class="btn btn-primary btn-sm">
-                🎌 Load JLPT N5 Kanji Deck (104 Cards)
+                Load JLPT N5 Kanji Deck (104 Cards)
               </button>
             </div>
           </div>
@@ -210,7 +210,7 @@
         <div id="subview-study" class="subview">
           <div class="study-header">
             <button id="btn-cancel-study" class="btn-text">Exit</button>
-            <div class="study-deck-badge" id="study-deck-badge" title="Active Study Collection">📁 All Collections</div>
+            <div class="study-deck-badge" id="study-deck-badge" title="Active Study Collection">All Collections</div>
             <div class="study-progress">
               <span id="study-progress-text"></span>
               <div class="progress-bar-bg">
@@ -476,11 +476,11 @@
               </div>
               <button type="button" id="btn-browser-deck-picker" class="gui-picker-filter-btn" title="Filter by collection">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                <span id="browser-deck-filter-label">📁 All Collections</span>
+                <span id="browser-deck-filter-label">All Collections</span>
                 <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
               </button>
               <select id="browser-deck-filter" class="hidden">
-                <option value="all">📁 All Collections</option>
+                <option value="all">All Collections</option>
               </select>
             </div>
 
@@ -635,14 +635,14 @@
             <div class="analytics-deck-picker-wrap">
               <button type="button" id="btn-analytics-deck-picker" class="gui-picker-filter-btn" title="Browse and filter by collection">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                <span id="analytics-deck-filter-label">📁 All Collections</span>
+                <span id="analytics-deck-filter-label">All Collections</span>
                 <span id="analytics-deck-count-pill" class="gui-picker-badge">0 cards</span>
                 <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
               </button>
               <button type="button" id="btn-analytics-clear-filter" class="gui-picker-clear-btn hidden" title="Clear filter to All Collections">✕ Clear</button>
             </div>
             <select id="analytics-deck-filter" class="hidden">
-              <option value="all">📁 All Collections</option>
+              <option value="all">All Collections</option>
             </select>
           </div>
         </div>
@@ -688,7 +688,7 @@
 
         <!-- Prescriptive Reflection & Diagnostic Action Alerts -->
         <div class="analytics-section-title-row">
-          <h3>🧠 Cognitive Prescriptions &amp; Reflection</h3>
+          <h3>Cognitive Prescriptions &amp; Reflection</h3>
           <span class="section-subtext">Automated diagnostic interventions to optimize your study ROI</span>
         </div>
         <div id="analytics-prescriptions-container" class="prescriptions-container">
@@ -697,7 +697,7 @@
 
         <!-- Interactive Deck Health & Retention Matrix Table -->
         <div class="analytics-section-title-row" style="margin-top: var(--space-6);">
-          <h3>📊 Deck Retention &amp; Cognitive Health Matrix</h3>
+          <h3>Deck Retention &amp; Cognitive Health Matrix</h3>
           <span class="section-subtext">Click any column header to sort • Click a row to inspect leeches</span>
         </div>
         <div class="card-panel deck-health-table-panel">
@@ -749,7 +749,7 @@
           <div class="card-panel chart-card" id="analytics-calibration-section">
             <div class="chart-header">
               <div>
-                <h3>🎯 FSRS-5 Model Calibration</h3>
+                <h3>FSRS-5 Model Calibration</h3>
                 <p>Predicted Retrievability (R) vs. Observed Recall</p>
               </div>
               <span id="calibration-rating-badge" class="kpi-badge neutral">Brier: 0.0000</span>
@@ -780,7 +780,7 @@
         <!-- Word-Level Memory Traps & Leech Radar -->
         <div class="analytics-section-title-row" id="analytics-leech-radar-section" style="margin-top: var(--space-6);">
           <div class="section-title-with-badge">
-            <h3>🪤 Memory Traps &amp; Leech Radar</h3>
+            <h3>Memory Traps &amp; Leech Radar</h3>
             <span class="kpi-badge warning" id="leech-radar-count-badge">0</span>
           </div>
           <span class="section-subtext">Individual cards causing high cognitive friction, repeated lapses, or excessive response latency</span>
@@ -806,7 +806,7 @@
         <div class="card-panel starter-decks-panel" style="margin-bottom: var(--space-4);">
           <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
             <div>
-              <h3>🎌 Preloaded Starter Decks</h3>
+              <h3>Preloaded Starter Decks</h3>
               <p>Curated flashcard collections with verified readings, mnemonics, and examples.</p>
             </div>
             <span class="badge-tag card-badge">Instant Load</span>
@@ -848,7 +848,7 @@
                 <span class="dest-label-sub">Importing directly into:</span>
                 <div class="dest-active-hierarchy" id="import-dest-display">
                   <svg class="dest-folder-icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                  <span id="import-target-label" class="dest-target-name">🗂️ Default <span style="opacity:0.6">(Root)</span></span>
+                  <span id="import-target-label" class="dest-target-name">Default <span style="opacity:0.6">(Root)</span></span>
                 </div>
               </div>
               <div class="dest-card-actions">
@@ -877,8 +877,8 @@
           
           <div class="import-format-guide">
             <div class="import-badge-row">
-              <span class="badge-tag card-badge">✨ Card-Only CSV (Clean)</span>
-              <span class="badge-tag anki-badge">⭐ Native Anki (.apkg)</span>
+              <span class="badge-tag card-badge">Card-Only CSV (Clean)</span>
+              <span class="badge-tag anki-badge">Native Anki (.apkg)</span>
               <span class="badge-tag csv-badge">TSV / Text</span>
             </div>
             <p><strong>Card-Only CSV:</strong> No need to repeat folder or deck names! Just provide card data:</p>
@@ -1191,15 +1191,15 @@ Gracias,Thank you,greeting,Common polite phrase
           Do you want this practice session to count towards your <strong>FSRS spaced repetition</strong> scheduling?
         </p>
         <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--panel-border); border-radius: var(--radius-md); padding: 12px; margin-bottom: 18px; font-size: 0.82rem; line-height: 1.45; color: var(--text-secondary);">
-          <strong style="color: var(--text-primary); display: block; margin-bottom: 4px;">💡 Recommendation:</strong>
+          <strong style="color: var(--text-primary); display: block; margin-bottom: 4px;"> Recommendation:</strong>
           Choose <strong>Practice Only</strong> for new word acquisition or rapid drilling to avoid distorting your memory stability, difficulty, and review intervals.
         </div>
         <div class="modal-buttons" style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
           <button id="btn-practice-only" class="btn btn-primary" style="width: 100%; justify-content: center;">
-            🎯 Practice Only (Keep FSRS Untouched)
+            Practice Only (Keep FSRS Untouched)
           </button>
           <button id="btn-practice-fsrs" class="btn btn-secondary" style="width: 100%; justify-content: center;">
-            📈 Count Towards FSRS Data
+            Count Towards FSRS Data
           </button>
           <button id="btn-practice-cancel" class="btn btn-text" style="width: 100%; justify-content: center; margin-top: 4px;">
             Cancel
@@ -1228,7 +1228,7 @@ Gracias,Thank you,greeting,Common polite phrase
       <div class="modal-content card-panel intro-tour-panel">
         <div class="intro-tour-header">
           <div class="intro-step-badge" id="intro-step-badge">
-            <span class="intro-step-tag" id="intro-step-tag">⚡ Quick Start</span>
+            <span class="intro-step-tag" id="intro-step-tag">Quick Start</span>
             <span class="intro-step-counter" id="intro-step-counter">1 of 7</span>
           </div>
           <button type="button" id="btn-intro-skip-top" class="intro-skip-btn" title="Skip Introduction">
@@ -1345,7 +1345,7 @@ Gracias,Thank you,greeting,Common polite phrase
             <label for="export-scope-select" class="input-label">Select Collection or Folder to Export</label>
             <div class="export-scope-wrap">
               <select id="export-scope-select" class="select-input">
-                <option value="all">🌐 All Collections (Entire Library)</option>
+                <option value="all">All Collections (Entire Library)</option>
               </select>
             </div>
           </div>
@@ -1484,7 +1484,7 @@ Gracias,Thank you,greeting,Common polite phrase
         <div class="picker-modal-footer">
           <div class="picker-footer-left">
             <span class="picker-footer-label">Selected Destination:</span>
-            <div id="picker-selected-label" class="picker-selected-label">🗂️ Default (Root)</div>
+            <div id="picker-selected-label" class="picker-selected-label">Default (Root)</div>
           </div>
           <div class="picker-footer-right">
             <button id="btn-picker-cancel" class="btn btn-secondary">Cancel</button>
