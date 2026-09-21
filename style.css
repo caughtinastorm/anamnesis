@@ -7030,3 +7030,848 @@ select:focus {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* ==========================================================================
+   V2 — REVIEW + DECKS LAYOUT REBALANCE
+   The navigation already tells the user which workspace they're in, so the
+   large explanatory headers are removed from these two high-frequency views.
+   Review is for starting/staying in a study flow; analytics is where detailed
+   consistency history belongs.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   REVIEW — remove redundant vertical chrome
+   -------------------------------------------------------------------------- */
+
+/* The "Review" heading + FSRS explanatory copy repeats the active navigation
+   destination and consumes valuable study-starting space. Keep it in the DOM
+   for JS/accessibility, but don't render it in the dashboard. */
+#view-review > #subview-dashboard > .view-header {
+  display: none;
+}
+
+/* The three key numbers become the first meaningful content. */
+#view-review > #subview-dashboard > .stats-grid {
+  margin-top: 0;
+  margin-bottom: 14px;
+}
+
+/* Study Consistency is an analytics element, not a primary review action.
+   Keep the component in the DOM so existing JS can continue updating it, but
+   remove it from the Review workspace. Analytics remains the appropriate home
+   for this information. */
+#view-review .activity-heatmap-card {
+  display: none !important;
+}
+
+/* If the empty state is shown, don't leave a giant artificial gap where the
+   heatmap used to be. */
+#view-review #dashboard-empty-state {
+  margin-top: 14px;
+}
+
+/* Make the study hub the visual focal point rather than another equally-sized
+   card. */
+#view-review .hero-study-card {
+  margin-bottom: 0;
+}
+
+/* --------------------------------------------------------------------------
+   DECKS — centered workspace, larger tabs, less redundant header
+   -------------------------------------------------------------------------- */
+
+@media (min-width: 769px) {
+  #view-decks.active {
+    max-width: 1280px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* "Decks & Folders" plus the long Windows Explorer description is redundant:
+     the tab labels already establish the workspace. */
+  #view-decks > .view-header {
+    display: none;
+  }
+
+  /* Center the workspace navigation instead of leaving a small pill on the
+     left edge. */
+  #view-decks > .decks-nav-tabs {
+    display: flex;
+    width: min(760px, 100%);
+    max-width: 760px;
+    margin: 0 auto 16px;
+    justify-content: stretch;
+    align-items: stretch;
+    padding: 5px;
+    gap: 4px;
+  }
+
+  #view-decks > .decks-nav-tabs .btn-deck-tab {
+    flex: 1 1 0;
+    justify-content: center;
+    min-height: 44px;
+    padding: 10px 18px;
+    font-size: 0.9rem;
+  }
+
+  #view-decks > .deck-tab-panel {
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  #view-decks > .deck-tab-panel .win-explorer-panel,
+  #view-decks > .deck-tab-panel .browser-panel {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* Give the actual explorer more room to breathe vertically. */
+  #view-decks > #tab-collections #win-explorer {
+    min-height: calc(100vh - 170px);
+  }
+}
+
+/* Make the tab control equally readable at tablet widths too. */
+@media (min-width: 601px) and (max-width: 768px) {
+  #view-decks > .view-header {
+    display: none;
+  }
+
+  #view-decks > .decks-nav-tabs {
+    display: flex;
+    width: 100%;
+    margin: 0 0 14px;
+    justify-content: stretch;
+  }
+
+  #view-decks > .decks-nav-tabs .btn-deck-tab {
+    flex: 1 1 0;
+    justify-content: center;
+    min-height: 42px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+}
+
+/* On phones the labels need to remain usable without making the control
+   overflow horizontally. */
+@media (max-width: 600px) {
+  #view-decks > .view-header {
+    display: none;
+  }
+
+  #view-decks > .decks-nav-tabs {
+    display: flex;
+    width: 100%;
+    margin: 0 0 12px;
+    padding: 4px;
+    gap: 3px;
+    border-radius: var(--radius-card);
+  }
+
+  #view-decks > .decks-nav-tabs .btn-deck-tab {
+    flex: 1 1 0;
+    justify-content: center;
+    min-width: 0;
+    min-height: 42px;
+    padding: 9px 6px;
+    gap: 5px;
+    font-size: 0.76rem;
+  }
+
+  #view-decks > .decks-nav-tabs .btn-deck-tab svg {
+    flex: 0 0 auto;
+  }
+
+  #view-decks > .decks-nav-tabs .btn-deck-tab span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   DECKS — improve internal centering and proportion
+   -------------------------------------------------------------------------- */
+
+/* The explorer's toolbar currently spreads controls according to content
+   width. Keep the main navigation cluster and search field visually balanced. */
+@media (min-width: 769px) {
+  #view-decks .explorer-header-toolbar {
+    display: grid;
+    grid-template-columns: auto minmax(240px, 1fr) minmax(220px, 320px);
+    align-items: center;
+  }
+
+  #view-decks .explorer-nav-buttons {
+    justify-content: center;
+  }
+
+  #view-decks .explorer-address-bar {
+    min-width: 0;
+  }
+
+  #view-decks .explorer-search-box {
+    width: 100%;
+    max-width: none;
+  }
+
+  /* Center the primary explorer/browser content rather than letting it hug
+     whichever side happens to have the longest controls. */
+  #view-decks .explorer-body,
+  #view-decks .browser-panel,
+  #view-decks .browser-table-container {
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* The three tabs should read as workspace modes, not tiny utility buttons. */
+.btn-deck-tab {
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.btn-deck-tab:hover {
+  transform: none;
+}
+
+/* --------------------------------------------------------------------------
+   REVIEW — tighten the first screen without shrinking useful controls
+   -------------------------------------------------------------------------- */
+
+@media (min-width: 769px) {
+  #view-review > #subview-dashboard {
+    gap: 0;
+  }
+
+  #view-review .stats-grid {
+    gap: 12px;
+  }
+
+  #view-review .stat-card {
+    min-height: 76px;
+  }
+
+  #view-review .hero-study-card {
+    margin-top: 0;
+  }
+}
+
+
+/* ==========================================================================
+   DESIGN AUDIT V3
+   Goal: one visual system across desktop + mobile, with mobile treated as a
+   first-class study interface rather than a compressed desktop layout.
+
+   Rules:
+   - Page padding: 24px desktop / 12px mobile
+   - Primary vertical rhythm: 16px desktop / 12px mobile
+   - Card padding: 16px desktop / 12-14px mobile
+   - Control heights: 40px normal / 36px compact / 48px primary
+   - Cards: 14px radius; hero surfaces: 18px
+   - Pills are reserved for status/badges/tabs; ordinary buttons are rounded
+     rectangles.
+   - One clear focal action per section.
+   ========================================================================== */
+
+:root {
+  --audit-page-pad: 24px;
+  --audit-section-gap: 16px;
+  --audit-card-pad: 16px;
+  --audit-card-radius: 14px;
+  --audit-control-radius: 10px;
+  --audit-control-h: 40px;
+  --audit-control-sm: 36px;
+  --audit-primary-h: 48px;
+}
+
+/* --------------------------------------------------------------------------
+   GLOBAL HIERARCHY
+   -------------------------------------------------------------------------- */
+
+.app-view {
+  padding: var(--audit-page-pad);
+  gap: var(--audit-section-gap);
+}
+
+.app-view.active {
+  padding-bottom: calc(var(--safe-bottom) + 24px);
+}
+
+/* Desktop content should be centered inside its chosen max-width rather than
+   relying on whichever child happens to define the visual center. */
+@media (min-width: 769px) {
+  #view-review.active,
+  #view-decks.active,
+  #view-analytics.active,
+  #view-import.active,
+  #view-settings.active {
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* One surface treatment for ordinary cards. */
+.card-panel,
+.dashboard-card,
+.stat-card,
+.collections-tree-card,
+.deck-control-card,
+.browser-panel,
+.win-explorer-panel {
+  border-radius: var(--audit-card-radius);
+}
+
+/* Avoid a "card inside card inside card" feeling: toolbars are surfaces, not
+   separate cards. */
+.explorer-header-toolbar,
+.explorer-command-bar,
+.browser-controls-row {
+  border-radius: 0;
+}
+
+/* Ordinary buttons are never pills. */
+.btn,
+.btn-command,
+.btn-explorer-nav,
+.btn-view-mode,
+.gui-picker-filter-btn {
+  border-radius: var(--audit-control-radius);
+}
+
+/* Pills remain semantic. */
+.badge-tag,
+.kpi-badge,
+.nav-badge,
+.header-status-pill,
+.hero-streak-badge,
+.bulk-count-pill,
+.review-tile-badge {
+  border-radius: var(--radius-pill);
+}
+
+/* --------------------------------------------------------------------------
+   TYPOGRAPHY HIERARCHY
+   -------------------------------------------------------------------------- */
+
+.view-header h2 {
+  font-size: 1.5rem;
+  line-height: 1.15;
+  font-weight: 800;
+}
+
+.view-header p {
+  max-width: 680px;
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.panel-header h3,
+.browser-header-row h3 {
+  font-size: 0.95rem;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.panel-header p,
+.browser-header-row p {
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.stat-label,
+.input-label,
+.section-subtext {
+  font-size: 0.72rem;
+}
+
+/* --------------------------------------------------------------------------
+   REVIEW — CONTENT-FIRST
+   -------------------------------------------------------------------------- */
+
+#view-review > #subview-dashboard > .view-header {
+  display: none;
+}
+
+#view-review .activity-heatmap-card {
+  display: none !important;
+}
+
+#view-review > #subview-dashboard > .stats-grid {
+  margin: 0 0 16px;
+}
+
+#view-review .hero-study-card {
+  margin: 0;
+}
+
+@media (min-width: 769px) {
+  #view-review > #subview-dashboard {
+    gap: 0;
+  }
+
+  #view-review .stats-grid {
+    gap: 16px;
+  }
+
+  #view-review .stat-card {
+    min-height: 76px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   DECKS — WORKSPACE HIERARCHY
+   -------------------------------------------------------------------------- */
+
+#view-decks > .view-header {
+  display: none;
+}
+
+#view-decks > .decks-nav-tabs {
+  margin: 0 auto 0;
+}
+
+#view-decks > .deck-tab-panel {
+  width: 100%;
+}
+
+@media (min-width: 769px) {
+  #view-decks > .decks-nav-tabs {
+    width: min(760px, 100%);
+  }
+
+  #view-decks > .deck-tab-panel {
+    max-width: 1180px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  #view-decks > #tab-collections {
+    max-width: 1280px;
+  }
+}
+
+/* Tabs are navigation, not content. Give them enough area to scan quickly,
+   but don't let them dominate the workspace. */
+.decks-nav-tabs {
+  border-radius: 12px;
+}
+
+.btn-deck-tab {
+  min-height: 40px;
+  border-radius: 8px;
+}
+
+/* --------------------------------------------------------------------------
+   DESKTOP EXPLORER
+   -------------------------------------------------------------------------- */
+
+@media (min-width: 769px) {
+  #view-decks .explorer-header-toolbar {
+    grid-template-columns: auto minmax(260px, 1fr) minmax(220px, 320px) auto;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  #view-decks .explorer-command-bar {
+    gap: 6px;
+    padding: 10px 12px;
+  }
+
+  #view-decks .explorer-body {
+    min-height: 500px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   MOBILE — FIRST-CLASS LAYOUT
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 768px) {
+  :root {
+    --audit-page-pad: 12px;
+    --audit-section-gap: 12px;
+    --audit-card-pad: 12px;
+  }
+
+  .app-view {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .app-view.active {
+    padding-bottom: calc(var(--safe-bottom) + 68px);
+  }
+
+  /* Mobile header is utility-only. The workspace itself establishes context. */
+  .app-header {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .app-header .sync-label {
+    display: none;
+  }
+
+  .app-header .header-help-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  /* Don't repeat a destination title on high-frequency workspaces. */
+  #view-review > #subview-dashboard > .view-header,
+  #view-decks > .view-header {
+    display: none;
+  }
+
+  /* Other views still get a useful heading, but it is compact. */
+  .view-header {
+    margin-bottom: 0;
+    gap: 8px;
+  }
+
+  .view-header h2 {
+    font-size: 1.25rem;
+  }
+
+  .view-header p {
+    display: none;
+  }
+
+  /* Consistent mobile cards. */
+  .card-panel,
+  .dashboard-card,
+  .stat-card,
+  .collections-tree-card {
+    padding: var(--audit-card-pad);
+    border-radius: 12px;
+  }
+
+  /* REVIEW */
+  #view-review > #subview-dashboard {
+    gap: 12px;
+  }
+
+  #view-review > #subview-dashboard > .stats-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+  }
+
+  #view-review .stat-card {
+    min-height: 68px;
+    padding: 10px 8px;
+    gap: 8px;
+    justify-content: center;
+  }
+
+  #view-review .stat-card-icon-wrap {
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+  }
+
+  #view-review .stat-card-icon-wrap .stat-icon-svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  #view-review .stat-val {
+    font-size: 1.35rem;
+  }
+
+  #view-review .stat-label {
+    font-size: 0.62rem;
+    letter-spacing: 0.035em;
+    white-space: normal;
+    line-height: 1.15;
+  }
+
+  #view-review .hero-study-card {
+    border-radius: 14px;
+  }
+
+  #view-review .study-selection-banner {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  #view-review .study-selection-info {
+    width: 100%;
+    gap: 8px;
+  }
+
+  #view-review .study-selection-label {
+    font-size: 0.66rem;
+  }
+
+  #view-review .study-selection-name {
+    font-size: 0.9rem;
+  }
+
+  #view-review .hero-study-body {
+    padding: 22px 14px;
+  }
+
+  #view-review .hero-due-number {
+    font-size: 3rem;
+    line-height: 0.95;
+  }
+
+  #view-review .hero-study-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+    gap: 8px;
+  }
+
+  #view-review .btn-hero-study,
+  #view-review .btn-hero-practice {
+    width: 100%;
+    min-height: 48px;
+    padding: 0 14px;
+  }
+
+  /* DECKS */
+  #view-decks > .decks-nav-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    margin: 0;
+    padding: 4px;
+    gap: 3px;
+    border-radius: 12px;
+  }
+
+  #view-decks > .decks-nav-tabs .btn-deck-tab {
+    min-width: 0;
+    min-height: 42px;
+    padding: 8px 5px;
+    gap: 4px;
+    font-size: 0.7rem;
+    line-height: 1.1;
+    text-align: center;
+  }
+
+  #view-decks > .decks-nav-tabs .btn-deck-tab svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  #view-decks > .decks-nav-tabs .btn-deck-tab span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #view-decks > .deck-tab-panel {
+    margin: 0;
+  }
+
+  /* Explorer becomes one vertical task flow:
+     navigation → location/search → actions → content. */
+  #view-decks .win-explorer-panel {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  #view-decks .explorer-header-toolbar {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  #view-decks .explorer-nav-buttons {
+    display: flex;
+    gap: 4px;
+  }
+
+  #view-decks .explorer-address-bar {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    min-width: 0;
+    width: 100%;
+  }
+
+  #view-decks .explorer-search-box {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    width: 100%;
+    max-width: none;
+  }
+
+  #view-decks .explorer-view-toggle {
+    justify-self: end;
+  }
+
+  #view-decks .explorer-command-bar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    padding: 10px;
+  }
+
+  #view-decks .explorer-command-bar .command-bar-divider {
+    display: none;
+  }
+
+  #view-decks .explorer-command-bar .btn-command {
+    min-height: 40px;
+    justify-content: center;
+    padding: 8px 7px;
+    font-size: 0.76rem;
+  }
+
+  #view-decks .explorer-command-bar #btn-explorer-study,
+  #view-decks .explorer-command-bar #btn-explorer-practice {
+    grid-column: span 1;
+  }
+
+  #view-decks .explorer-body {
+    display: block;
+    min-height: 0;
+  }
+
+  #view-decks .explorer-sidebar {
+    display: none;
+  }
+
+  #view-decks .explorer-main {
+    width: 100%;
+    min-width: 0;
+  }
+
+  #view-decks .explorer-canvas {
+    min-height: 260px;
+    padding: 10px;
+  }
+
+  #view-decks .explorer-status-bar {
+    padding: 8px 10px;
+  }
+
+  /* ALL CARDS BROWSER */
+  #view-decks #card-browser-panel {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  #view-decks .browser-header-row {
+    padding: 14px 12px 10px;
+  }
+
+  #view-decks .browser-controls-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 0 12px 12px;
+  }
+
+  #view-decks .search-input-wrap,
+  #view-decks .gui-picker-filter-btn {
+    width: 100%;
+    min-height: 40px;
+  }
+
+  #view-decks .table-container,
+  #view-decks .browser-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* QUICK ADD */
+  #view-decks #tab-add .card-panel {
+    padding: 14px;
+  }
+
+  /* Mobile forms: one column unless the two fields are genuinely comparable. */
+  .settings-grid,
+  .sync-actions-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .input-with-button {
+    flex-direction: column;
+  }
+
+  /* Keep modal and utility controls tappable without making them visually huge. */
+  .btn,
+  .btn-command,
+  .btn-explorer-nav,
+  .btn-view-mode,
+  .gui-picker-filter-btn {
+    min-height: 40px;
+  }
+
+  .btn-sm {
+    min-height: 36px;
+  }
+
+  /* Avoid hover-only visual hierarchy on touch devices. */
+  .stat-card:hover,
+  .btn-choose-deck:hover,
+  .btn-clear-selection:hover,
+  .btn-hero-study:hover,
+  .btn-hero-practice:hover,
+  .gui-picker-btn:hover,
+  .review-explorer-tile:hover {
+    transform: none;
+  }
+}
+
+/* Very narrow phones: preserve the same system, just reduce horizontal density. */
+@media (max-width: 380px) {
+  .app-view {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  #view-review > #subview-dashboard > .stats-grid {
+    gap: 6px;
+  }
+
+  #view-review .stat-card {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+
+  #view-review .stat-card-icon-wrap {
+    display: none;
+  }
+
+  #view-review .stat-info {
+    align-items: center;
+    text-align: center;
+  }
+
+  #view-decks > .decks-nav-tabs .btn-deck-tab {
+    font-size: 0.66rem;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   TOUCH / MOTION / FOCUS
+   -------------------------------------------------------------------------- */
+
+@media (hover: none) {
+  .btn:hover,
+  .nav-item:hover,
+  .btn-command:hover,
+  .btn-deck-tab:hover,
+  .review-explorer-tile:hover,
+  .stat-card:hover {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-view,
+  .btn,
+  .nav-item,
+  .card-panel,
+  .dashboard-card {
+    transition: none !important;
+  }
+}
