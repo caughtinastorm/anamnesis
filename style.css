@@ -7371,3 +7371,103 @@ html, body {
     grid-template-columns: 1fr;
   }
 }
+
+/* ============================================================================
+   THEME / SURFACE RECOVERY
+   The previous polish layer referenced token names that do not exist in the
+   app's actual theme system (--bg-primary, --surface, --border-color). Those
+   fallbacks made panels transparent and overrode the real theme. This layer
+   deliberately maps back to the app's existing tokens.
+   ============================================================================ */
+
+html, body {
+  background-color: var(--outer-bg);
+  color: var(--text-primary);
+}
+
+.app-container,
+.app-content {
+  background-color: var(--bg-color);
+}
+
+/* Restore actual themed surfaces instead of transparent fallback surfaces. */
+#view-analytics .card,
+#view-analytics .panel,
+#view-analytics .card-panel,
+#view-analytics .analytics-card,
+#view-analytics .analytics-section,
+#view-analytics .stat-card,
+#view-analytics .analytics-toolbar-panel,
+#view-decks .card,
+#view-decks .panel,
+#view-decks .card-panel,
+#view-decks .browser-panel,
+#view-decks .win-explorer-panel,
+#view-decks .collections-tree-card,
+#view-decks .deck-control-card {
+  background: var(--panel-bg);
+  color: var(--text-primary);
+  border-color: var(--panel-border);
+}
+
+/* Elevated controls keep a second, subtle surface level. */
+#view-analytics .stat-card,
+#view-analytics .analytics-toolbar-panel,
+#view-decks .explorer-command-bar,
+#view-decks .explorer-header-toolbar,
+#view-decks .browser-controls-row {
+  background: var(--panel-bg-elevated);
+}
+
+/* Keep the Library workspace visibly bounded without bringing back heavy cards. */
+#view-decks .win-explorer-panel,
+#view-decks .browser-panel,
+#view-decks .collections-tree-card {
+  border: 1px solid var(--panel-border);
+  box-shadow: none;
+}
+
+#view-decks .explorer-header-toolbar,
+#view-decks .explorer-command-bar,
+#view-decks .browser-controls-row {
+  border-color: var(--panel-border);
+}
+
+/* Analytics needs structure: subtle borders, not floating text on the page. */
+#view-analytics .analytics-card,
+#view-analytics .analytics-section,
+#view-analytics .analytics-toolbar-panel,
+#view-analytics .stat-card {
+  border: 1px solid var(--panel-border);
+}
+
+/* Inputs/selects must also inherit the active light/dark theme. */
+#view-analytics input,
+#view-analytics select,
+#view-decks input,
+#view-decks select,
+#view-decks textarea {
+  background: var(--bg-color);
+  color: var(--text-primary);
+  border-color: var(--panel-border);
+}
+
+/* Light mode: remove the dark-only transparent/white assumptions from the
+   polish layer while preserving the existing app's light palette. */
+html[data-theme="light"] #view-analytics .stat-card,
+html[data-theme="light"] #view-analytics .analytics-toolbar-panel,
+html[data-theme="light"] #view-decks .explorer-command-bar,
+html[data-theme="light"] #view-decks .explorer-header-toolbar,
+html[data-theme="light"] #view-decks .browser-controls-row {
+  background: var(--panel-bg-elevated);
+}
+
+/* Preserve visible separators in both themes. */
+#view-analytics .analytics-card,
+#view-analytics .analytics-section,
+#view-analytics .stat-card,
+#view-decks .win-explorer-panel,
+#view-decks .browser-panel,
+#view-decks .collections-tree-card {
+  border-color: var(--panel-border);
+}
