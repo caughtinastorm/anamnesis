@@ -1,5 +1,5 @@
 /* ==========================================================================
-   anamnesis — Pure Black. Pure Signal.
+   Pure Black. Pure Signal.
    Inspired by Vercel's extreme monochrome aesthetic.
    ========================================================================== */
 
@@ -6696,4 +6696,337 @@ html[data-theme="light"] .btn-leech-action:hover {
 
 .review-explorer-list .review-tile-actions {
   margin-top: 0;
+}
+
+
+/* ============================================================================
+   FINAL UI CONSISTENCY / ACCESSIBILITY PASS
+   - Removes product branding from the application chrome.
+   - Consolidates control geometry and interaction states.
+   - Reduces unnecessary hover motion and border noise.
+   - Improves touch targets, keyboard focus, responsive widths and heatmap density.
+   ============================================================================ */
+
+:root {
+  /* Semantic surface hierarchy */
+  --surface-0: var(--bg-color);
+  --surface-1: var(--panel-bg);
+  --surface-2: var(--panel-bg-elevated);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: var(--panel-border);
+  --border-strong: var(--panel-border-hover);
+
+  /* Consistent control geometry */
+  --control-sm: 36px;
+  --control-md: 40px;
+  --control-lg: 48px;
+  --radius-control: 10px;
+  --radius-card: 14px;
+  --radius-hero: 18px;
+}
+
+html[data-theme="light"] {
+  --border-subtle: rgba(0, 0, 0, 0.05);
+  --border-default: var(--panel-border);
+  --border-strong: var(--panel-border-hover);
+}
+
+/* --------------------------------------------------------------------------
+   Branding: intentionally absent from application chrome.
+   The app should feel like a neutral study workspace, not a branded landing page.
+   -------------------------------------------------------------------------- */
+.header-logo,
+.sidebar-brand {
+  display: none !important;
+}
+
+/* Keep the desktop sidebar visually balanced after removing its brand block. */
+@media (min-width: 769px) {
+  .app-nav {
+    padding-top: 16px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Selection: don't disable selection globally. Only controls that behave as
+   direct-manipulation UI should suppress it.
+   -------------------------------------------------------------------------- */
+html,
+body {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+button,
+.nav-item,
+.picker-card-tile,
+.review-explorer-tile,
+.folder-header-row,
+.deck-tree-name,
+.drag-handle,
+.swipe-card {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* --------------------------------------------------------------------------
+   Unified controls
+   -------------------------------------------------------------------------- */
+.btn {
+  min-height: var(--control-md);
+  border-radius: var(--radius-control);
+  transition: background-color 0.15s ease,
+              border-color 0.15s ease,
+              color 0.15s ease,
+              opacity 0.15s ease,
+              box-shadow 0.15s ease;
+}
+
+.btn:active {
+  transform: none;
+}
+
+.btn-sm {
+  min-height: var(--control-sm);
+  border-radius: var(--radius-control);
+}
+
+.btn-primary:hover {
+  opacity: 0.92;
+}
+
+.btn-secondary:hover {
+  border-color: var(--border-strong);
+}
+
+/* Small icon controls get a larger hit area without enlarging their visual icon. */
+.btn-tts,
+.modal-close-btn,
+.modal-header-with-action .btn-text,
+.edit-modal-header .btn-text,
+.picker-modal-header .btn-text {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+}
+
+/* Tiny text/icon actions: retain compact visuals but give them a usable hit area. */
+.btn-table-action,
+.btn-review-tile-action,
+.btn-folder-action,
+.tile-select-btn {
+  min-height: 32px;
+}
+
+/* --------------------------------------------------------------------------
+   Keyboard focus — consistent across the whole product.
+   -------------------------------------------------------------------------- */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 2px;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--text-primary) 18%, transparent);
+}
+
+/* --------------------------------------------------------------------------
+   Calm interaction model: use contrast rather than making every component fly.
+   -------------------------------------------------------------------------- */
+.stat-card:hover,
+.btn-choose-deck:hover,
+.btn-clear-selection:hover,
+.btn-hero-study:hover,
+.btn-hero-practice:hover,
+.gui-picker-btn:hover,
+.review-explorer-tile:hover {
+  transform: none;
+}
+
+.btn-hero-study:hover {
+  box-shadow: 0 0 30px rgba(255, 255, 255, 0.20);
+}
+
+/* Don't make ordinary tiles feel like floating cards. */
+.stat-card:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+/* --------------------------------------------------------------------------
+   Card hierarchy — three predictable surface levels instead of feature-specific
+   elevation everywhere.
+   -------------------------------------------------------------------------- */
+.card-panel,
+.dashboard-card,
+.stat-card,
+.activity-heatmap-card,
+.collections-tree-card,
+.deck-control-card {
+  border-radius: var(--radius-card);
+}
+
+.card-panel,
+.dashboard-card,
+.stat-card,
+.activity-heatmap-card,
+.collections-tree-card,
+.deck-control-card {
+  border-color: var(--border-default);
+}
+
+/* --------------------------------------------------------------------------
+   Desktop widths: give spatial interfaces more room while keeping text-heavy
+   settings/import views controlled.
+   -------------------------------------------------------------------------- */
+@media (min-width: 769px) {
+  #view-review.active {
+    max-width: 1240px;
+  }
+
+  #view-decks.active {
+    max-width: 1440px;
+  }
+
+  #view-analytics.active {
+    max-width: 1240px;
+  }
+
+  #view-import.active {
+    max-width: 1200px;
+  }
+
+  #view-settings.active {
+    max-width: 1000px;
+  }
+
+  /* Study mode should remain focused rather than expanding with the desktop shell. */
+  #subview-study.active {
+    max-width: 860px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Navigation hierarchy: destination-level navigation should be visually quieter
+   than the current workspace content.
+   -------------------------------------------------------------------------- */
+@media (min-width: 769px) {
+  .nav-item.active {
+    border-color: var(--border-default);
+    background: var(--btn-secondary-bg);
+  }
+
+  .nav-item:hover {
+    background: var(--btn-secondary-hover);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Heatmap: preserve readable cells on narrow screens instead of squeezing 20
+   columns into a tiny viewport.
+   -------------------------------------------------------------------------- */
+@media (max-width: 600px) {
+  .heatmap-grid {
+    grid-template-columns: repeat(14, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .heatmap-cell {
+    min-height: 14px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Mobile: don't let desktop-style panels become cramped edge-to-edge blocks.
+   -------------------------------------------------------------------------- */
+@media (max-width: 480px) {
+  .app-view {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .app-view.active {
+    padding-bottom: calc(var(--safe-bottom) + 72px);
+  }
+
+  .card-panel,
+  .dashboard-card,
+  .activity-heatmap-card,
+  .collections-tree-card {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .hero-study-body {
+    padding: 28px 20px;
+  }
+
+  .hero-due-number {
+    font-size: 3.4rem;
+  }
+
+  .hero-study-actions {
+    width: 100%;
+  }
+
+  .btn-hero-study,
+  .btn-hero-practice {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Mobile Explorer / Picker: preserve the existing compact interaction model,
+   but make the remaining content easier to scan after the hierarchy is collapsed.
+   -------------------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .explorer-toolbar,
+  .explorer-header-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .explorer-search-box,
+  .review-explorer-search {
+    max-width: none;
+    flex: 1 1 180px;
+  }
+
+  .review-explorer-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .picker-main {
+    padding: 12px;
+  }
+
+  .picker-card-tile {
+    min-height: 52px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion: flashcard interactions stay functional without animation for
+   users who request less motion.
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
