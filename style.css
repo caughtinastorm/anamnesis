@@ -7117,3 +7117,257 @@ html, body {
     font-size: .66rem;
   }
 }
+
+/* ================================================================
+   FINAL POLISH PASS
+   Theme-safe + lighter Analytics + lighter Library/Decks
+   ================================================================ */
+
+:root {
+  --ui-page-bg: var(--bg-primary, #0b0d10);
+  --ui-border: var(--border-color, rgba(128,128,128,.16));
+}
+
+html, body {
+  background: var(--bg-primary, var(--background, #0b0d10));
+  color: var(--text-primary, #f3f4f6);
+}
+
+/* Never impose a dark-only surface. Let the active theme variables win. */
+.card, .panel, .section-card, .stat-card,
+.analytics-card, .analytics-section,
+#view-analytics .card, #view-analytics .panel,
+#view-decks .card, #view-decks .panel {
+  background: var(--surface, var(--bg-secondary, transparent));
+  color: var(--text-primary, inherit);
+  border-color: var(--border-color, rgba(128,128,128,.16));
+}
+
+/* ANALYTICS */
+#view-analytics {
+  max-width: 1100px;
+  margin-inline: auto;
+  padding-bottom: 32px;
+}
+
+#view-analytics .stats-grid,
+#view-analytics .analytics-stats,
+#view-analytics .stat-grid {
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+#view-analytics .stat-card {
+  min-height: 0;
+  padding: 14px 16px;
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+#view-analytics .stat-card .stat-value {
+  font-size: clamp(20px, 2.2vw, 28px);
+  line-height: 1.1;
+}
+
+#view-analytics .analytics-card,
+#view-analytics .analytics-section {
+  margin-bottom: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+#view-analytics canvas {
+  max-height: 300px;
+}
+
+/* LIBRARY / DECKS */
+#view-decks {
+  max-width: 1180px;
+  margin-inline: auto;
+}
+
+#view-decks .view-header {
+  margin-bottom: 12px;
+}
+
+#decks-tab-bar {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  min-height: 40px;
+  margin: 0 0 10px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+#decks-tab-bar .btn-deck-tab {
+  position: relative;
+  min-height: 36px;
+  padding: 7px 2px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-secondary, #8b93a1);
+  box-shadow: none;
+  font-weight: 500;
+}
+
+#decks-tab-bar .btn-deck-tab:hover,
+#decks-tab-bar .btn-deck-tab.active {
+  background: transparent;
+  color: var(--text-primary, #f3f4f6);
+  box-shadow: none;
+}
+
+#decks-tab-bar .btn-deck-tab.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+}
+
+#win-explorer {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+#win-explorer .explorer-toolbar,
+#win-explorer .explorer-command-bar {
+  padding: 7px 0;
+  background: transparent;
+  border-inline: 0;
+  box-shadow: none;
+}
+
+#win-explorer .explorer-command-bar {
+  border: 0;
+}
+
+#win-explorer .explorer-sidebar,
+#win-explorer .explorer-canvas {
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+#win-explorer .explorer-grid-container {
+  gap: 8px;
+}
+
+#win-explorer .explorer-card-tile {
+  padding: 12px;
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+#win-explorer .explorer-card-tile .tile-actions-row {
+  opacity: .72;
+}
+
+#win-explorer .explorer-card-tile:hover .tile-actions-row,
+#win-explorer .explorer-card-tile:focus-within .tile-actions-row {
+  opacity: 1;
+}
+
+#win-explorer .deck-detail-view {
+  padding: 0;
+}
+
+#win-explorer .deck-detail-hero,
+#win-explorer .deck-cards-section {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+#win-explorer .deck-detail-hero {
+  padding: 16px 0;
+}
+
+#win-explorer .deck-cards-section {
+  margin-top: 12px;
+  padding: 0;
+}
+
+#win-explorer .deck-cards-table-wrap {
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+#win-explorer .explorer-status-text {
+  color: var(--text-secondary, #8b93a1);
+  font-size: 12px;
+}
+
+/* MOBILE */
+@media (max-width: 768px) {
+  #view-analytics, #view-decks {
+    max-width: none;
+    padding-inline: 12px;
+  }
+
+  #view-analytics .stats-grid,
+  #view-analytics .analytics-stats,
+  #view-analytics .stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #view-analytics .analytics-card,
+  #view-analytics .analytics-section {
+    padding: 12px;
+    border-radius: 10px;
+  }
+
+  #decks-tab-bar {
+    gap: 16px;
+    margin-bottom: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  #decks-tab-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  #decks-tab-bar .btn-deck-tab {
+    flex: 0 0 auto;
+  }
+
+  #win-explorer .explorer-toolbar,
+  #win-explorer .explorer-command-bar {
+    padding: 6px 0;
+  }
+
+  #win-explorer .explorer-card-tile {
+    padding: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  #view-analytics, #view-decks {
+    padding-inline: 10px;
+  }
+
+  #view-analytics .stat-card {
+    padding: 11px 12px;
+  }
+
+  #view-analytics .stat-card .stat-value {
+    font-size: 20px;
+  }
+
+  #decks-tab-bar {
+    gap: 14px;
+  }
+
+  #win-explorer .explorer-grid-container {
+    grid-template-columns: 1fr;
+  }
+}
