@@ -148,9 +148,9 @@
               <div class="study-selection-actions">
                 <button type="button" id="btn-dashboard-deck-picker" class="btn btn-secondary btn-sm btn-choose-deck" title="Open Explorer to choose a specific collection">
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                  Choose Deck ↗
+                  Choose deck
                 </button>
-                <button type="button" id="btn-dashboard-reset-deck" class="btn-clear-selection hidden" title="Reset filter to All Collections">✕ All Decks</button>
+                <button type="button" id="btn-dashboard-reset-deck" class="btn-clear-selection hidden" title="Reset filter to All Collections">✕ All</button>
                 <button type="button" id="btn-dashboard-reset-fsrs" class="btn-clear-selection hidden" style="color: #f87171; border-color: rgba(239, 68, 68, 0.25);" title="Reset FSRS data for this collection">🔄 Reset FSRS</button>
                 <button type="button" id="btn-dashboard-export-deck" class="btn-clear-selection" title="Export this collection to CSV">📥 Export</button>
               </div>
@@ -203,7 +203,7 @@
               </svg>
             </div>
             <h3>There are no cards available</h3>
-            <p>Your collection is empty. Use Quick Add, Import, or load our preloaded JLPT N5 Kanji deck.</p>
+            <p>Your collection is empty. Use Add card, Import, or load our preloaded JLPT N5 Kanji deck.</p>
             <div style="margin-top: 14px; display: flex; justify-content: center; gap: 10px;">
               <button type="button" id="btn-empty-load-n5-kanji" class="btn btn-primary btn-sm">
                 🎌 Load JLPT N5 Kanji Deck (104 Cards)
@@ -338,8 +338,8 @@
       <section id="view-decks" class="app-view">
         <div class="view-header">
           <div class="view-header-content">
-            <h2>Decks &amp; Folders</h2>
-            <p>Windows-style collection explorer. Browse, create, study, and manage your flashcard hierarchy.</p>
+            <h2>Library</h2>
+            <p></p>
           </div>
         </div>
 
@@ -347,15 +347,15 @@
         <div class="decks-nav-tabs" id="decks-tab-bar" role="tablist">
           <button type="button" class="btn-deck-tab active" data-deck-tab="tab-collections" role="tab" aria-selected="true" aria-controls="tab-collections">
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-            <span>Collections &amp; Folders</span>
+            <span>Decks</span>
           </button>
           <button type="button" class="btn-deck-tab" data-deck-tab="tab-browser" role="tab" aria-selected="false" aria-controls="tab-browser">
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-            <span>All Cards Browser</span>
+            <span>Cards</span>
           </button>
           <button type="button" class="btn-deck-tab" data-deck-tab="tab-add" role="tab" aria-selected="false" aria-controls="tab-add">
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            <span>Quick Add Card</span>
+            <span>Add Card</span>
           </button>
         </div>
 
@@ -416,7 +416,7 @@
               </button>
               <button type="button" id="btn-explorer-import" class="btn-command">
                 <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                <span>Import Cards Here</span>
+                <span>Import here</span>
               </button>
               <button type="button" id="btn-explorer-export" class="btn-command">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -424,7 +424,7 @@
               </button>
               <button type="button" id="btn-explorer-add-card" class="btn-command">
                 <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-                <span>Quick Add</span>
+                <span>Add card</span>
               </button>
               <div class="command-bar-divider"></div>
               <button type="button" id="btn-explorer-study" class="btn-command btn-command-primary">
@@ -433,7 +433,7 @@
               </button>
               <button type="button" id="btn-explorer-practice" class="btn-command">
                 <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                <span>Practice All</span>
+                <span>Practice</span>
               </button>
             </div>
 
@@ -441,7 +441,7 @@
             <div class="explorer-body">
               <!-- Left Sidebar Navigation Pane -->
               <aside class="explorer-sidebar">
-                <div class="sidebar-header-title">Quick Access &amp; Tree</div>
+                <div class="sidebar-header-title">Decks</div>
                 <div id="explorer-tree-root" class="explorer-tree">
                   <!-- Dynamically rendered tree -->
                 </div>
@@ -462,13 +462,13 @@
           </div>
         </div>
 
-        <!-- Tab 2: All Cards Browser Panel -->
+        <!-- Tab 2: Cards Panel -->
         <div id="tab-browser" class="deck-tab-panel hidden" role="tabpanel">
           <div class="card-panel browser-panel" id="card-browser-panel">
             <div class="panel-header browser-header-row">
               <div>
-                <h3>All Cards Browser</h3>
-                <p id="browser-total-count">Search, edit, and manage individual flashcards.</p>
+                <h3>Cards</h3>
+                <p id="browser-total-count">Search and manage your cards.</p>
               </div>
             </div>
             
@@ -538,12 +538,12 @@
           </div>
         </div>
 
-        <!-- Tab 3: Native Quick Add Card Form -->
+        <!-- Tab 3: Native Add Card Form -->
         <div id="tab-add" class="deck-tab-panel hidden" role="tabpanel">
           <div class="card-panel">
             <div class="panel-header">
-              <h3>Quick Add Card</h3>
-              <p>Insert a single card with optional folder hierarchy.</p>
+              <h3>Add Card</h3>
+              <p>Add a card to your library.</p>
             </div>
             <div class="form-grid-two-col">
               <div class="form-group">
@@ -803,7 +803,7 @@
       <section id="view-import" class="app-view">
         <div class="view-header">
           <div class="view-header-content">
-            <h2>Import Decks</h2>
+            <h2>Import</h2>
             <p>Upload native Anki packages (.apkg), text exports, or pure card CSV spreadsheets.</p>
           </div>
         </div>
@@ -843,7 +843,7 @@
         <!-- Universal Bulk Import Panel (Anki .apkg, CSV, TSV) -->
         <div class="import-container card-panel">
           <div class="panel-header">
-            <h3>Import Decks &amp; Cards</h3>
+            <h3>Import cards</h3>
             <p>Select target destination below. Your CSV only needs card data (Front, Back, Sub-text).</p>
           </div>
 
@@ -1141,7 +1141,7 @@ Gracias,Thank you,greeting,Common polite phrase
         <svg class="nav-icon-svg" viewBox="0 0 24 24">
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
         </svg>
-        <span class="nav-label">Decks</span>
+        <span class="nav-label">Library</span>
       </button>
       <button type="button" class="nav-item" data-view="view-analytics">
         <svg class="nav-icon-svg" viewBox="0 0 24 24">
