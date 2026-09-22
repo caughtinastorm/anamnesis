@@ -27,14 +27,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
   <!-- Styling -->
-  <link rel="stylesheet" href="anamnesis_design_system_canonical.css">
-
-    <style id="consistency-fixes">
-      /* Structural consistency helpers */
-      .starter-decks-panel-spacing { margin-bottom: var(--space-4); }
-    </style>
-
-  </head>
+  <link rel="stylesheet" href="style.css">
+</head>
 <body>
 
   <!-- Single Centered Mobile Shell Wrapper -->
@@ -168,11 +162,11 @@
 
               <!-- Primary Study Actions -->
               <div class="hero-study-actions">
-                <button type="button" id="btn-start-review" class="btn btn-primary btn-hero-study">
+                <button id="btn-start-review" class="btn btn-primary btn-hero-study">
                   <svg class="btn-icon-svg" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                   <span>Start Due Review</span>
                 </button>
-                <button type="button" id="btn-force-review" class="btn btn-secondary btn-hero-practice">
+                <button id="btn-force-review" class="btn btn-secondary btn-hero-practice">
                   <svg class="btn-icon-svg" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                   <span>Practice Mode</span>
                 </button>
@@ -215,7 +209,7 @@
         <!-- Study Session Sub-view -->
         <div id="subview-study" class="subview">
           <div class="study-header">
-            <button type="button" id="btn-cancel-study" class="btn-text">Exit</button>
+            <button id="btn-cancel-study" class="btn-text">Exit</button>
             <div class="study-deck-badge" id="study-deck-badge" title="Active Study Collection">📁 All Collections</div>
             <div class="study-progress">
               <span id="study-progress-text"></span>
@@ -225,25 +219,25 @@
             </div>
 
             <div class="study-header-actions">
-              <button type="button" id="btn-skip-card" class="btn-tts" title="Park Card to End of Session (S)">
+              <button id="btn-skip-card" class="btn-tts" title="Park Card to End of Session (S)">
                 <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <polygon points="5 4 15 12 5 20 5 4" fill="currentColor"/>
                   <line x1="19" y1="5" x2="19" y2="19"/>
                 </svg>
               </button>
-              <button type="button" id="btn-undo-study" class="btn-tts" title="Undo Last Review (Ctrl+Z)" disabled>
+              <button id="btn-undo-study" class="btn-tts" title="Undo Last Review (Ctrl+Z)" disabled>
                 <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M9 14L4 9l5-5"/>
                   <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/>
                 </svg>
               </button>
-              <button type="button" id="btn-restart-study" class="btn-tts" title="Restart / Review Again">
+              <button id="btn-restart-study" class="btn-tts" title="Restart / Review Again">
                 <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
                   <path d="M3 3v5h5"/>
                 </svg>
               </button>
-              <button type="button" id="btn-tts-speak" class="btn-tts" title="Pronounce with Speech Audio (R)">
+              <button id="btn-tts-speak" class="btn-tts" title="Pronounce with Speech Audio (R)">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
                   <path d="M11 5L6 9H2v6h4l5 4V5z"/>
                   <path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -299,22 +293,22 @@
             <div id="study-grading-bar" class="study-grading-bar hidden">
               <div class="grading-title">Recall Quality</div>
               <div class="grading-buttons fsrs-4-buttons">
-                <button type="button" class="btn-grade grade-again" data-grade="1" title="Incorrect recall / Lapse (Key: 1)">
+                <button class="btn-grade grade-again" data-grade="1" title="Incorrect recall / Lapse (Key: 1)">
                   <span class="grade-interval" id="grade-interval-1">&lt;10m</span>
                   <span class="grade-num">1</span>
                   <span class="grade-label">Again</span>
                 </button>
-                <button type="button" class="btn-grade grade-hard" data-grade="2" title="Difficult recall (Key: 2)">
+                <button class="btn-grade grade-hard" data-grade="2" title="Difficult recall (Key: 2)">
                   <span class="grade-interval" id="grade-interval-2">1d</span>
                   <span class="grade-num">2</span>
                   <span class="grade-label">Hard</span>
                 </button>
-                <button type="button" class="btn-grade grade-good" data-grade="3" title="Correct recall with effort (Key: 3)">
+                <button class="btn-grade grade-good" data-grade="3" title="Correct recall with effort (Key: 3)">
                   <span class="grade-interval" id="grade-interval-3">3d</span>
                   <span class="grade-num">3</span>
                   <span class="grade-label">Good</span>
                 </button>
-                <button type="button" class="btn-grade grade-easy" data-grade="4" title="Instant, effortless recall (Key: 4)">
+                <button class="btn-grade grade-easy" data-grade="4" title="Instant, effortless recall (Key: 4)">
                   <span class="grade-interval" id="grade-interval-4">7d</span>
                   <span class="grade-num">4</span>
                   <span class="grade-label">Easy</span>
@@ -366,16 +360,16 @@
             <div class="explorer-header-toolbar">
               <!-- Navigation Action Buttons (Back / Forward / Up / Refresh) -->
               <div class="explorer-nav-buttons">
-                <button type="button" id="btn-explorer-back" class="btn-explorer-nav" title="Back (Alt+Left)" disabled>
+                <button id="btn-explorer-back" class="btn-explorer-nav" title="Back (Alt+Left)" disabled>
                   <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
                 </button>
-                <button type="button" id="btn-explorer-forward" class="btn-explorer-nav" title="Forward (Alt+Right)" disabled>
+                <button id="btn-explorer-forward" class="btn-explorer-nav" title="Forward (Alt+Right)" disabled>
                   <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                 </button>
-                <button type="button" id="btn-explorer-up" class="btn-explorer-nav" title="Up to parent folder (Alt+Up)" disabled>
+                <button id="btn-explorer-up" class="btn-explorer-nav" title="Up to parent folder (Alt+Up)" disabled>
                   <svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
                 </button>
-                <button type="button" id="btn-explorer-refresh" class="btn-explorer-nav" title="Refresh">
+                <button id="btn-explorer-refresh" class="btn-explorer-nav" title="Refresh">
                   <svg viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l.56-.56"/></svg>
                 </button>
               </div>
@@ -395,10 +389,10 @@
 
               <!-- View Switcher (Grid / Details) -->
               <div class="explorer-view-toggle">
-                <button type="button" id="btn-view-grid" class="btn-view-mode active" title="Grid / Large Tiles View">
+                <button id="btn-view-grid" class="btn-view-mode active" title="Grid / Large Tiles View">
                   <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                 </button>
-                <button type="button" id="btn-view-details" class="btn-view-mode" title="Details / Table List View">
+                <button id="btn-view-details" class="btn-view-mode" title="Details / Table List View">
                   <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
                 </button>
               </div>
@@ -406,32 +400,32 @@
 
             <!-- Explorer Command Ribbon (Actions) -->
             <div class="explorer-command-bar">
-              <button type="button" id="btn-explorer-new-deck" class="btn-command">
+              <button id="btn-explorer-new-deck" class="btn-command">
                 <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 <span>New Deck</span>
               </button>
-              <button type="button" id="btn-explorer-new-folder" class="btn-command">
+              <button id="btn-explorer-new-folder" class="btn-command">
                 <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                 <span>New Folder</span>
               </button>
-              <button type="button" id="btn-explorer-import" class="btn-command">
+              <button id="btn-explorer-import" class="btn-command">
                 <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 <span>Import Cards Here</span>
               </button>
-              <button type="button" id="btn-explorer-export" class="btn-command">
+              <button id="btn-explorer-export" class="btn-command">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 <span>Export</span>
               </button>
-              <button type="button" id="btn-explorer-add-card" class="btn-command">
+              <button id="btn-explorer-add-card" class="btn-command">
                 <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
                 <span>Quick Add</span>
               </button>
               <div class="command-bar-divider"></div>
-              <button type="button" id="btn-explorer-study" class="btn-command btn-command-primary">
+              <button id="btn-explorer-study" class="btn-command btn-command-primary">
                 <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                 <span>Study Due</span>
               </button>
-              <button type="button" id="btn-explorer-practice" class="btn-command">
+              <button id="btn-explorer-practice" class="btn-command">
                 <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                 <span>Practice All</span>
               </button>
@@ -496,23 +490,23 @@
                 <span id="bulk-selected-count" class="bulk-count-pill">0 selected</span>
               </div>
               <div class="bulk-toolbar-actions">
-                <button type="button" id="btn-bulk-practice" class="btn btn-primary btn-sm" title="Practice selected cards">
+                <button id="btn-bulk-practice" class="btn btn-primary btn-sm" title="Practice selected cards">
                   <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                   Practice
                 </button>
-                <button type="button" id="btn-bulk-move" class="btn btn-secondary btn-sm" title="Move selected cards to another collection">
+                <button id="btn-bulk-move" class="btn btn-secondary btn-sm" title="Move selected cards to another collection">
                   <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                   Move...
                 </button>
-                <button type="button" id="btn-bulk-reset" class="btn btn-secondary btn-sm" title="Reset FSRS scheduling progress to new">
+                <button id="btn-bulk-reset" class="btn btn-secondary btn-sm" title="Reset FSRS scheduling progress to new">
                   <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                   Reset FSRS
                 </button>
-                <button type="button" id="btn-bulk-delete" class="btn btn-danger btn-sm" title="Delete selected cards">
+                <button id="btn-bulk-delete" class="btn btn-danger btn-sm" title="Delete selected cards">
                   <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                   Delete
                 </button>
-                <button type="button" id="btn-bulk-deselect" class="btn btn-secondary btn-sm" title="Clear selection">✕</button>
+                <button id="btn-bulk-deselect" class="btn btn-secondary btn-sm" title="Clear selection">✕</button>
               </div>
             </div>
 
@@ -596,7 +590,7 @@
               </div>
             </div>
             <div class="form-action-row">
-              <button type="button" id="btn-quick-add" class="btn btn-primary">
+              <button id="btn-quick-add" class="btn btn-primary">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
                   <line x1="12" y1="5" x2="12" y2="19"/>
                   <line x1="5" y1="12" x2="19" y2="12"/>
@@ -809,7 +803,7 @@
         </div>
 
         <!-- Preloaded Starter Decks Panel -->
-        <div class="card-panel starter-decks-panel starter-decks-panel-spacing">
+        <div class="card-panel starter-decks-panel" style="margin-bottom: var(--space-4);">
           <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
             <div>
               <h3>🎌 Preloaded Starter Decks</h3>
@@ -916,7 +910,7 @@ Gracias,Thank you,greeting,Common polite phrase
           </div>
 
           <div class="import-actions">
-            <button type="button" id="btn-parse-csv" class="btn btn-primary btn-full">
+            <button id="btn-parse-csv" class="btn btn-primary btn-full">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="11" cy="11" r="8"/>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -931,8 +925,8 @@ Gracias,Thank you,greeting,Common polite phrase
           <div class="preview-header">
             <h3>Cards Preview (<span id="preview-count">0</span>)</h3>
             <div class="preview-actions">
-              <button type="button" id="btn-cancel-import" class="btn btn-text">Clear</button>
-              <button type="button" id="btn-confirm-import" class="btn btn-primary">Import Now</button>
+              <button id="btn-cancel-import" class="btn btn-text">Clear</button>
+              <button id="btn-confirm-import" class="btn btn-primary">Import Now</button>
             </div>
           </div>
           <div class="table-container">
@@ -986,9 +980,9 @@ Gracias,Thank you,greeting,Common polite phrase
             </div>
 
             <div class="sync-actions-grid">
-              <button type="button" id="btn-validate-token" class="btn btn-secondary">Verify Token</button>
-              <button type="button" id="btn-create-gist" class="btn btn-secondary">Create Gist</button>
-              <button type="button" id="btn-save-credentials" class="btn btn-primary">Save Config</button>
+              <button id="btn-validate-token" class="btn btn-secondary">Verify Token</button>
+              <button id="btn-create-gist" class="btn btn-secondary">Create Gist</button>
+              <button id="btn-save-credentials" class="btn btn-primary">Save Config</button>
             </div>
 
             <div id="sync-console-log" class="sync-log-terminal hidden">
@@ -996,7 +990,7 @@ Gracias,Thank you,greeting,Common polite phrase
             </div>
 
             <div class="manual-sync-trigger hidden" id="manual-sync-container">
-              <button type="button" id="btn-force-sync" class="btn btn-secondary btn-full">
+              <button id="btn-force-sync" class="btn btn-secondary btn-full">
                 Sync Data Now
               </button>
               <p id="sync-last-time-label" class="sync-timestamp-footer">Last synced: Never</p>
@@ -1060,8 +1054,8 @@ Gracias,Thank you,greeting,Common polite phrase
             </div>
             
             <div class="admin-actions-grid">
-              <button type="button" id="btn-export-csv" class="btn btn-secondary btn-full">Export All Collections to CSV</button>
-              <button type="button" id="btn-clear-db" class="btn btn-danger btn-full">Delete All Local Data</button>
+              <button id="btn-export-csv" class="btn btn-secondary btn-full">Export All Collections to CSV</button>
+              <button id="btn-clear-db" class="btn btn-danger btn-full">Delete All Local Data</button>
             </div>
           </div>
 
@@ -1072,7 +1066,7 @@ Gracias,Thank you,greeting,Common polite phrase
                 <h3>Local Database Backups</h3>
                 <p>Rolling historical snapshots stored safely in local IndexedDB storage.</p>
               </div>
-              <button type="button" id="btn-create-backup-now" class="btn btn-secondary btn-sm" title="Take a local snapshot right now">
+              <button id="btn-create-backup-now" class="btn btn-secondary btn-sm" title="Take a local snapshot right now">
                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                 Create Snapshot
               </button>
@@ -1089,9 +1083,9 @@ Gracias,Thank you,greeting,Common polite phrase
               <p>Switch between dark, light, or system default color themes.</p>
             </div>
             <div class="theme-picker">
-              <button type="button" class="btn btn-theme active" data-theme-value="system">System</button>
-              <button type="button" class="btn btn-theme" data-theme-value="light">Light</button>
-              <button type="button" class="btn btn-theme" data-theme-value="dark">Dark</button>
+              <button class="btn btn-theme active" data-theme-value="system">System</button>
+              <button class="btn btn-theme" data-theme-value="light">Light</button>
+              <button class="btn btn-theme" data-theme-value="dark">Dark</button>
             </div>
           </div>
 
@@ -1111,7 +1105,7 @@ Gracias,Thank you,greeting,Common polite phrase
         </div>
 
         <div class="app-version-footer">
-          <p>v1.0.0 · Local-First PWA</p>
+          <p>anamnesis v1.0.0 (Local-First PWA)</p>
         </div>
       </section>
 
@@ -1129,7 +1123,7 @@ Gracias,Thank you,greeting,Common polite phrase
         <span class="logo-text" aria-hidden="true"></span>
       </div>
 
-      <button type="button" class="nav-item active" data-view="view-review">
+      <button class="nav-item active" data-view="view-review">
         <svg class="nav-icon-svg" viewBox="0 0 24 24">
           <circle cx="12" cy="12" r="10"/>
           <polyline points="12 6 12 12 16 14"/>
@@ -1137,13 +1131,13 @@ Gracias,Thank you,greeting,Common polite phrase
         <span class="nav-label">Review</span>
         <span class="nav-badge hidden" id="nav-due-badge">0</span>
       </button>
-      <button type="button" class="nav-item" data-view="view-decks">
+      <button class="nav-item" data-view="view-decks">
         <svg class="nav-icon-svg" viewBox="0 0 24 24">
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
         </svg>
         <span class="nav-label">Decks</span>
       </button>
-      <button type="button" class="nav-item" data-view="view-analytics">
+      <button class="nav-item" data-view="view-analytics">
         <svg class="nav-icon-svg" viewBox="0 0 24 24">
           <line x1="18" y1="20" x2="18" y2="10"/>
           <line x1="12" y1="20" x2="12" y2="4"/>
@@ -1151,7 +1145,7 @@ Gracias,Thank you,greeting,Common polite phrase
         </svg>
         <span class="nav-label">Analytics</span>
       </button>
-      <button type="button" class="nav-item" data-view="view-import">
+      <button class="nav-item" data-view="view-import">
         <svg class="nav-icon-svg" viewBox="0 0 24 24">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
           <polyline points="7 10 12 15 17 10"/>
@@ -1159,7 +1153,7 @@ Gracias,Thank you,greeting,Common polite phrase
         </svg>
         <span class="nav-label">Import</span>
       </button>
-      <button type="button" class="nav-item" data-view="view-settings">
+      <button class="nav-item" data-view="view-settings">
         <svg class="nav-icon-svg" viewBox="0 0 24 24">
           <line x1="4" y1="21" x2="4" y2="14"/>
           <line x1="4" y1="10" x2="4" y2="3"/>
@@ -1181,8 +1175,8 @@ Gracias,Thank you,greeting,Common polite phrase
         <h3 id="modal-title">Confirm Action</h3>
         <p id="modal-body">Are you sure you want to proceed?</p>
         <div class="modal-buttons">
-          <button type="button" id="modal-btn-cancel" class="btn btn-secondary">Cancel</button>
-          <button type="button" id="modal-btn-confirm" class="btn btn-danger">Confirm</button>
+          <button id="modal-btn-cancel" class="btn btn-secondary">Cancel</button>
+          <button id="modal-btn-confirm" class="btn btn-danger">Confirm</button>
         </div>
       </div>
     </div>
@@ -1201,13 +1195,13 @@ Gracias,Thank you,greeting,Common polite phrase
           Choose <strong>Practice Only</strong> for new word acquisition or rapid drilling to avoid distorting your memory stability, difficulty, and review intervals.
         </div>
         <div class="modal-buttons" style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
-          <button type="button" id="btn-practice-only" class="btn btn-primary" style="width: 100%; justify-content: center;">
+          <button id="btn-practice-only" class="btn btn-primary" style="width: 100%; justify-content: center;">
             🎯 Practice Only (Keep FSRS Untouched)
           </button>
-          <button type="button" id="btn-practice-fsrs" class="btn btn-secondary" style="width: 100%; justify-content: center;">
+          <button id="btn-practice-fsrs" class="btn btn-secondary" style="width: 100%; justify-content: center;">
             📈 Count Towards FSRS Data
           </button>
-          <button type="button" id="btn-practice-cancel" class="btn btn-text" style="width: 100%; justify-content: center; margin-top: 4px;">
+          <button id="btn-practice-cancel" class="btn btn-text" style="width: 100%; justify-content: center; margin-top: 4px;">
             Cancel
           </button>
         </div>
@@ -1223,8 +1217,8 @@ Gracias,Thank you,greeting,Common polite phrase
           <input type="text" id="prompt-modal-input" class="prompt-input" autocomplete="off" spellcheck="false">
         </div>
         <div class="modal-buttons">
-          <button type="button" id="prompt-modal-btn-cancel" class="btn btn-secondary">Cancel</button>
-          <button type="button" id="prompt-modal-btn-confirm" class="btn btn-primary">Confirm</button>
+          <button id="prompt-modal-btn-cancel" class="btn btn-secondary">Cancel</button>
+          <button id="prompt-modal-btn-confirm" class="btn btn-primary">Confirm</button>
         </div>
       </div>
     </div>
@@ -1245,7 +1239,7 @@ Gracias,Thank you,greeting,Common polite phrase
         <div class="intro-hero-wrap" id="intro-hero-wrap"></div>
 
         <div class="intro-body-wrap">
-          <h3 id="intro-tour-title" class="intro-title">Welcome</h3>
+          <h3 id="intro-tour-title" class="intro-title">Welcome to anamnesis</h3>
           <div id="intro-tour-body" class="intro-body"></div>
         </div>
 
@@ -1271,7 +1265,7 @@ Gracias,Thank you,greeting,Common polite phrase
       <div class="modal-content card-panel edit-card-modal-content">
         <div class="edit-modal-header">
           <h3>Edit Flashcard</h3>
-          <button type="button" id="btn-close-edit-modal" class="btn-text modal-close-btn" title="Close">✕</button>
+          <button id="btn-close-edit-modal" class="btn-text modal-close-btn" title="Close">✕</button>
         </div>
         <div class="edit-modal-body">
           <input type="hidden" id="edit-card-id">
@@ -1321,8 +1315,8 @@ Gracias,Thank you,greeting,Common polite phrase
           </div>
         </div>
         <div class="modal-buttons" style="margin-top: 14px;">
-          <button type="button" id="edit-modal-cancel" class="btn btn-secondary">Cancel</button>
-          <button type="button" id="edit-modal-save" class="btn btn-primary">Save Changes</button>
+          <button id="edit-modal-cancel" class="btn btn-secondary">Cancel</button>
+          <button id="edit-modal-save" class="btn btn-primary">Save Changes</button>
         </div>
       </div>
     </div>
@@ -1342,7 +1336,7 @@ Gracias,Thank you,greeting,Common polite phrase
               <p class="modal-subtitle">Download flashcards in standard CSV or full backup formats.</p>
             </div>
           </div>
-          <button type="button" id="btn-close-export-modal" class="btn-text modal-close-btn" title="Close">✕</button>
+          <button id="btn-close-export-modal" class="btn-text modal-close-btn" title="Close">✕</button>
         </div>
 
         <div class="export-modal-body">
@@ -1403,8 +1397,8 @@ Gracias,Thank you,greeting,Common polite phrase
         </div>
 
         <div class="modal-buttons" style="margin-top: 16px;">
-          <button type="button" id="btn-export-modal-cancel" class="btn btn-secondary">Cancel</button>
-          <button type="button" id="btn-export-modal-download" class="btn btn-primary">
+          <button id="btn-export-modal-cancel" class="btn btn-secondary">Cancel</button>
+          <button id="btn-export-modal-download" class="btn btn-primary">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="17 8 12 3 7 8"/>
@@ -1425,19 +1419,19 @@ Gracias,Thank you,greeting,Common polite phrase
             <svg class="picker-window-icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
             <h3 id="picker-modal-title">Select Collection or Destination</h3>
           </div>
-          <button type="button" id="btn-close-picker-modal" class="btn-text modal-close-btn" title="Close">✕</button>
+          <button id="btn-close-picker-modal" class="btn-text modal-close-btn" title="Close">✕</button>
         </div>
 
         <!-- Address Bar & Navigation Toolbar -->
         <div class="picker-toolbar-row">
           <div class="picker-nav-btns">
-            <button type="button" id="btn-picker-back" class="btn-explorer-nav" title="Back" disabled>
+            <button id="btn-picker-back" class="btn-explorer-nav" title="Back" disabled>
               <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
             </button>
-            <button type="button" id="btn-picker-forward" class="btn-explorer-nav" title="Forward" disabled>
+            <button id="btn-picker-forward" class="btn-explorer-nav" title="Forward" disabled>
               <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </button>
-            <button type="button" id="btn-picker-up" class="btn-explorer-nav" title="Up to Parent Folder" disabled>
+            <button id="btn-picker-up" class="btn-explorer-nav" title="Up to Parent Folder" disabled>
               <svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
             </button>
           </div>
@@ -1456,15 +1450,15 @@ Gracias,Thank you,greeting,Common polite phrase
 
         <!-- Picker Actions Ribbon (New Folder, New Deck, Export) -->
         <div class="picker-ribbon-actions">
-          <button type="button" id="btn-picker-new-deck" class="btn-command">
+          <button id="btn-picker-new-deck" class="btn-command">
             <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             <span>New Deck</span>
           </button>
-          <button type="button" id="btn-picker-new-folder" class="btn-command">
+          <button id="btn-picker-new-folder" class="btn-command">
             <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
             <span>New Folder</span>
           </button>
-          <button type="button" id="btn-picker-export" class="btn-command" title="Export Current Folder or Collection">
+          <button id="btn-picker-export" class="btn-command" title="Export Current Folder or Collection">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             <span>Export</span>
           </button>
@@ -1493,8 +1487,8 @@ Gracias,Thank you,greeting,Common polite phrase
             <div id="picker-selected-label" class="picker-selected-label">🗂️ Default (Root)</div>
           </div>
           <div class="picker-footer-right">
-            <button type="button" id="btn-picker-cancel" class="btn btn-secondary">Cancel</button>
-            <button type="button" id="btn-picker-confirm" class="btn btn-primary">Select This Destination</button>
+            <button id="btn-picker-cancel" class="btn btn-secondary">Cancel</button>
+            <button id="btn-picker-confirm" class="btn btn-primary">Select This Destination</button>
           </div>
         </div>
       </div>
@@ -1505,8 +1499,8 @@ Gracias,Thank you,greeting,Common polite phrase
     </div>
 
     <!-- Datalist Suggestions -->
-    <datalist id="folder-suggestions-secondary"></datalist>
-    <datalist id="deck-suggestions-secondary"></datalist>
+    <datalist id="folder-suggestions"></datalist>
+    <datalist id="deck-suggestions"></datalist>
     <datalist id="import-folder-datalist"></datalist>
     <datalist id="import-deck-datalist"></datalist>
 
