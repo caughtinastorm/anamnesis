@@ -1,4 +1,5 @@
-import { state } from "./state.js";
+import { updateMinimalHome } from "./minimal-ui.js";
+import { cardState, selectionState } from "./state.js";
 import { dom, showToast, showModal, switchView } from "./ui.js";
 import { getCardFolder, getCardDeck, getCardFullHierarchy, matchesDeckSelection, formatDeckSelectionLabel, limitText, escapeHTML, generateUUID, getLocalDateString } from "./utils.js";
 import { isCardDue, isCardNew, createDefaultFSRSStats } from "../fsrs.js";
@@ -14,7 +15,8 @@ export function onSyncNeeded(cb) { onSyncRequest = cb; }
  * Called by cards.js subscriber after every loadCardsFromDB().
  * Registered in app.js via onCardsRefreshed(refreshDashboard).
  */
-export function refreshDashboard() {
+export async function refreshDashboard() {
+  await recordDailyReview();
   invalidateStatsCache();
   populateDeckDropdown();
   calculateStats();
@@ -37,7 +39,7 @@ export const reviewExplorerState = {
  * @param {string} selection e.g. "all", "folder:Spanish", "deck:Spanish / Verbs", "deck:Verbs"
  */
 export function setActiveDeckSelection(selection = "all") {
-  state.selectedDeck = selection || "all";
+  selectionState.selectedDeck = selection || "all";
 
   // If selection is inside a folder, auto-open that folder in review explorer
   if (selection.startsWith("folder:")) {
@@ -52,14 +54,14 @@ export function setActiveDeckSelection(selection = "all") {
 
   // Sync hidden deckSelect dropdown for backwards compatibility
   if (dom.deckSelect && dom.deckSelect.options) {
-    let exists = Array.from(dom.deckSelect.options).some(o => o.value === state.selectedDeck);
-    if (!exists && state.selectedDeck !== "all") {
+    let exists = Array.from(dom.deckSelect.options).some(o => o.value === selectionState.selectedDeck);
+    if (!exists && selectionState.selectedDeck !== "all") {
       const o = document.createElement("option");
-      o.value = state.selectedDeck;
-      o.textContent = formatDeckSelectionLabel(state.selectedDeck);
+      o.value = selectionState.selectedDeck;
+      o.textContent = formatDeckSelectionLabel(selectionState.selectedDeck);
       dom.deckSelect.appendChild(o);
     }
-    dom.deckSelect.value = state.selectedDeck;
+    dom.deckSelect.value = selectionState.selectedDeck;
   }
 
   calculateStats();
@@ -72,13 +74,13 @@ export function setActiveDeckSelection(selection = "all") {
 
 export function populateDeckDropdown() {
   if (!dom.deckSelect) return;
-  const currentSel = state.selectedDeck || "all";
+  const currentSel = selectionState.selectedDeck || "all";
   const folderMap = new Map();
   const standaloneDecks = new Set();
   const allFolderNames = new Set();
   const allDeckNames = new Set();
 
-  state.allCards.forEach(card => {
+  cardState.allCards.forEach(card => {
     if (card.deleted) return;
     const folder = getCardFolder(card);
     const deck = getCardDeck(card);
@@ -141,7 +143,7 @@ export function populateDeckDropdown() {
   if (exists) {
     dom.deckSelect.value = currentSel;
   } else {
-    state.selectedDeck = "all";
+    selectionState.selectedDeck = "all";
     dom.deckSelect.value = "all";
   }
 }
@@ -156,12 +158,12 @@ export function invalidateStatsCache() {
 }
 
 export function filterCards(customSelected = null) {
-  const selected = customSelected !== null ? customSelected : (state.selectedDeck || "all");
-  const cacheKey = `${selected}_rev${cardsRevision}_n${state.allCards.length}`;
+  const selected = customSelected !== null ? customSelected : (selectionState.selectedDeck || "all");
+  const cacheKey = `${selected}_rev${cardsRevision}_n${cardState.allCards.length}`;
   if (statsCache.has(cacheKey)) {
     return statsCache.get(cacheKey);
   }
-  const result = state.allCards.filter(card => matchesDeckSelection(card, selected));
+  const result = cardState.allCards.filter(card => matchesDeckSelection(card, selected));
   statsCache.set(cacheKey, result);
   return result;
 }
@@ -169,21 +171,21 @@ export function filterCards(customSelected = null) {
 export function calculateStats() {
   const now = Date.now();
   const filtered = filterCards();
-  state.dueCards = filtered.filter(c => isCardDue(c, now));
-  state.newCards = filtered.filter(c => isCardNew(c));
+  cardState.dueCards = filtered.filter(c => isCardDue(c, now));
+  cardState.newCards = filtered.filter(c => isCardNew(c));
 }
 
 export function updateUIStats() {
   const now = Date.now();
   const filteredTotal = filterCards().length;
-  const due = state.dueCards.length;
-  const newCount = state.newCards.length;
+  const due = cardState.dueCards.length;
+  const newCount = cardState.newCards.length;
 
   if (dom.statDueCount) dom.statDueCount.textContent = due;
   if (dom.statNewCount) dom.statNewCount.textContent = newCount;
   if (dom.statTotalCount) dom.statTotalCount.textContent = filteredTotal;
 
-  const overallDue = state.allCards.filter(c => isCardDue(c, now)).length;
+  const overallDue = cardState.allCards.filter(c => isCardDue(c, now)).length;
   if (dom.navDueBadge) {
     dom.navDueBadge.textContent = overallDue;
     dom.navDueBadge.classList.toggle("hidden", overallDue === 0);
@@ -192,7 +194,7 @@ export function updateUIStats() {
   // Primary Start Due Button
   if (dom.btnStartReview) {
     dom.btnStartReview.classList.toggle("hidden", due === 0);
-    dom.btnStartReview.innerHTML = `<svg class="btn-icon-svg" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Start Due Review (${due})`;
+    dom.btnStartReview.innerHTML = `Start reviewing <span aria-hidden="true">→</span>`;
   }
 
   // Unlimited Practice Review Button
@@ -209,13 +211,13 @@ export function updateUIStats() {
   if (dom.dashboardEmptyState) {
     if (filteredTotal === 0) {
       dom.dashboardEmptyState.classList.remove("hidden");
-      const isLibraryEmpty = state.allCards.filter(c => !c.deleted).length === 0;
+      const isLibraryEmpty = cardState.allCards.filter(c => !c.deleted).length === 0;
       if (isLibraryEmpty) {
-        dom.dashboardEmptyState.querySelector("h3").textContent = "There are no cards available";
-        dom.dashboardEmptyState.querySelector("p").textContent = "Your collection is empty. Use Quick Add or the Import tab to create flashcards.";
+        dom.dashboardEmptyState.querySelector("h3").textContent = "Your first card starts here.";
+        dom.dashboardEmptyState.querySelector("p").textContent = "Add something you want to remember, or import a deck from Settings.";
       } else {
         dom.dashboardEmptyState.querySelector("h3").textContent = "There are no cards available in this collection";
-        dom.dashboardEmptyState.querySelector("p").textContent = "Pick another collection with the browser above or add cards to this deck.";
+        dom.dashboardEmptyState.querySelector("p").textContent = "Choose another deck above, or add a card.";
       }
     } else {
       dom.dashboardEmptyState.classList.add("hidden");
@@ -223,10 +225,11 @@ export function updateUIStats() {
   }
 
   updateDashboardPickerDisplay();
+  updateMinimalHome();
 }
 
 export function updateDashboardPickerDisplay() {
-  const currentVal = state.selectedDeck || "all";
+  const currentVal = selectionState.selectedDeck || "all";
   const titleEl = document.getElementById("dashboard-deck-name");
   const subEl = document.getElementById("dashboard-deck-stats");
   const duePillEl = document.getElementById("dashboard-deck-due-pill");
@@ -234,7 +237,7 @@ export function updateDashboardPickerDisplay() {
   const resetFsrsBtn = document.getElementById("btn-dashboard-reset-fsrs");
 
   const filtered = filterCards();
-  const due = state.dueCards.length;
+  const due = cardState.dueCards.length;
   const total = filtered.length;
 
   const fullLabel = formatDeckSelectionLabel(currentVal);
@@ -278,7 +281,7 @@ export function initDashboardPickerButton() {
   const btn = document.getElementById("btn-dashboard-deck-picker");
   if (btn) {
     btn.addEventListener("click", () => {
-      const currentVal = state.selectedDeck || "all";
+      const currentVal = selectionState.selectedDeck || "all";
       let initFolder, initDeck;
       if (currentVal.startsWith("folder:")) {
         initFolder = currentVal.substring(7);
@@ -342,7 +345,7 @@ export function initDashboardPickerButton() {
     exportBtn.addEventListener("click", async (e) => {
       e.stopPropagation();
       e.preventDefault();
-      const currentVal = state.selectedDeck || "all";
+      const currentVal = selectionState.selectedDeck || "all";
       let folder, deck;
       if (currentVal.startsWith("folder:")) {
         folder = currentVal.slice(7);
@@ -510,7 +513,7 @@ export function renderFoldersTree() {
   const folderMap = new Map();
   const standaloneMap = new Map();
 
-  state.allCards.forEach(card => {
+  cardState.allCards.forEach(card => {
     if (card.deleted) return;
     const folder = getCardFolder(card);
     const deck = getCardDeck(card);
@@ -618,7 +621,7 @@ export function renderFoldersTree() {
  * Create an interactive folder tile for the Review Explorer
  */
 function createFolderTile(folder, totalCards, totalDue, subdeckCount) {
-  const isSelected = state.selectedDeck === `folder:${folder}`;
+  const isSelected = selectionState.selectedDeck === `folder:${folder}`;
   const tile = document.createElement("div");
   tile.className = `review-explorer-tile ${isSelected ? "is-active-deck" : ""}`;
   tile.title = `Click to open folder "${folder}"`;
@@ -732,7 +735,7 @@ function createFolderTile(folder, totalCards, totalDue, subdeckCount) {
  */
 function createDeckTile(folder, deck, total, due) {
   const selectionKey = folder ? `deck:${folder} / ${deck}` : `deck:${deck}`;
-  const isSelected = state.selectedDeck === selectionKey;
+  const isSelected = selectionState.selectedDeck === selectionKey;
   const tile = document.createElement("div");
   tile.className = `review-explorer-tile ${isSelected ? "is-active-deck" : ""}`;
   tile.title = `Select collection "${deck}"`;
@@ -829,7 +832,7 @@ export function deleteDeck(folderName, deckName, count) {
     `Are you sure you want to delete this collection (${count} cards)? This will remove all of its cards.`,
     async () => {
       const now = Date.now();
-      const toDelete = state.allCards.filter(c => {
+      const toDelete = cardState.allCards.filter(c => {
         if (c.deleted) return false;
         if (folderName) {
           return getCardFolder(c).toLowerCase() === folderName.toLowerCase() &&
@@ -860,7 +863,7 @@ export function deleteFolder(folderName, count) {
     `Are you sure you want to delete the folder "${folderName}" and ALL of its collections (${count} total cards)?`,
     async () => {
       const now = Date.now();
-      const toDelete = state.allCards.filter(c => {
+      const toDelete = cardState.allCards.filter(c => {
         if (c.deleted) return false;
         return getCardFolder(c).toLowerCase() === folderName.toLowerCase();
       }).map(c => ({ ...c, deleted: true, last_modified: now }));
@@ -892,11 +895,9 @@ export async function executeResetCardsFSRS(cardsToReset, label) {
     delete copy.sm2_stats;
     return copy;
   });
-  const cardIds = updatedCards.map(c => c.id);
 
   try {
-    await db.saveCards(updatedCards);
-    await db.deleteReviewLogsForCards(cardIds);
+    await db.resetCardProgress(updatedCards);
     showToast(`Reset FSRS data for ${updatedCards.length} cards in "${label}"`, "success");
     await loadCardsFromDB();
     onSyncRequest();
@@ -907,14 +908,14 @@ export async function executeResetCardsFSRS(cardsToReset, label) {
 }
 
 export function promptResetCurrentSelectionFSRS() {
-  const currentVal = state.selectedDeck || "all";
+  const currentVal = selectionState.selectedDeck || "all";
   if (currentVal === "all") {
     showToast("Select a specific collection or folder to reset FSRS data", "info");
     return;
   }
 
   const label = formatDeckSelectionLabel(currentVal);
-  const targetCards = state.allCards.filter(c => !c.deleted && matchesDeckSelection(c, currentVal));
+  const targetCards = cardState.allCards.filter(c => !c.deleted && matchesDeckSelection(c, currentVal));
 
   if (targetCards.length === 0) {
     showToast(`No cards found in "${label}"`, "info");
@@ -930,7 +931,7 @@ export function promptResetCurrentSelectionFSRS() {
 
 export function promptResetDeckFSRS(folderName, deckName, count) {
   const label = folderName ? `${folderName} / ${deckName}` : deckName;
-  const targetCards = state.allCards.filter(c => {
+  const targetCards = cardState.allCards.filter(c => {
     if (c.deleted) return false;
     if (folderName) {
       return getCardFolder(c).toLowerCase() === folderName.toLowerCase() &&
@@ -949,7 +950,7 @@ export function promptResetDeckFSRS(folderName, deckName, count) {
 }
 
 export function promptResetFolderFSRS(folderName, count) {
-  const targetCards = state.allCards.filter(c => {
+  const targetCards = cardState.allCards.filter(c => {
     if (c.deleted) return false;
     return getCardFolder(c).toLowerCase() === folderName.toLowerCase();
   });
@@ -962,13 +963,16 @@ export function promptResetFolderFSRS(folderName, count) {
   );
 }
 
-export function recordDailyReview() {
-  const today = getLocalDateString(new Date());
-  let h = {};
-  try { h = JSON.parse(localStorage.getItem("app-review-history") || "{}"); } catch(e) {}
-  h[today] = (h[today] || 0) + 1;
-  localStorage.setItem("app-review-history", JSON.stringify(h));
-  renderHeatmap();
+let reviewHistory = {};
+export async function recordDailyReview() {
+  let legacy = {};
+  try { legacy = JSON.parse(localStorage.getItem("app-review-history") || "{}"); } catch {}
+  try {
+    reviewHistory = await db.getReviewHistory(legacy);
+    renderHeatmap();
+  } catch (error) {
+    console.warn("Unable to refresh review history:", error);
+  }
 }
 
 export function calculateStreak(h = {}) {
@@ -999,8 +1003,7 @@ export function calculateStreak(h = {}) {
 
 export function renderHeatmap() {
   if (!dom.dashboardHeatmapGrid) return;
-  let h = {};
-  try { h = JSON.parse(localStorage.getItem("app-review-history") || "{}"); } catch(e) {}
+  const h = reviewHistory;
   dom.dashboardHeatmapGrid.innerHTML = "";
   let total = 0;
   const today = new Date();
@@ -1024,7 +1027,9 @@ export function renderHeatmap() {
   if (heroStreak) heroStreak.textContent = `${streakVal}d`;
 }
 
+let quickAddBusy = false;
 export async function handleQuickAddCard() {
+  if (quickAddBusy) return;
   const front = dom.quickFront?.value.trim();
   const back = dom.quickBack?.value.trim();
   if (!front || !back) { showToast("Please enter both Front and Back content", "error"); return; }
@@ -1043,9 +1048,11 @@ export async function handleQuickAddCard() {
     last_modified: now
   };
 
+  quickAddBusy = true;
+  if (dom.btnQuickAdd) dom.btnQuickAdd.disabled = true;
   try {
     await db.saveCard(card);
-    showToast("Card added successfully!", "success");
+    showToast("Card saved.", "success");
     dom.quickFront.value = ""; dom.quickSub.value = "";
     dom.quickBack.value = ""; dom.quickDescription.value = "";
     await loadCardsFromDB();
@@ -1053,5 +1060,5 @@ export async function handleQuickAddCard() {
   } catch (err) {
     console.error("Quick add error:", err);
     showToast("Failed to save card locally", "error");
-  }
+  } finally { quickAddBusy = false; if (dom.btnQuickAdd) dom.btnQuickAdd.disabled = false; }
 }

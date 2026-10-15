@@ -1,18 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
+<html lang="en" data-theme="light"><head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>anamnesis - Spaced Repetition Flashcards</title>
-  
+  <title>anamnesis — A little, every day.</title>
+
   <!-- Cybersecurity Hardening: Strict Content Security Policy -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://api.github.com https://gist.githubusercontent.com https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://api.github.com https://gist.githubusercontent.com https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data:;">
 
   <!-- PWA Meta Tags -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#121214">
+  <meta name="theme-color" content="#f6f7f3">
   <!-- Browser Tab Favicon & App Icons -->
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
@@ -22,41 +21,25 @@
   <link rel="manifest" href="manifest.json">
 
   <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  
+
   <!-- Styling -->
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="simple-ui">
 
   <!-- Single Centered Mobile Shell Wrapper -->
   <div class="app-container">
 
     <!-- App Header -->
     <header class="app-header">
-      <div class="header-logo" id="header-logo-home">
-        <svg class="logo-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 4h16M5 7h14M7 7v13M10 7v13M14 7v13M17 7v13M3 20h18"/>
-          <path d="M5 7c-1 0-2-.5-2-1.5S4 4 5 4"/>
-          <path d="M19 7c1 0 2-.5 2-1.5S20 4 19 4"/>
-        </svg>
-        <h1 class="logo-text" aria-hidden="true"></h1>
-      </div>
+      <button type="button" id="header-logo-home" class="simple-brand" aria-label="anamnesis home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="5" y="7" width="14" height="15" rx="3"></rect><path d="M8 3h8a3 3 0 0 1 3 3M5 11h14"></path></svg><span>anamnesis<span class="brand-period">.</span></span></button>
       <div style="display: flex; align-items: center; gap: 8px;">
-        <button type="button" id="btn-header-help" class="header-help-btn" title="App Introduction &amp; Guide">
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-            <line x1="12" y1="17" x2="12.01" y2="17"/>
-          </svg>
-        </button>
+
         <div class="header-sync" id="header-sync-status" title="Sync Status">
           <svg class="sync-icon-svg" viewBox="0 0 24 24">
-            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l.56-.56" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l.56-.56" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"></path>
           </svg>
-          <span class="sync-label" id="sync-label-text">Offline</span>
+          <span class="sync-label" id="sync-label-text">On this device</span>
         </div>
       </div>
     </header>
@@ -66,150 +49,39 @@
 
       <!-- VIEW 1: REVIEW & DASHBOARD -->
       <section id="view-review" class="app-view active">
-        
+
         <!-- Dashboard Sub-view -->
-        <div id="subview-dashboard" class="subview active">
-          <!-- Unified View Header -->
-          <div class="view-header">
-            <div class="view-header-content">
-              <h2>Review</h2>
-              <p>Spaced repetition active recall powered by FSRS-5 Stability &amp; Retrievability models.</p>
-            </div>
-            <div class="view-header-badges">
-              <div class="hero-streak-badge" id="hero-streak-badge" title="Consecutive active review streak">
-                <span class="streak-flame">🔥</span>
-                <span id="stat-streak-days">0</span>d Streak
-              </div>
-              <div class="header-status-pill">
-                <span class="status-indicator-dot"></span>
-                <span>FSRS-5 Active</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Statistics Panel: 3 Balanced Cards Spanning Full Width -->
-          <div class="stats-grid">
-            <div class="stat-card due">
-              <div class="stat-card-icon-wrap">
-                <svg class="stat-icon-svg" viewBox="0 0 24 24">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" fill="none"/>
-                  <polyline points="12 6 12 12 16 14" stroke="currentColor"/>
-                </svg>
-              </div>
-              <div class="stat-info">
-                <span class="stat-val" id="stat-due-count">0</span>
-                <span class="stat-label">Due Today</span>
-              </div>
-            </div>
-            
-            <div class="stat-card new">
-              <div class="stat-card-icon-wrap">
-                <svg class="stat-icon-svg" viewBox="0 0 24 24">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" fill="none"/>
-                  <line x1="12" y1="8" x2="12" y2="16" stroke="currentColor"/>
-                  <line x1="8" y1="12" x2="16" y2="12" stroke="currentColor"/>
-                </svg>
-              </div>
-              <div class="stat-info">
-                <span class="stat-val" id="stat-new-count">0</span>
-                <span class="stat-label">New Cards</span>
-              </div>
-            </div>
-
-            <div class="stat-card total">
-              <div class="stat-card-icon-wrap">
-                <svg class="stat-icon-svg" viewBox="0 0 24 24">
-                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" fill="none"/>
-                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" stroke="currentColor" fill="none"/>
-                </svg>
-              </div>
-              <div class="stat-info">
-                <span class="stat-val" id="stat-total-count">0</span>
-                <span class="stat-label">Total Library</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Hero Study Hub: 2 Clear Modes (Review All or Choose Deck with Explorer) -->
-          <div class="dashboard-card hero-study-card">
-            <!-- Mode 2 & Collection Scope Bar -->
-            <div class="study-selection-banner">
-              <div class="study-selection-info">
-                <span class="study-selection-label">Collection:</span>
-                <span id="dashboard-deck-name" class="study-selection-name">📁 All Collections</span>
-                <span id="dashboard-deck-due-pill" class="study-selection-badge">0 due</span>
-              </div>
-              <div class="study-selection-actions">
-                <button type="button" id="btn-dashboard-deck-picker" class="btn btn-secondary btn-sm btn-choose-deck" title="Open Explorer to choose a specific collection">
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                  Choose Deck ↗
-                </button>
-                <button type="button" id="btn-dashboard-reset-deck" class="btn-clear-selection hidden" title="Reset filter to All Collections">✕ All Decks</button>
-                <button type="button" id="btn-dashboard-reset-fsrs" class="btn-clear-selection hidden" style="color: #f87171; border-color: rgba(239, 68, 68, 0.25);" title="Reset FSRS data for this collection">🔄 Reset FSRS</button>
-                <button type="button" id="btn-dashboard-export-deck" class="btn-clear-selection" title="Export this collection to CSV">📥 Export</button>
-              </div>
-            </div>
-
-            <!-- Main Due Status & Primary Actions (Mode 1) -->
-            <div class="hero-study-body">
-              <div class="hero-due-display">
-                <div class="hero-due-number" id="hero-due-large-num">0</div>
-                <div class="hero-due-meta">
-                  <div class="hero-due-title" id="hero-due-status-title">Cards Due Today</div>
-                  <div class="hero-due-desc" id="dashboard-deck-stats">Entire Flashcard Library</div>
-                </div>
-              </div>
-
-              <!-- Primary Study Actions -->
-              <div class="hero-study-actions">
-                <button id="btn-start-review" class="btn btn-primary btn-hero-study">
-                  <svg class="btn-icon-svg" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                  <span>Start Due Review</span>
-                </button>
-                <button id="btn-force-review" class="btn btn-secondary btn-hero-practice">
-                  <svg class="btn-icon-svg" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                  <span>Practice Mode</span>
-                </button>
-              </div>
-            </div>
-
-            <select id="deck-select" class="hidden">
-              <option value="all">📁 All Collections</option>
-            </select>
-          </div>
-
-          <!-- Activity Consistency Heatmap Card (Full Width) -->
-          <div class="dashboard-card activity-heatmap-card">
-            <div class="heatmap-header">
-              <span class="heatmap-title">Study Consistency</span>
-              <span class="heatmap-subtitle" id="heatmap-reviews-count">0 reviews recorded</span>
-            </div>
-            <div class="heatmap-grid" id="dashboard-heatmap-grid">
-              <!-- 60-day heatmap squares rendered via JS -->
-            </div>
-          </div>
-
-          <!-- Empty State Display -->
-          <div id="dashboard-empty-state" class="empty-state hidden">
+        <div id="subview-dashboard" class="subview active"><div class="today-intro"><p class="eyebrow">A LITTLE, EVERY DAY</p><h2>Ready when you are.</h2><p>A few cards. A clearer mind.</p></div>
+<article class="today-card">
+  <div class="today-scope"><span>Today’s practice</span><label class="scope-select"><span class="sr-only">Deck to study</span><select id="today-deck-select" aria-label="Deck to study"><option value="all">All decks</option></select></label></div>
+  <div class="today-art" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="5" y="7" width="14" height="15" rx="3"></rect><path d="M8 3h8a3 3 0 0 1 3 3M5 11h14"></path></svg></div>
+  <div class="today-status" aria-live="polite"><span id="hero-due-large-num" class="today-number">0</span><h3 id="hero-due-status-title">cards ready to review</h3></div>
+  <p id="simple-session-hint" class="today-hint">One card at a time. Your progress is always saved.</p>
+  <div id="today-primary-actions"><button id="btn-start-review" class="btn btn-primary btn-start-simple" type="button">Start reviewing <span aria-hidden="true">→</span></button></div>
+  <div class="today-scope-reset"><button id="btn-dashboard-reset-deck" class="btn-text hidden">Use all decks</button></div>
+</article>
+<details class="quiet-options"><summary>Other ways to study</summary><div id="practice-secondary-slot"><button id="btn-force-review" type="button" class="btn btn-secondary">Practice anytime</button></div><p>Revisit any card without changing its review schedule.</p></details>
+<p class="save-note"><span aria-hidden="true">✓</span> Saved on this device, after every card.</p>
+<select id="deck-select" class="hidden"><option value="all">All decks</option></select>
+<span id="dashboard-deck-due-pill" class="hidden"></span><span id="dashboard-deck-stats" class="hidden"></span><div id="dashboard-empty-state" class="empty-state hidden">
             <div class="empty-icon-circle">
               <svg class="empty-icon-svg" viewBox="0 0 24 24">
-                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
               </svg>
             </div>
-            <h3>There are no cards available</h3>
-            <p>Your collection is empty. Use Quick Add, Import, or load our preloaded JLPT N5 Kanji deck.</p>
+            <h3>Your first card starts here.</h3>
+            <p>Add something you want to remember, or try a starter deck.</p>
             <div style="margin-top: 14px; display: flex; justify-content: center; gap: 10px;">
               <button type="button" id="btn-empty-load-n5-kanji" class="btn btn-primary btn-sm">
                 🎌 Load JLPT N5 Kanji Deck (104 Cards)
               </button>
             </div>
-          </div>
-        </div>
+          <button class="btn btn-primary" data-view="view-decks" data-open-add="" type="button">Add your first card</button></div><span id="dashboard-deck-name" class="hidden"></span></div>
 
         <!-- Study Session Sub-view -->
         <div id="subview-study" class="subview">
           <div class="study-header">
-            <button id="btn-cancel-study" class="btn-text">Exit</button>
+            <button id="btn-cancel-study" class="btn-text">← Today</button>
             <div class="study-deck-badge" id="study-deck-badge" title="Active Study Collection">📁 All Collections</div>
             <div class="study-progress">
               <span id="study-progress-text"></span>
@@ -221,26 +93,26 @@
             <div class="study-header-actions">
               <button id="btn-skip-card" class="btn-tts" title="Park Card to End of Session (S)">
                 <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <polygon points="5 4 15 12 5 20 5 4" fill="currentColor"/>
-                  <line x1="19" y1="5" x2="19" y2="19"/>
+                  <polygon points="5 4 15 12 5 20 5 4" fill="currentColor"></polygon>
+                  <line x1="19" y1="5" x2="19" y2="19"></line>
                 </svg>
               </button>
-              <button id="btn-undo-study" class="btn-tts" title="Undo Last Review (Ctrl+Z)" disabled>
+              <button id="btn-undo-study" class="btn-tts" title="Undo Last Review (Ctrl+Z)" disabled="">
                 <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M9 14L4 9l5-5"/>
-                  <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/>
+                  <path d="M9 14L4 9l5-5"></path>
+                  <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"></path>
                 </svg>
               </button>
-              <button id="btn-restart-study" class="btn-tts" title="Restart / Review Again">
+              <button id="btn-restart-study" class="btn-tts hidden" title="Restart / Review Again">
                 <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                  <path d="M3 3v5h5"/>
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                  <path d="M3 3v5h5"></path>
                 </svg>
               </button>
               <button id="btn-tts-speak" class="btn-tts" title="Pronounce with Speech Audio (R)">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                  <path d="M11 5L6 9H2v6h4l5 4V5z"/>
-                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
                 </svg>
               </button>
             </div>
@@ -248,9 +120,9 @@
 
           <!-- Study Card Deck -->
           <div class="card-container">
-            <div class="flashcard" id="flashcard">
+            <div class="flashcard" id="flashcard" tabindex="0" role="button" aria-label="Show answer">
               <!-- Front Face -->
-              <div class="card-face card-front">
+              <div class="card-face card-front" aria-hidden="false">
                 <div class="card-tag-row">
                   <div class="card-tag">QUESTION</div>
                   <div class="card-mastery-pill hidden" id="practice-mastery-pill-front" title="In-session practice mastery progress">
@@ -262,10 +134,10 @@
                   <div class="card-subtext" id="card-front-sub"></div>
                   <div class="card-content" id="card-front-content">There are no cards available</div>
                 </div>
-                <div class="card-hint">Tap card to flip</div>
+                <div class="card-hint"></div>
               </div>
               <!-- Back Face -->
-              <div class="card-face card-back">
+              <div class="card-face card-back" aria-hidden="true">
                 <div class="card-tag-row">
                   <div class="card-tag">ANSWER</div>
                   <div class="card-mastery-pill hidden" id="practice-mastery-pill-back" title="In-session practice mastery progress">
@@ -279,46 +151,36 @@
                   <hr class="card-divider hidden" id="card-back-divider">
                   <div class="card-description hidden" id="card-back-description"></div>
                 </div>
-                <div class="card-hint">Tap card to flip back</div>
+                <div class="card-hint"></div>
               </div>
             </div>
           </div>
 
           <!-- Review Controls -->
           <div class="study-controls">
-            <div id="study-hint-bar" class="study-hint-bar">
-              <span>Tap card to reveal answer</span>
-            </div>
-            
-            <div id="study-grading-bar" class="study-grading-bar hidden">
-              <div class="grading-title">Recall Quality</div>
-              <div class="grading-buttons fsrs-4-buttons">
-                <button class="btn-grade grade-again" data-grade="1" title="Incorrect recall / Lapse (Key: 1)">
+            <div id="study-hint-bar" class="study-hint-bar"><button type="button" id="btn-reveal-answer" class="btn btn-primary">Show answer</button><span class="keyboard-hint">or press space</span></div>
+
+            <div id="study-grading-bar" class="study-grading-bar hidden"><div class="grading-title">Did you remember?</div><div class="simple-grade-actions"><button class="btn-grade grade-again" data-grade="1" title="Incorrect recall / Lapse (Key: 1)">
                   <span class="grade-interval" id="grade-interval-1">&lt;10m</span>
                   <span class="grade-num">1</span>
                   <span class="grade-label">Again</span>
-                </button>
-                <button class="btn-grade grade-hard" data-grade="2" title="Difficult recall (Key: 2)">
+                </button><button class="btn-grade grade-good" data-grade="3" title="Correct recall with effort (Key: 3)">
+                  <span class="grade-interval" id="grade-interval-3">3d</span>
+                  <span class="grade-num">3</span>
+                  <span class="grade-label">Got it</span>
+                </button></div><details class="extra-ratings quiet-options"><summary>More rating options</summary><div class="extra-rating-actions"><button class="btn-grade grade-hard" data-grade="2" title="Difficult recall (Key: 2)">
                   <span class="grade-interval" id="grade-interval-2">1d</span>
                   <span class="grade-num">2</span>
                   <span class="grade-label">Hard</span>
-                </button>
-                <button class="btn-grade grade-good" data-grade="3" title="Correct recall with effort (Key: 3)">
-                  <span class="grade-interval" id="grade-interval-3">3d</span>
-                  <span class="grade-num">3</span>
-                  <span class="grade-label">Good</span>
-                </button>
-                <button class="btn-grade grade-easy" data-grade="4" title="Instant, effortless recall (Key: 4)">
+                </button><button class="btn-grade grade-easy" data-grade="4" title="Instant, effortless recall (Key: 4)">
                   <span class="grade-interval" id="grade-interval-4">7d</span>
                   <span class="grade-num">4</span>
                   <span class="grade-label">Easy</span>
-                </button>
-              </div>
-            </div>
+                </button></div></details></div>
           </div>
-          
+
           <!-- Desktop Keyboard Shortcuts Guide -->
-          <div class="study-shortcuts-guide">
+          <div class="study-shortcuts-guide hidden">
             <span class="shortcut-badge"><kbd>Space</kbd> Flip Card</span>
             <span class="shortcut-badge"><kbd>1</kbd>–<kbd>4</kbd> Grade</span>
             <span class="shortcut-badge"><kbd>S</kbd> Park Card</span>
@@ -332,45 +194,45 @@
       <section id="view-decks" class="app-view">
         <div class="view-header">
           <div class="view-header-content">
-            <h2>Decks &amp; Folders</h2>
-            <p>Windows-style collection explorer. Browse, create, study, and manage your flashcard hierarchy.</p>
+            <h2>Your cards</h2>
+            <p>Keep the things you want to remember.</p>
           </div>
-        </div>
+        <button type="button" class="btn btn-primary" data-open-add="">Add a card <span aria-hidden="true">+</span></button></div>
 
         <!-- Segmented Tab Navigation for Decks & Cards -->
         <div class="decks-nav-tabs" id="decks-tab-bar" role="tablist">
           <button type="button" class="btn-deck-tab active" data-deck-tab="tab-collections" role="tab" aria-selected="true" aria-controls="tab-collections">
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-            <span>Collections &amp; Folders</span>
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+            <span>Decks</span>
           </button>
           <button type="button" class="btn-deck-tab" data-deck-tab="tab-browser" role="tab" aria-selected="false" aria-controls="tab-browser">
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-            <span>All Cards Browser</span>
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+            <span>All cards</span>
           </button>
           <button type="button" class="btn-deck-tab" data-deck-tab="tab-add" role="tab" aria-selected="false" aria-controls="tab-add">
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            <span>Quick Add Card</span>
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span>Add a card</span>
           </button>
         </div>
 
         <!-- Tab 1: Windows File Explorer Widget Card -->
-        <div id="tab-collections" class="deck-tab-panel active" role="tabpanel">
-          <div class="card-panel win-explorer-panel" id="win-explorer">
+        <div id="tab-collections" class="deck-tab-panel active" role="tabpanel"><div class="simple-decks-header"><h3>Your decks</h3><span id="simple-deck-count"></span></div>
+          <div id="simple-deck-list" class="simple-deck-list"></div><details class="organize-tools quiet-options"><summary>Organize decks &amp; folders</summary><div class="card-panel win-explorer-panel" id="win-explorer">
             <!-- Explorer Navigation & Address Bar Ribbon -->
             <div class="explorer-header-toolbar">
               <!-- Navigation Action Buttons (Back / Forward / Up / Refresh) -->
               <div class="explorer-nav-buttons">
-                <button id="btn-explorer-back" class="btn-explorer-nav" title="Back (Alt+Left)" disabled>
-                  <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                <button id="btn-explorer-back" class="btn-explorer-nav" title="Back (Alt+Left)" disabled="">
+                  <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
                 </button>
-                <button id="btn-explorer-forward" class="btn-explorer-nav" title="Forward (Alt+Right)" disabled>
-                  <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                <button id="btn-explorer-forward" class="btn-explorer-nav" title="Forward (Alt+Right)" disabled="">
+                  <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
                 </button>
-                <button id="btn-explorer-up" class="btn-explorer-nav" title="Up to parent folder (Alt+Up)" disabled>
-                  <svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                <button id="btn-explorer-up" class="btn-explorer-nav" title="Up to parent folder (Alt+Up)" disabled="">
+                  <svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
                 </button>
                 <button id="btn-explorer-refresh" class="btn-explorer-nav" title="Refresh">
-                  <svg viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l.56-.56"/></svg>
+                  <svg viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l.56-.56"></path></svg>
                 </button>
               </div>
 
@@ -383,17 +245,17 @@
 
               <!-- Explorer Search Box -->
               <div class="explorer-search-box">
-                <svg class="search-icon-svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <svg class="search-icon-svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                 <input type="text" id="explorer-search-input" placeholder="Search this folder...">
               </div>
 
               <!-- View Switcher (Grid / Details) -->
               <div class="explorer-view-toggle">
                 <button id="btn-view-grid" class="btn-view-mode active" title="Grid / Large Tiles View">
-                  <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                  <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                 </button>
                 <button id="btn-view-details" class="btn-view-mode" title="Details / Table List View">
-                  <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                  <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
                 </button>
               </div>
             </div>
@@ -401,32 +263,32 @@
             <!-- Explorer Command Ribbon (Actions) -->
             <div class="explorer-command-bar">
               <button id="btn-explorer-new-deck" class="btn-command">
-                <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 <span>New Deck</span>
               </button>
               <button id="btn-explorer-new-folder" class="btn-command">
-                <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                 <span>New Folder</span>
               </button>
               <button id="btn-explorer-import" class="btn-command">
-                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                 <span>Import Cards Here</span>
               </button>
               <button id="btn-explorer-export" class="btn-command">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                 <span>Export</span>
               </button>
               <button id="btn-explorer-add-card" class="btn-command">
-                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
                 <span>Quick Add</span>
               </button>
               <div class="command-bar-divider"></div>
               <button id="btn-explorer-study" class="btn-command btn-command-primary">
-                <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                 <span>Study Due</span>
               </button>
               <button id="btn-explorer-practice" class="btn-command">
-                <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
                 <span>Practice All</span>
               </button>
             </div>
@@ -453,7 +315,7 @@
             <div class="explorer-status-bar">
               <span id="explorer-status-text">Loading collections...</span>
             </div>
-          </div>
+          </div></details>
         </div>
 
         <!-- Tab 2: All Cards Browser Panel -->
@@ -465,19 +327,19 @@
                 <p id="browser-total-count">Search, edit, and manage individual flashcards.</p>
               </div>
             </div>
-            
+
             <div class="browser-controls-row">
               <div class="search-input-wrap">
                 <svg class="search-icon-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="11" cy="11" r="8"/>
-                  <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
                 <input type="text" id="browser-search-input" placeholder="Search cards by front, back, deck, folder...">
               </div>
               <button type="button" id="btn-browser-deck-picker" class="gui-picker-filter-btn" title="Filter by collection">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                 <span id="browser-deck-filter-label">📁 All Collections</span>
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
               </button>
               <select id="browser-deck-filter" class="hidden">
                 <option value="all">📁 All Collections</option>
@@ -491,19 +353,19 @@
               </div>
               <div class="bulk-toolbar-actions">
                 <button id="btn-bulk-practice" class="btn btn-primary btn-sm" title="Practice selected cards">
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
                   Practice
                 </button>
                 <button id="btn-bulk-move" class="btn btn-secondary btn-sm" title="Move selected cards to another collection">
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                   Move...
                 </button>
                 <button id="btn-bulk-reset" class="btn btn-secondary btn-sm" title="Reset FSRS scheduling progress to new">
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
                   Reset FSRS
                 </button>
                 <button id="btn-bulk-delete" class="btn btn-danger btn-sm" title="Delete selected cards">
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                   Delete
                 </button>
                 <button id="btn-bulk-deselect" class="btn btn-secondary btn-sm" title="Clear selection">✕</button>
@@ -536,43 +398,33 @@
         <div id="tab-add" class="deck-tab-panel hidden" role="tabpanel">
           <div class="card-panel">
             <div class="panel-header">
-              <h3>Quick Add Card</h3>
-              <p>Insert a single card with optional folder hierarchy.</p>
-            </div>
-            <div class="form-grid-two-col">
-              <div class="form-group">
+              <h3>Make something memorable</h3>
+              <p>A clear question. A simple answer.</p>
+            </div><div class="simple-add-fields"><div class="form-group">
+              <label for="quick-front" class="input-label">Question</label>
+              <input type="text" id="quick-front" placeholder="What do you want to remember?">
+            </div><div class="form-group">
+              <label for="quick-back" class="input-label">Answer</label>
+              <input type="text" id="quick-back" placeholder="The answer, in your own words.">
+            </div><div class="form-group">
+                <label for="quick-deck" class="input-label">Deck</label>
+                <input type="text" id="quick-deck" list="deck-suggestions" placeholder="e.g. Spanish" value="Default">
+                <datalist id="deck-suggestions">
+                  <!-- Dynamically populated -->
+                </datalist>
+              </div></div><details class="quiet-options card-extra-fields"><summary>Add a hint, notes, or audio</summary><div class="optional-fields"><div class="form-group">
                 <label for="quick-folder" class="input-label">Folder (e.g. Spanish, Medical)</label>
                 <input type="text" id="quick-folder" list="folder-suggestions" placeholder="e.g. Spanish (Optional)">
                 <datalist id="folder-suggestions">
                   <!-- Dynamically populated -->
                 </datalist>
-              </div>
-              <div class="form-group">
-                <label for="quick-deck" class="input-label">Collection / Deck</label>
-                <input type="text" id="quick-deck" list="deck-suggestions" placeholder="e.g. Verbs or Default" value="Default">
-                <datalist id="deck-suggestions">
-                  <!-- Dynamically populated -->
-                </datalist>
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="quick-front" class="input-label">Front (Question / Kanji)</label>
-              <input type="text" id="quick-front" placeholder="e.g. 漢字 or Question text">
-            </div>
-            <div class="form-group">
+              </div><div class="form-group">
               <label for="quick-sub" class="input-label">Sub-text (Kana helper / top hint)</label>
               <input type="text" id="quick-sub" placeholder="e.g. かんじ or Kana pronunciation">
-            </div>
-            <div class="form-group">
-              <label for="quick-back" class="input-label">Back (Answer / English)</label>
-              <input type="text" id="quick-back" placeholder="e.g. Chinese characters or Answer text">
-            </div>
-            <div class="form-grid-two-col">
-              <div class="form-group">
+            </div><div class="form-group">
                 <label for="quick-description" class="input-label">Description (Optional detailed notes)</label>
                 <input type="text" id="quick-description" placeholder="e.g. Example sentence or detailed explanation">
-              </div>
-              <div class="form-group">
+              </div><div class="form-group">
                 <label for="quick-lang" class="input-label">Audio Speech Language</label>
                 <select id="quick-lang" class="select-input">
                   <option value="">Auto-Detect / Global Default</option>
@@ -587,23 +439,17 @@
                   <option value="pt-BR">Portuguese (pt-BR)</option>
                   <option value="ko-KR">Korean (ko-KR)</option>
                 </select>
-              </div>
-            </div>
+              </div></div></details>
+
             <div class="form-action-row">
-              <button id="btn-quick-add" class="btn btn-primary">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="12" y1="5" x2="12" y2="19"/>
-                  <line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-                Add Card
-              </button>
+              <button id="btn-quick-add" class="btn btn-primary">Save card</button>
             </div>
           </div>
         </div>
       </section>
 
       <!-- VIEW 3: COGNITIVE ANALYTICS & REFLECTION ENGINE -->
-      <section id="view-analytics" class="app-view">
+      <section id="view-analytics" class="app-view"><button type="button" class="back-link" data-view="view-settings">← Settings</button>
         <div class="view-header">
           <div class="view-header-content">
             <h2>Cognitive Analytics &amp; Reflection</h2>
@@ -612,7 +458,7 @@
           <div class="view-header-badges">
             <button type="button" id="btn-refresh-analytics" class="btn btn-secondary btn-sm" title="Recompute analytics">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l.56-.56"/>
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l.56-.56"></path>
               </svg>
               Refresh
             </button>
@@ -634,10 +480,10 @@
             <span class="toolbar-label">Collection:</span>
             <div class="analytics-deck-picker-wrap">
               <button type="button" id="btn-analytics-deck-picker" class="gui-picker-filter-btn" title="Browse and filter by collection">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                 <span id="analytics-deck-filter-label">📁 All Collections</span>
                 <span id="analytics-deck-count-pill" class="gui-picker-badge">0 cards</span>
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
               </button>
               <button type="button" id="btn-analytics-clear-filter" class="gui-picker-clear-btn hidden" title="Clear filter to All Collections">✕ Clear</button>
             </div>
@@ -794,7 +640,7 @@
       </section>
 
       <!-- VIEW 4: IMPORT -->
-      <section id="view-import" class="app-view">
+      <section id="view-import" class="app-view"><button type="button" class="back-link" data-view="view-settings">← Settings</button>
         <div class="view-header">
           <div class="view-header-content">
             <h2>Import Decks</h2>
@@ -825,9 +671,9 @@
             </div>
             <button type="button" id="btn-load-n5-kanji" class="btn btn-primary" style="white-space: nowrap;">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7 10 12 15 17 10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
               </svg>
               Load N5 Kanji Deck
             </button>
@@ -847,34 +693,34 @@
               <div class="dest-card-info">
                 <span class="dest-label-sub">Importing directly into:</span>
                 <div class="dest-active-hierarchy" id="import-dest-display">
-                  <svg class="dest-folder-icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                  <svg class="dest-folder-icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                   <span id="import-target-label" class="dest-target-name">🗂️ Default <span style="opacity:0.6">(Root)</span></span>
                 </div>
               </div>
               <div class="dest-card-actions">
                 <button type="button" id="btn-import-browse-dest" class="btn btn-secondary btn-sm">
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                   Browse / Change...
                 </button>
                 <button type="button" id="btn-import-new-deck" class="btn btn-secondary btn-sm" title="Create a new collection to import into">
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                   New Deck
                 </button>
               </div>
             </div>
-            
+
             <!-- Hidden inputs to hold values seamlessly -->
             <input type="hidden" id="import-dest-folder" value="">
             <input type="hidden" id="import-dest-deck" value="Default">
 
             <div class="dest-card-footer">
               <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text-secondary); cursor: pointer;">
-                <input type="checkbox" id="import-use-csv-decks" checked>
+                <input type="checkbox" id="import-use-csv-decks" checked="">
                 <span>Auto-detect folders/decks inside multi-deck CSV or Anki packages if present</span>
               </label>
             </div>
           </div>
-          
+
           <div class="import-format-guide">
             <div class="import-badge-row">
               <span class="badge-tag card-badge">✨ Card-Only CSV (Clean)</span>
@@ -893,9 +739,9 @@ Gracias,Thank you,greeting,Common polite phrase
             <div class="file-picker-wrapper">
               <label for="import-file" class="btn btn-secondary file-picker-btn">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                  <polyline points="17 8 12 3 7 8"/>
-                  <line x1="12" y1="3" x2="12" y2="15"/>
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
                 </svg>
                 Choose File (.apkg, .csv)
               </label>
@@ -905,15 +751,17 @@ Gracias,Thank you,greeting,Common polite phrase
 
             <div class="text-input-wrapper">
               <label for="import-text" class="input-label">Or paste text / CSV below:</label>
-              <textarea id="import-text" placeholder="Hablar,To speak,hablo&#10;Gracias,Thank you,greeting&#10;水|みず,Water,Essential noun" rows="6"></textarea>
+              <textarea id="import-text" placeholder="Hablar,To speak,hablo
+Gracias,Thank you,greeting
+水|みず,Water,Essential noun" rows="6"></textarea>
             </div>
           </div>
 
           <div class="import-actions">
             <button id="btn-parse-csv" class="btn btn-primary btn-full">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="11" cy="11" r="8"/>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
               </svg>
               Preview Import
             </button>
@@ -954,18 +802,18 @@ Gracias,Thank you,greeting,Common polite phrase
         <div class="view-header">
           <div class="view-header-content">
             <h2>Settings</h2>
-            <p>Configure device syncing, themes, and manage database.</p>
+            <p>Make this space your own. Everything else is here when you need it.</p>
           </div>
-        </div>
+        </div><div class="settings-tools"><button type="button" class="tool-link" data-view="view-analytics"><span class="tool-link-icon">↗</span><span><strong>Progress</strong><small>Your activity and learning insights</small></span><span aria-hidden="true">→</span></button><button type="button" class="tool-link" data-view="view-import"><span class="tool-link-icon">↓</span><span><strong>Import cards</strong><small>Bring in a deck you already have</small></span><span aria-hidden="true">→</span></button></div>
 
         <div class="settings-grid">
           <!-- GitHub Gist Remote Sync Section -->
-          <div class="card-panel">
+          <details class="settings-section"><summary>Sync across devices</summary><div class="settings-section-body"><div class="card-panel">
             <div class="panel-header">
               <h3>GitHub Gist Sync</h3>
               <p>Sync cards across devices using a private GitHub Gist.</p>
             </div>
-            
+
             <div class="form-group">
               <label for="settings-pat" class="input-label">GitHub Personal Access Token (PAT)</label>
               <input type="password" id="settings-pat" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
@@ -995,15 +843,15 @@ Gracias,Thank you,greeting,Common polite phrase
               </button>
               <p id="sync-last-time-label" class="sync-timestamp-footer">Last synced: Never</p>
             </div>
-          </div>
+          </div></div></details>
 
           <!-- Spaced Repetition & Audio Settings -->
-          <div class="card-panel">
+          <details class="settings-section"><summary>Study preferences</summary><div class="settings-section-body"><div class="card-panel">
             <div class="panel-header">
-              <h3>Spaced Repetition & Audio</h3>
-              <p>FSRS-5 Next-Gen Model & Native Speech Pronunciation</p>
+              <h3>Spaced Repetition &amp; Audio</h3>
+              <p>FSRS-5 Next-Gen Model &amp; Native Speech Pronunciation</p>
             </div>
-            
+
             <div class="form-group">
               <label for="settings-voice-lang" class="input-label">Pronunciation Language</label>
               <select id="settings-voice-lang" class="select-input">
@@ -1034,50 +882,43 @@ Gracias,Thank you,greeting,Common polite phrase
             </div>
 
             <div class="form-group">
-              <label for="settings-review-cap" class="input-label">Vacation / Catch-Up Mode (Daily Review Cap)</label>
-              <select id="settings-review-cap" class="select-input">
-                <option value="0">Off (Review All Due Cards)</option>
-                <option value="15">Max 15 Due Cards / Session</option>
-                <option value="25">Max 25 Due Cards / Session (Recommended)</option>
-                <option value="35">Max 35 Due Cards / Session</option>
-                <option value="50">Max 50 Due Cards / Session</option>
-              </select>
-              <small class="help-text">Caps overdue card load to prevent burnout when returning after a break.</small>
+              <label for="settings-review-cap" class="input-label">Cards per session</label>
+              <select id="settings-review-cap" class="select-input"><option value="10">10 cards · a small daily session</option><option value="15">15 cards</option><option value="25">25 cards</option><option value="35">35 cards</option><option value="50">50 cards</option><option value="0">All ready cards</option></select>
+              <small class="help-text">A short session makes it easier to come back. You can always start another.</small>
             </div>
-          </div>
+          </div></div></details>
 
           <!-- Backup / Local Data Management -->
-          <div class="card-panel">
+          <details class="settings-section"><summary>Export &amp; restore</summary><div class="settings-section-body"><div class="card-panel">
             <div class="panel-header">
               <h3>Data Administration</h3>
               <p>Export your flashcards or clear the offline database.</p>
             </div>
-            
+
             <div class="admin-actions-grid">
               <button id="btn-export-csv" class="btn btn-secondary btn-full">Export All Collections to CSV</button>
+              <button id="btn-restore-backup-file" class="btn btn-secondary btn-full">Restore JSON Backup</button>
+              <input id="restore-backup-file" type="file" accept=".json,application/json" class="hidden">
               <button id="btn-clear-db" class="btn btn-danger btn-full">Delete All Local Data</button>
             </div>
-          </div>
+          </div></div></details>
 
           <!-- Local Database Backups Panel -->
-          <div class="card-panel">
+          <details class="settings-section"><summary>Backups</summary><div class="settings-section-body"><div class="card-panel">
             <div class="panel-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
               <div>
                 <h3>Local Database Backups</h3>
                 <p>Rolling historical snapshots stored safely in local IndexedDB storage.</p>
               </div>
-              <button id="btn-create-backup-now" class="btn btn-secondary btn-sm" title="Take a local snapshot right now">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                Create Snapshot
-              </button>
+
             </div>
-            <div id="backups-list-container" class="backups-list-container">
+            <button id="btn-create-backup-now" class="btn btn-secondary btn-sm" title="Take a local snapshot right now" style="margin-bottom: 18px;">Create a snapshot</button><div id="backups-list-container" class="backups-list-container">
               <!-- Dynamically populated -->
             </div>
-          </div>
+          </div></div></details>
 
           <!-- Visual Settings -->
-          <div class="card-panel">
+          <details class="settings-section" open=""><summary>Appearance</summary><div class="settings-section-body"><div class="card-panel">
             <div class="panel-header">
               <h3>Appearance Theme</h3>
               <p>Switch between dark, light, or system default color themes.</p>
@@ -1087,25 +928,62 @@ Gracias,Thank you,greeting,Common polite phrase
               <button class="btn btn-theme" data-theme-value="light">Light</button>
               <button class="btn btn-theme" data-theme-value="dark">Dark</button>
             </div>
-          </div>
+          </div></div></details>
 
           <!-- App Guide & Onboarding -->
-          <div class="card-panel">
-            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
-              <div>
-                <h3>App Guide &amp; Introduction</h3>
-                <p>Revisit the interactive walkthrough explaining each section and feature.</p>
+
+        <details class="settings-section"><summary>Activity at a glance</summary><div class="settings-section-body"><p class="activity-streak"><span id="stat-streak-days">0</span> days in a row</p><div class="stats-grid">
+            <div class="stat-card due">
+              <div class="stat-card-icon-wrap">
+                <svg class="stat-icon-svg" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" fill="none"></circle>
+                  <polyline points="12 6 12 12 16 14" stroke="currentColor"></polyline>
+                </svg>
               </div>
-              <button id="btn-start-tour" class="btn btn-secondary btn-sm" type="button">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor"/></svg>
-                Start Tour
-              </button>
+              <div class="stat-info">
+                <span class="stat-val" id="stat-due-count">0</span>
+                <span class="stat-label">Due Today</span>
+              </div>
             </div>
-          </div>
-        </div>
+
+            <div class="stat-card new">
+              <div class="stat-card-icon-wrap">
+                <svg class="stat-icon-svg" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" fill="none"></circle>
+                  <line x1="12" y1="8" x2="12" y2="16" stroke="currentColor"></line>
+                  <line x1="8" y1="12" x2="16" y2="12" stroke="currentColor"></line>
+                </svg>
+              </div>
+              <div class="stat-info">
+                <span class="stat-val" id="stat-new-count">0</span>
+                <span class="stat-label">New Cards</span>
+              </div>
+            </div>
+
+            <div class="stat-card total">
+              <div class="stat-card-icon-wrap">
+                <svg class="stat-icon-svg" viewBox="0 0 24 24">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" fill="none"></path>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" stroke="currentColor" fill="none"></path>
+                </svg>
+              </div>
+              <div class="stat-info">
+                <span class="stat-val" id="stat-total-count">0</span>
+                <span class="stat-label">Total Library</span>
+              </div>
+            </div>
+          </div><div class="dashboard-card activity-heatmap-card">
+            <div class="heatmap-header">
+              <span class="heatmap-title">Study Consistency</span>
+              <span class="heatmap-subtitle" id="heatmap-reviews-count">0 reviews recorded</span>
+            </div>
+            <div class="heatmap-grid" id="dashboard-heatmap-grid">
+              <!-- 60-day heatmap squares rendered via JS -->
+            </div>
+          </div></div></details><details class="settings-section"><summary>Help &amp; study options</summary><div class="settings-section-body"><p>Choose a deck, reveal each answer, then tap Again or Got it. Your progress saves as you go.</p><button type="button" id="btn-header-help" class="btn btn-secondary" title="App Introduction &amp; Guide">Open the app guide</button></div></details></div>
 
         <div class="app-version-footer">
-          <p>anamnesis v1.0.0 (Local-First PWA)</p>
+          <p>anamnesis · A little, every day.</p>
         </div>
       </section>
 
@@ -1114,56 +992,33 @@ Gracias,Thank you,greeting,Common polite phrase
     <!-- Bottom Navigation Bar / Desktop Sidebar -->
     <footer class="app-nav">
       <!-- Desktop Sidebar Brand Header -->
-      <div class="sidebar-brand" id="sidebar-logo-home">
-        <svg class="logo-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 4h16M5 7h14M7 7v13M10 7v13M14 7v13M17 7v13M3 20h18"/>
-          <path d="M5 7c-1 0-2-.5-2-1.5S4 4 5 4"/>
-          <path d="M19 7c1 0 2-.5 2-1.5S20 4 19 4"/>
-        </svg>
-        <span class="logo-text" aria-hidden="true"></span>
-      </div>
 
       <button class="nav-item active" data-view="view-review">
         <svg class="nav-icon-svg" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="10"/>
-          <polyline points="12 6 12 12 16 14"/>
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
         </svg>
-        <span class="nav-label">Review</span>
+        <span class="nav-label">Today</span>
         <span class="nav-badge hidden" id="nav-due-badge">0</span>
       </button>
       <button class="nav-item" data-view="view-decks">
         <svg class="nav-icon-svg" viewBox="0 0 24 24">
-          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
         </svg>
-        <span class="nav-label">Decks</span>
+        <span class="nav-label">Cards</span>
       </button>
-      <button class="nav-item" data-view="view-analytics">
-        <svg class="nav-icon-svg" viewBox="0 0 24 24">
-          <line x1="18" y1="20" x2="18" y2="10"/>
-          <line x1="12" y1="20" x2="12" y2="4"/>
-          <line x1="6" y1="20" x2="6" y2="14"/>
-        </svg>
-        <span class="nav-label">Analytics</span>
-      </button>
-      <button class="nav-item" data-view="view-import">
-        <svg class="nav-icon-svg" viewBox="0 0 24 24">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="7 10 12 15 17 10"/>
-          <line x1="12" y1="15" x2="12" y2="3"/>
-        </svg>
-        <span class="nav-label">Import</span>
-      </button>
+
       <button class="nav-item" data-view="view-settings">
         <svg class="nav-icon-svg" viewBox="0 0 24 24">
-          <line x1="4" y1="21" x2="4" y2="14"/>
-          <line x1="4" y1="10" x2="4" y2="3"/>
-          <line x1="12" y1="21" x2="12" y2="12"/>
-          <line x1="12" y1="8" x2="12" y2="3"/>
-          <line x1="20" y1="21" x2="20" y2="16"/>
-          <line x1="20" y1="12" x2="20" y2="3"/>
-          <line x1="1" y1="14" x2="7" y2="14"/>
-          <line x1="9" y1="8" x2="15" y2="8"/>
-          <line x1="17" y1="16" x2="23" y2="16"/>
+          <line x1="4" y1="21" x2="4" y2="14"></line>
+          <line x1="4" y1="10" x2="4" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12" y2="3"></line>
+          <line x1="20" y1="21" x2="20" y2="16"></line>
+          <line x1="20" y1="12" x2="20" y2="3"></line>
+          <line x1="1" y1="14" x2="7" y2="14"></line>
+          <line x1="9" y1="8" x2="15" y2="8"></line>
+          <line x1="17" y1="16" x2="23" y2="16"></line>
         </svg>
         <span class="nav-label">Settings</span>
       </button>
@@ -1327,9 +1182,9 @@ Gracias,Thank you,greeting,Common polite phrase
         <div class="modal-header-with-action">
           <div class="modal-title-with-icon">
             <svg class="modal-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="17 8 12 3 7 8"/>
-              <line x1="12" y1="3" x2="12" y2="15"/>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
             </svg>
             <div>
               <h3>Export Collections</h3>
@@ -1361,7 +1216,7 @@ Gracias,Thank you,greeting,Common polite phrase
             <label class="input-label">Export Format</label>
             <div class="export-format-options">
               <label class="export-format-card">
-                <input type="radio" name="export-format" value="csv-standard" checked>
+                <input type="radio" name="export-format" value="csv-standard" checked="">
                 <div class="format-card-content">
                   <div class="format-card-title">
                     <span class="format-badge">CSV</span>
@@ -1400,9 +1255,9 @@ Gracias,Thank you,greeting,Common polite phrase
           <button id="btn-export-modal-cancel" class="btn btn-secondary">Cancel</button>
           <button id="btn-export-modal-download" class="btn btn-primary">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="17 8 12 3 7 8"/>
-              <line x1="12" y1="3" x2="12" y2="15"/>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
             </svg>
             Download Export
           </button>
@@ -1416,7 +1271,7 @@ Gracias,Thank you,greeting,Common polite phrase
         <!-- Dialog Header -->
         <div class="picker-modal-header">
           <div class="picker-modal-title-row">
-            <svg class="picker-window-icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            <svg class="picker-window-icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
             <h3 id="picker-modal-title">Select Collection or Destination</h3>
           </div>
           <button id="btn-close-picker-modal" class="btn-text modal-close-btn" title="Close">✕</button>
@@ -1425,14 +1280,14 @@ Gracias,Thank you,greeting,Common polite phrase
         <!-- Address Bar & Navigation Toolbar -->
         <div class="picker-toolbar-row">
           <div class="picker-nav-btns">
-            <button id="btn-picker-back" class="btn-explorer-nav" title="Back" disabled>
-              <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            <button id="btn-picker-back" class="btn-explorer-nav" title="Back" disabled="">
+              <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
             </button>
-            <button id="btn-picker-forward" class="btn-explorer-nav" title="Forward" disabled>
-              <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            <button id="btn-picker-forward" class="btn-explorer-nav" title="Forward" disabled="">
+              <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
             </button>
-            <button id="btn-picker-up" class="btn-explorer-nav" title="Up to Parent Folder" disabled>
-              <svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+            <button id="btn-picker-up" class="btn-explorer-nav" title="Up to Parent Folder" disabled="">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
             </button>
           </div>
 
@@ -1443,7 +1298,7 @@ Gracias,Thank you,greeting,Common polite phrase
           </div>
 
           <div class="picker-search-wrap">
-            <svg class="search-icon-svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <svg class="search-icon-svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             <input type="text" id="picker-search-input" placeholder="Search all collections...">
           </div>
         </div>
@@ -1451,15 +1306,15 @@ Gracias,Thank you,greeting,Common polite phrase
         <!-- Picker Actions Ribbon (New Folder, New Deck, Export) -->
         <div class="picker-ribbon-actions">
           <button id="btn-picker-new-deck" class="btn-command">
-            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             <span>New Deck</span>
           </button>
           <button id="btn-picker-new-folder" class="btn-command">
-            <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
             <span>New Folder</span>
           </button>
           <button id="btn-picker-export" class="btn-command" title="Export Current Folder or Collection">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
             <span>Export</span>
           </button>
         </div>
@@ -1499,8 +1354,7 @@ Gracias,Thank you,greeting,Common polite phrase
     </div>
 
     <!-- Datalist Suggestions -->
-    <datalist id="folder-suggestions"></datalist>
-    <datalist id="deck-suggestions"></datalist>
+
     <datalist id="import-folder-datalist"></datalist>
     <datalist id="import-deck-datalist"></datalist>
 
@@ -1508,5 +1362,5 @@ Gracias,Thank you,greeting,Common polite phrase
 
   <!-- Main JavaScript File -->
   <script type="module" src="app.js"></script>
-</body>
-</html>
+
+</body></html>

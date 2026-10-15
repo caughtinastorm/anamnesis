@@ -1,0 +1,13 @@
+import { cp, readFile, writeFile, mkdir } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+await mkdir(path.join(root, 'vendor'), { recursive: true });
+const copy = (source, name) => cp(path.join(root, 'node_modules', source), path.join(root, 'vendor', name));
+await copy('fflate/esm/browser.js', 'fflate.js');
+await copy('fflate/LICENSE', 'fflate-LICENSE.txt');
+await copy('sql.js/dist/sql-wasm-browser.wasm', 'sql-wasm-browser.wasm');
+await copy('sql.js/LICENSE', 'sqljs-LICENSE.txt');
+const sqlite = await readFile(path.join(root, 'node_modules/sql.js/dist/sql-wasm-browser.js'), 'utf8');
+await writeFile(path.join(root, 'vendor/sql-wasm-browser.js'), sqlite + '\nexport default initSqlJs;\n');
+console.log('Browser vendor assets synchronized with installed dependencies.');

@@ -12,7 +12,7 @@
  * 8. Automated Heuristic Reflection & Prescription Engine
  */
 
-import { calculateRetrievability, getTargetRetention, DEFAULT_TARGET_RETENTION } from "../fsrs.js";
+import { calculateRetrievability, DEFAULT_TARGET_RETENTION } from "../fsrs.js";
 import { getCardFolder, getCardDeck, matchesDeckSelection } from "./utils.js";
 
 // ============================================================================
@@ -186,9 +186,9 @@ export function calculateEfficiencyScore({
  * @returns {{ decks: Array<Object>, summary: Object }}
  */
 export function analyzeDecks(cards = [], reviewLogs = [], options = {}) {
-  const targetRetention = options.targetRetention || getTargetRetention() || DEFAULT_TARGET_RETENTION;
+  const targetRetention = options.targetRetention ?? DEFAULT_TARGET_RETENTION;
   const timeHorizonDays = options.timeHorizonDays || null;
-  const now = Date.now();
+  const now = options.now ?? Date.now();
   const timeLimit = timeHorizonDays ? now - (timeHorizonDays * 24 * 60 * 60 * 1000) : 0;
 
   // Build card lookup map

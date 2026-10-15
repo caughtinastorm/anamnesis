@@ -1,11 +1,17 @@
 {
   "name": "anamnesis",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Offline-First Spaced Repetition System with FSRS-5 & GitHub Gist Sync",
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "test": "node test/run-tests.js"
+    "test": "node test/run-tests.js && node test/runner-regression.js && node --test test/*.test.js",
+    "build": "node scripts/sync-vendor.js && node scripts/build.js",
+    "test:e2e": "npm run build && playwright test",
+    "check": "node scripts/check.js",
+    "verify": "npm run check && npm run lint && npm test",
+    "lint": "eslint .",
+    "pretest": "npm run build"
   },
   "keywords": [
     "flashcards",
@@ -15,5 +21,19 @@
     "pwa"
   ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "1.58.2",
+    "eslint": "10.12.0",
+    "fake-indexeddb": "6.2.5",
+    "globals": "16.5.0",
+    "happy-dom": "20.14.6"
+  },
+  "dependencies": {
+    "fflate": "0.8.3",
+    "sql.js": "1.14.2"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  }
 }

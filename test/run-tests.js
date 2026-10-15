@@ -65,10 +65,10 @@ import {
 let testsRun = 0;
 let testsPassed = 0;
 
-function runTest(name, fn) {
+async function runTest(name, fn) {
   testsRun++;
   try {
-    fn();
+    await fn();
     console.log(`  ✓ ${name}`);
     testsPassed++;
   } catch (err) {
@@ -79,12 +79,12 @@ function runTest(name, fn) {
 
 console.log("\n=== 1. FSRS-5 SCHEDULER & ROLLOVER HOUR TESTS ===");
 
-runTest("calculateRetrievability returns 1.0 when elapsed days is 0", () => {
+await runTest("calculateRetrievability returns 1.0 when elapsed days is 0", () => {
   const r = calculateRetrievability(0, 10);
   assert.equal(r, 1.0);
 });
 
-runTest("calculateRetrievability decays properly with elapsed time", () => {
+await runTest("calculateRetrievability decays properly with elapsed time", () => {
   const r1 = calculateRetrievability(10, 10);
   const factor = 19 / 81;
   const expected = Math.pow(1 + factor * (10 / 10), -0.5);
@@ -92,13 +92,13 @@ runTest("calculateRetrievability decays properly with elapsed time", () => {
   assert.ok(r1 < 1.0 && r1 > 0.5);
 });
 
-runTest("calculateInterval produces valid interval for target retention", () => {
+await runTest("calculateInterval produces valid interval for target retention", () => {
   const interval = calculateInterval(10, 0.90);
   assert.ok(interval >= 1);
   assert.ok(Number.isInteger(interval));
 });
 
-runTest("Logical rollover: Late night review (11:00 PM) gives next review Wednesday 4:00 AM (>12h away)", () => {
+await runTest("Logical rollover: Late night review (11:00 PM) gives next review Wednesday 4:00 AM (>12h away)", () => {
   // Monday 2026-09-07 23:00:00 (11 PM)
   const mondayNight = new Date(2026, 8, 7, 23, 0, 0).getTime();
   const nextTimestamp = calculateNextReviewTimestamp(1, mondayNight, 4);
@@ -113,7 +113,7 @@ runTest("Logical rollover: Late night review (11:00 PM) gives next review Wednes
   assert.ok(nextTimestamp - mondayNight >= 12 * 60 * 60 * 1000);
 });
 
-runTest("Logical rollover: Early morning review (02:00 AM) counts as previous logical day", () => {
+await runTest("Logical rollover: Early morning review (02:00 AM) counts as previous logical day", () => {
   // Tuesday 2026-09-08 02:00:00 (2 AM)
   const tuesdayEarly = new Date(2026, 8, 8, 2, 0, 0).getTime();
   const nextTimestamp = calculateNextReviewTimestamp(1, tuesdayEarly, 4);
@@ -125,7 +125,7 @@ runTest("Logical rollover: Early morning review (02:00 AM) counts as previous lo
   assert.ok(nextTimestamp - tuesdayEarly >= 12 * 60 * 60 * 1000);
 });
 
-runTest("Logical rollover: Morning review (09:00 AM) becomes due tomorrow at 4:00 AM", () => {
+await runTest("Logical rollover: Morning review (09:00 AM) becomes due tomorrow at 4:00 AM", () => {
   // Tuesday 2026-09-08 09:00:00 (9 AM)
   const tuesdayMorning = new Date(2026, 8, 8, 9, 0, 0).getTime();
   const nextTimestamp = calculateNextReviewTimestamp(1, tuesdayMorning, 4);
@@ -137,13 +137,13 @@ runTest("Logical rollover: Morning review (09:00 AM) becomes due tomorrow at 4:0
   assert.ok(nextTimestamp - tuesdayMorning >= 12 * 60 * 60 * 1000);
 });
 
-runTest("Lapse (interval 0) returns current timestamp immediately", () => {
+await runTest("Lapse (interval 0) returns current timestamp immediately", () => {
   const now = Date.now();
   const nextTimestamp = calculateNextReviewTimestamp(0, now, 4);
   assert.equal(nextTimestamp, now);
 });
 
-runTest("calculateFSRS5 advances new card to Review state on Good rating", () => {
+await runTest("calculateFSRS5 advances new card to Review state on Good rating", () => {
   const newCard = { id: "c1", front: "Question", back: "Answer" };
   const updated = calculateFSRS5(newCard, Rating.Good);
   assert.equal(updated.fsrs_stats.state, State.Review);
@@ -153,7 +153,7 @@ runTest("calculateFSRS5 advances new card to Review state on Good rating", () =>
   assert.equal(updated.fsrs_stats.lapses, 0);
 });
 
-runTest("calculateFSRS5 marks lapsed card as Relearning on Again rating", () => {
+await runTest("calculateFSRS5 marks lapsed card as Relearning on Again rating", () => {
   const reviewedCard = {
     id: "c1",
     front: "Q",
@@ -175,7 +175,7 @@ runTest("calculateFSRS5 marks lapsed card as Relearning on Again rating", () => 
 
 console.log("\n=== 2. SANITIZATION & FORMATTING TESTS ===");
 
-runTest("escapeHTML properly escapes dangerous characters", () => {
+await runTest("escapeHTML properly escapes dangerous characters", () => {
   const raw = `<script>alert("XSS" & 'hack')</script>`;
   const escaped = escapeHTML(raw);
   assert.ok(!escaped.includes("<"));
@@ -184,7 +184,7 @@ runTest("escapeHTML properly escapes dangerous characters", () => {
   assert.ok(escaped.includes("&amp;"));
 });
 
-runTest("sanitizeHTML preserves safe formatting tags and converts <br>", () => {
+await runTest("sanitizeHTML preserves safe formatting tags and converts <br>", () => {
   const input = `<b>Bold</b> <i>Italic</i> <br> <code>code</code>`;
   const sanitized = sanitizeHTML(input);
   assert.ok(sanitized.includes("<b>Bold</b>"));
@@ -193,7 +193,7 @@ runTest("sanitizeHTML preserves safe formatting tags and converts <br>", () => {
   assert.ok(sanitized.includes("<code>code</code>"));
 });
 
-runTest("sanitizeHTML neutralizes malicious script and event handlers", () => {
+await runTest("sanitizeHTML neutralizes malicious script and event handlers", () => {
   const input = `<img src=x onerror=alert(1)> <script>alert(2)</script>`;
   const sanitized = sanitizeHTML(input);
   assert.ok(!sanitized.includes("<script>"));
@@ -202,20 +202,20 @@ runTest("sanitizeHTML neutralizes malicious script and event handlers", () => {
   assert.ok(sanitized.includes("&lt;script&gt;alert(2)&lt;/script&gt;"));
 });
 
-runTest("plainText strips HTML and normalizes whitespace", () => {
+await runTest("plainText strips HTML and normalizes whitespace", () => {
   const input = `<b>Hello</b><br>world   &amp; test`;
   const plain = plainText(input);
   assert.equal(plain, "Hello world &amp; test");
 });
 
-runTest("limitText limits text length and appends ellipsis without exceeding limit", () => {
+await runTest("limitText limits text length and appends ellipsis without exceeding limit", () => {
   assert.equal(limitText("Short Deck", 20), "Short Deck");
   assert.equal(limitText("Super Long Deck Name Exceeding Twenty Characters", 20), "Super Long Deck Nam…");
   assert.equal(limitText("Super Long Deck Name Exceeding Twenty Characters", 20).length, 20);
   assert.equal(limitText("", 10), "");
 });
 
-runTest("formatDeckSelectionLabel formats and limits long collection names", () => {
+await runTest("formatDeckSelectionLabel formats and limits long collection names", () => {
   assert.equal(formatDeckSelectionLabel("all"), "📁 All Collections");
   assert.equal(formatDeckSelectionLabel("deck:Grammar"), "🗂️ Grammar");
   assert.equal(formatDeckSelectionLabel("deck:Super Long Deck Name Exceeding Twenty Characters", 20), "🗂️ Super Long Deck…");
@@ -224,12 +224,12 @@ runTest("formatDeckSelectionLabel formats and limits long collection names", () 
 
 console.log("\n=== 3. LOCAL TIME & STREAK TESTS ===");
 
-runTest("getLocalDateString returns YYYY-MM-DD for local date", () => {
+await runTest("getLocalDateString returns YYYY-MM-DD for local date", () => {
   const d = new Date(2026, 8, 3, 14, 30);
   assert.equal(getLocalDateString(d), "2026-09-03");
 });
 
-runTest("calculateStreak counts consecutive active days correctly", () => {
+await runTest("calculateStreak counts consecutive active days correctly", () => {
   const today = getLocalDateString(new Date());
   const yestDate = new Date();
   yestDate.setDate(yestDate.getDate() - 1);
@@ -248,7 +248,7 @@ runTest("calculateStreak counts consecutive active days correctly", () => {
   assert.equal(streak, 3);
 });
 
-runTest("calculateStreak handles yesterday review if user has not reviewed today yet", () => {
+await runTest("calculateStreak handles yesterday review if user has not reviewed today yet", () => {
   const yestDate = new Date();
   yestDate.setDate(yestDate.getDate() - 1);
   const yest = getLocalDateString(yestDate);
@@ -263,7 +263,7 @@ runTest("calculateStreak handles yesterday review if user has not reviewed today
 
 console.log("\n=== 4. CLOZE & BRACKET SAFETY TESTS ===");
 
-runTest("renderCardContent preserves standard IPA brackets [kæt] on both front and back", () => {
+await runTest("renderCardContent preserves standard IPA brackets [kæt] on both front and back", () => {
   const text = "What is the pronunciation of cat? [kæt]";
   const front = renderCardContent(text, false);
   const back = renderCardContent(text, true);
@@ -275,7 +275,7 @@ runTest("renderCardContent preserves standard IPA brackets [kæt] on both front 
   assert.ok(!back.includes("cloze-answer"));
 });
 
-runTest("renderCardContent preserves citation brackets [1] and math brackets [0, 1]", () => {
+await runTest("renderCardContent preserves citation brackets [1] and math brackets [0, 1]", () => {
   const text = "According to study [1], the range is [0, 1].";
   const front = renderCardContent(text, false);
   const back = renderCardContent(text, true);
@@ -285,7 +285,7 @@ runTest("renderCardContent preserves citation brackets [1] and math brackets [0,
   assert.ok(!front.includes("cloze-blank"));
 });
 
-runTest("renderCardContent formats explicit cloze {{c1::answer}} correctly", () => {
+await runTest("renderCardContent formats explicit cloze {{c1::answer}} correctly", () => {
   const text = "The capital of France is {{c1::Paris}}.";
   const front = renderCardContent(text, false);
   const back = renderCardContent(text, true);
@@ -294,7 +294,7 @@ runTest("renderCardContent formats explicit cloze {{c1::answer}} correctly", () 
   assert.ok(back.includes(`<span class="cloze-answer">Paris</span>`));
 });
 
-runTest("renderCardContent formats cloze with hint {{c1::Paris::city}} correctly", () => {
+await runTest("renderCardContent formats cloze with hint {{c1::Paris::city}} correctly", () => {
   const text = "The capital of France is {{c1::Paris::city}}.";
   const front = renderCardContent(text, false);
   const back = renderCardContent(text, true);
@@ -303,13 +303,13 @@ runTest("renderCardContent formats cloze with hint {{c1::Paris::city}} correctly
   assert.ok(back.includes(`<span class="cloze-answer">Paris</span>`));
 });
 
-runTest("renderCardContent formats expanded cloze [ ... ] on front", () => {
+await runTest("renderCardContent formats expanded cloze [ ... ] on front", () => {
   const text = "The capital of France is [ ... ].";
   const front = renderCardContent(text, false);
   assert.ok(front.includes(`<span class="cloze-blank">[ ... ]</span>`));
 });
 
-runTest("cleanHtmlTags strips HTML tags but preserves line breaks", () => {
+await runTest("cleanHtmlTags strips HTML tags but preserves line breaks", () => {
   const html = "<div>First line<br>Second line</div>";
   const cleaned = cleanHtmlTags(html);
   assert.ok(cleaned.includes("First line"));
@@ -318,7 +318,7 @@ runTest("cleanHtmlTags strips HTML tags but preserves line breaks", () => {
   assert.ok(!cleaned.includes("</div>"));
 });
 
-runTest("normalizeAnkiDeck splits multi-level deck names", () => {
+await runTest("normalizeAnkiDeck splits multi-level deck names", () => {
   const result = normalizeAnkiDeck("Languages::Spanish::Verbs");
   assert.equal(result.folder, "Languages");
   assert.equal(result.deck, "Spanish / Verbs");
@@ -328,7 +328,7 @@ runTest("normalizeAnkiDeck splits multi-level deck names", () => {
   assert.equal(single.deck, "Biology");
 });
 
-runTest("expandClozeCards expands multiple cloze deletions properly", () => {
+await runTest("expandClozeCards expands multiple cloze deletions properly", () => {
   const baseCard = {
     front: "The {{c1::quick}} brown {{c2::fox}} jumps.",
     back: "Extra note"
@@ -341,7 +341,7 @@ runTest("expandClozeCards expands multiple cloze deletions properly", () => {
   assert.ok(expanded[1].front.includes("quick"));
 });
 
-runTest("parseAnkiText parses tab-delimited Anki exports with headers", () => {
+await runTest("parseAnkiText parses tab-delimited Anki exports with headers", () => {
   const text = `#separator:tab\n#html:true\n#deck:Medical::Anatomy\nFront 1\tBack 1\tSub 1\nFront 2\tBack 2\tSub 2`;
   const cards = parseAnkiText(text);
   assert.equal(cards.length, 2);
@@ -353,7 +353,7 @@ runTest("parseAnkiText parses tab-delimited Anki exports with headers", () => {
 
 console.log("\n=== 5. SYNC & TOMBSTONE PRUNING TESTS ===");
 
-runTest("mergeCards applies Last-Write-Wins based on timestamp", () => {
+await runTest("mergeCards applies Last-Write-Wins based on timestamp", () => {
   const local = [{ id: "1", front: "Local newer", last_modified: 2000 }];
   const remote = [{ id: "1", front: "Remote older", last_modified: 1000 }];
 
@@ -362,7 +362,7 @@ runTest("mergeCards applies Last-Write-Wins based on timestamp", () => {
   assert.equal(merged[0].front, "Local newer");
 });
 
-runTest("mergeCards removes tombstones older than 30 days", () => {
+await runTest("mergeCards retains tombstones to prevent resurrection from long-offline devices", () => {
   const now = Date.now();
   const oldTombstone = { id: "del-old", front: "Deleted", deleted: true, last_modified: now - 35 * 86400000 };
   const freshTombstone = { id: "del-fresh", front: "Deleted", deleted: true, last_modified: now - 5 * 86400000 };
@@ -371,12 +371,12 @@ runTest("mergeCards removes tombstones older than 30 days", () => {
   const merged = mergeCards([oldTombstone, freshTombstone, activeCard], []);
   const ids = merged.map(c => c.id);
 
-  assert.ok(!ids.includes("del-old"), "Old tombstone should be pruned");
+  assert.ok(ids.includes("del-old"), "Old tombstone must be retained");
   assert.ok(ids.includes("del-fresh"), "Fresh tombstone should be kept");
   assert.ok(ids.includes("active"), "Active card should be kept");
 });
 
-runTest("cardsDiffer detects content, deletion, and timestamp differences", () => {
+await runTest("cardsDiffer detects content, deletion, and timestamp differences", () => {
   const a = [{ id: "1", front: "A", last_modified: 100 }];
   const b = [{ id: "1", front: "B", last_modified: 100 }];
   assert.equal(cardsDiffer(a, b), true);
@@ -385,7 +385,7 @@ runTest("cardsDiffer detects content, deletion, and timestamp differences", () =
   assert.equal(cardsDiffer(a, c), false);
 });
 
-runTest("sanitizeGistId extracts clean hex ID from URL, fragments, and queries", () => {
+await runTest("sanitizeGistId extracts clean hex ID from URL, fragments, and queries", () => {
   assert.equal(sanitizeGistId("https://gist.github.com/user/e30c449339485f8c6b738927498c0d9a"), "e30c449339485f8c6b738927498c0d9a");
   assert.equal(sanitizeGistId("https://gist.github.com/user/e30c449339485f8c6b738927498c0d9a#file-flashcards-json"), "e30c449339485f8c6b738927498c0d9a");
   assert.equal(sanitizeGistId("https://gist.github.com/user/e30c449339485f8c6b738927498c0d9a?foo=bar/"), "e30c449339485f8c6b738927498c0d9a");
@@ -395,7 +395,7 @@ runTest("sanitizeGistId extracts clean hex ID from URL, fragments, and queries",
   assert.equal(sanitizeGistId(null), "");
 });
 
-runTest("getCardTimestamp handles fallbacks, string conversion, and NaN safety", () => {
+await runTest("getCardTimestamp handles fallbacks, string conversion, and NaN safety", () => {
   assert.equal(getCardTimestamp(null), 0);
   assert.equal(getCardTimestamp({}), 0);
   assert.equal(getCardTimestamp({ created_at: 1000 }), 1000);
@@ -406,7 +406,7 @@ runTest("getCardTimestamp handles fallbacks, string conversion, and NaN safety",
   assert.equal(getCardTimestamp({ last_modified: "invalid" }), 0);
 });
 
-runTest("cardsDiffer detects duplicate IDs and non-array arguments", () => {
+await runTest("cardsDiffer detects duplicate IDs and non-array arguments", () => {
   assert.equal(cardsDiffer(null, []), true);
   assert.equal(cardsDiffer([], null), true);
   // Duplicate IDs in b
@@ -415,7 +415,7 @@ runTest("cardsDiffer detects duplicate IDs and non-array arguments", () => {
   assert.equal(cardsDiffer(a, b), true);
 });
 
-runTest("mergeCards prioritizes deletion tombstone when timestamps are equal", () => {
+await runTest("mergeCards prioritizes deletion tombstone when timestamps are equal", () => {
   const now = Date.now();
   const local = [{ id: "1", front: "Active", deleted: false, last_modified: now }];
   const remote = [{ id: "1", front: "Deleted", deleted: true, last_modified: now }];
@@ -426,7 +426,7 @@ runTest("mergeCards prioritizes deletion tombstone when timestamps are equal", (
 
 console.log("\n=== 6. SERVER PATH RESOLUTION SECURITY TESTS ===");
 
-runTest("Path resolution prevents sibling directory traversal", () => {
+await runTest("Path resolution prevents sibling directory traversal", () => {
   const __dirname = path.resolve("c:/Users/12/Desktop/app");
   const baseDir = path.resolve(__dirname);
 
@@ -448,7 +448,7 @@ runTest("Path resolution prevents sibling directory traversal", () => {
 
 console.log("\n=== 7. EXPORT LOGICAL ORDERING & SM2 PURGE TESTS ===");
 
-runTest("sortCardsLogically groups root cards, orders folders and natural decks", () => {
+await runTest("sortCardsLogically groups root cards, orders folders and natural decks", () => {
   const cards = [
     { front: "Social 1", folder: "Social", deck: "Smooth Exits", sub: "Exit" },
     { front: "Culinary 2", folder: "Culinary", deck: "Basics", sub: "Pan" },
@@ -468,7 +468,7 @@ runTest("sortCardsLogically groups root cards, orders folders and natural decks"
   assert.equal(sorted[5].folder, "Social");
 });
 
-runTest("calculateFSRS5 never creates or maintains sm2_stats", () => {
+await runTest("calculateFSRS5 never creates or maintains sm2_stats", () => {
   const card = {
     id: "fsrs-clean",
     front: "Q",
@@ -482,7 +482,7 @@ runTest("calculateFSRS5 never creates or maintains sm2_stats", () => {
   assert.ok(updated.fsrs_stats.stability > 0, "FSRS stability must be calculated");
 });
 
-runTest("Resetting FSRS data resets stats to default, purges legacy SM2, and preserves card content", () => {
+await runTest("Resetting FSRS data resets stats to default, purges legacy SM2, and preserves card content", () => {
   const card = {
     id: "card-reset-1",
     front: "Katakana",
@@ -537,9 +537,9 @@ runTest("Resetting FSRS data resets stats to default, purges legacy SM2, and pre
 
 console.log("\n=== 8. ONBOARDING & INTRODUCTION TOUR TESTS ===");
 
-runTest("INTRO_STEPS contains all essential app areas with valid metadata", () => {
+await runTest("INTRO_STEPS contains all essential app areas with valid metadata", () => {
   assert.ok(Array.isArray(INTRO_STEPS), "INTRO_STEPS must be an array");
-  assert.ok(INTRO_STEPS.length >= 6, "Must contain at least 6 guided steps");
+  assert.equal(INTRO_STEPS.length, 3, "Guide stays short and covers the core loop");
 
   const validViews = new Set(["view-review", "view-decks", "view-browser", "view-settings"]);
 
@@ -555,18 +555,14 @@ runTest("INTRO_STEPS contains all essential app areas with valid metadata", () =
   assert.equal(INTRO_STEPS[0].id, "welcome");
   assert.ok(INTRO_STEPS[0].bodyHtml.includes("skip"), "Step 1 must explicitly mention skipping");
 
-  // Check key area steps exist
   const stepIds = INTRO_STEPS.map(s => s.id);
-  assert.ok(stepIds.includes("dashboard"), "Must have dashboard step");
-  assert.ok(stepIds.includes("study-practice"), "Must have study vs practice step");
-  assert.ok(stepIds.includes("decks-explorer"), "Must have deck explorer step");
-  assert.ok(stepIds.includes("card-browser"), "Must have card browser step");
-  assert.ok(stepIds.includes("settings-sync"), "Must have settings and sync step");
+  assert.ok(stepIds.includes("study-practice"), "Guide explains the two review choices");
+  assert.ok(stepIds.includes("cards-settings"), "Guide explains where secondary tools live");
 });
 
 console.log("\n=== 9. PRACTICE BUFFER & LOCAL RETENTION ENGINE TESTS ===");
 
-runTest("createPracticeSession caps workingSet at 4 cards and queues remainder", () => {
+await runTest("createPracticeSession caps workingSet at 4 cards and queues remainder", () => {
   const dummyCards = Array.from({ length: 10 }, (_, i) => ({
     id: `card_${i + 1}`,
     front: `Front ${i + 1}`,
@@ -590,7 +586,7 @@ runTest("createPracticeSession caps workingSet at 4 cards and queues remainder",
   });
 });
 
-runTest("createPracticeSession handles decks smaller than batch size", () => {
+await runTest("createPracticeSession handles decks smaller than batch size", () => {
   const dummyCards = [
     { id: "c1", front: "1", back: "1" },
     { id: "c2", front: "2", back: "2" }
@@ -601,7 +597,7 @@ runTest("createPracticeSession handles decks smaller than batch size", () => {
   assert.equal(session.totalCards, 2);
 });
 
-runTest("pickNextPracticeCard avoids immediate back-to-back repetitions", () => {
+await runTest("pickNextPracticeCard avoids immediate back-to-back repetitions", () => {
   const dummyCards = [
     { id: "c1", front: "A", back: "A" },
     { id: "c2", front: "B", back: "B" },
@@ -615,7 +611,7 @@ runTest("pickNextPracticeCard avoids immediate back-to-back repetitions", () => 
   assert.notEqual(next.id, "c1", "Should not pick c1 immediately after reviewing c1");
 });
 
-runTest("pickNextPracticeCard prioritizes cards with lower streak", () => {
+await runTest("pickNextPracticeCard prioritizes cards with lower streak", () => {
   const dummyCards = [
     { id: "c1", front: "A", back: "A" },
     { id: "c2", front: "B", back: "B" },
@@ -633,7 +629,7 @@ runTest("pickNextPracticeCard prioritizes cards with lower streak", () => {
   assert.equal(next.id, "c3", "Must pick card c3 which has lowest streak (0)");
 });
 
-runTest("processPracticeGrade increments streak on Good and graduates at target", () => {
+await runTest("processPracticeGrade increments streak on Good and graduates at target", () => {
   const dummyCards = [
     { id: "c1", front: "A", back: "A" },
     { id: "c2", front: "B", back: "B" },
@@ -669,7 +665,7 @@ runTest("processPracticeGrade increments streak on Good and graduates at target"
   assert.equal(session.pendingQueue.length, 0, "Pending queue should now have 0 cards");
 });
 
-runTest("processPracticeGrade resets streak to 0 and schedules urgent retry on Again", () => {
+await runTest("processPracticeGrade resets streak to 0 and schedules urgent retry on Again", () => {
   const dummyCards = [
     { id: "c1", front: "A", back: "A" },
     { id: "c2", front: "B", back: "B" }
@@ -687,7 +683,7 @@ runTest("processPracticeGrade resets streak to 0 and schedules urgent retry on A
   assert.equal(st.nextDueTurn, session.currentTurn, "nextDueTurn must be scheduled 1 turn ahead");
 });
 
-runTest("processPracticeGrade with Easy advances streak by 2 and can graduate", () => {
+await runTest("processPracticeGrade with Easy advances streak by 2 and can graduate", () => {
   const dummyCards = [
     { id: "c1", front: "A", back: "A" },
     { id: "c2", front: "B", back: "B" }
@@ -700,7 +696,7 @@ runTest("processPracticeGrade with Easy advances streak by 2 and can graduate", 
   assert.equal(res.graduated, true, "Card should graduate when reaching 3 streak");
 });
 
-runTest("Full practice simulation: 6 cards cycle and graduate completely", () => {
+await runTest("Full practice simulation: 6 cards cycle and graduate completely", () => {
   const dummyCards = Array.from({ length: 6 }, (_, i) => ({
     id: `card_${i + 1}`,
     front: `Q${i + 1}`,
@@ -726,7 +722,7 @@ runTest("Full practice simulation: 6 cards cycle and graduate completely", () =>
   assert.ok(steps < maxSteps, "Should finish cleanly without infinite loop");
 });
 
-runTest("skipPracticeCard moves card to deferredQueue and pulls new card from pendingQueue", () => {
+await runTest("skipPracticeCard moves card to deferredQueue and pulls new card from pendingQueue", () => {
   const dummyCards = [
     { id: "c1", front: "1", back: "1" },
     { id: "c2", front: "2", back: "2" }, // troublesome leech
@@ -754,7 +750,7 @@ runTest("skipPracticeCard moves card to deferredQueue and pulls new card from pe
   assert.equal(session.pendingQueue.length, 1, "Pending queue should now have 1 card (c6)");
 });
 
-runTest("deferred cards return automatically at end of session and graduate completely", () => {
+await runTest("deferred cards return automatically at end of session and graduate completely", () => {
   const dummyCards = [
     { id: "c1", front: "1", back: "1" },
     { id: "c2", front: "2", back: "2" },
@@ -787,13 +783,13 @@ runTest("deferred cards return automatically at end of session and graduate comp
 
 console.log("\n=== 10. PRELOADED JLPT N5 KANJI DECK TESTS ===");
 
-runTest("JLPT_N5_KANJI_DECK contains exactly 104 canonical N5 kanji characters", () => {
+await runTest("JLPT_N5_KANJI_DECK contains exactly 104 canonical N5 kanji characters", () => {
   assert.equal(JLPT_N5_KANJI_DECK.length, 104);
   assert.equal(STARTER_FOLDER, "Japanese");
   assert.equal(STARTER_DECK, "JLPT N5 Kanji");
 });
 
-runTest("Every JLPT N5 Kanji card has valid front, back, and description without front spoilers", () => {
+await runTest("Every JLPT N5 Kanji card has valid front, back, and description without front spoilers", () => {
   const frontSet = new Set();
 
   for (const card of JLPT_N5_KANJI_DECK) {
@@ -819,7 +815,7 @@ runTest("Every JLPT N5 Kanji card has valid front, back, and description without
 
 console.log("\n=== 11. DATA-SCIENCE COGNITIVE ANALYTICS & RETENTION TESTS ===");
 
-runTest("wilsonScoreInterval returns zero bounds for empty trials", () => {
+await runTest("wilsonScoreInterval returns zero bounds for empty trials", () => {
   const ci = wilsonScoreInterval(0, 0);
   assert.equal(ci.center, 0);
   assert.equal(ci.lower, 0);
@@ -828,7 +824,7 @@ runTest("wilsonScoreInterval returns zero bounds for empty trials", () => {
   assert.equal(ci.formatted, "0.0% (±0.0%)");
 });
 
-runTest("wilsonScoreInterval computes mathematically sound 95% CI bounds", () => {
+await runTest("wilsonScoreInterval computes mathematically sound 95% CI bounds", () => {
   // 90 passes out of 100 trials
   const ci = wilsonScoreInterval(90, 100);
   assert.equal(ci.p, 0.9);
@@ -844,7 +840,7 @@ runTest("wilsonScoreInterval computes mathematically sound 95% CI bounds", () =>
   assert.ok(ciSmall.lower < 0.65, `Small sample lower bound should reflect high uncertainty: ${ciSmall.lower}`);
 });
 
-runTest("calculateLeechSeverity accounts for lapses, difficulty, and attenuates with stability", () => {
+await runTest("calculateLeechSeverity accounts for lapses, difficulty, and attenuates with stability", () => {
   // 0 lapses -> 0 LSI
   assert.equal(calculateLeechSeverity(0, 8.0, 1.0), 0);
 
@@ -857,7 +853,7 @@ runTest("calculateLeechSeverity accounts for lapses, difficulty, and attenuates 
   assert.ok(lsiMature < lsiHighFriction * 0.4, `Mature card LSI must attenuate with stability: ${lsiMature}`);
 });
 
-runTest("calculateEfficiencyScore scales logically with retention and stability velocity", () => {
+await runTest("calculateEfficiencyScore scales logically with retention and stability velocity", () => {
   const highEff = calculateEfficiencyScore({
     retentionRate: 0.92,
     targetRetention: 0.90,
@@ -879,7 +875,7 @@ runTest("calculateEfficiencyScore scales logically with retention and stability 
   assert.ok(lowEff.grade === "D" || lowEff.grade === "C");
 });
 
-runTest("analyzeDecks groups cards and review logs, computing retention, velocity, and health", () => {
+await runTest("analyzeDecks groups cards and review logs, computing retention, velocity, and health", () => {
   const mockCards = [
     { id: "c1", deck: "Spanish", folder: "Languages", fsrs_stats: { state: 2, stability: 12, difficulty: 4.5, lapses: 0, repetitions: 4 } },
     { id: "c2", deck: "Spanish", folder: "Languages", fsrs_stats: { state: 2, stability: 15, difficulty: 5.0, lapses: 1, repetitions: 5 } },
@@ -934,7 +930,7 @@ runTest("analyzeDecks groups cards and review logs, computing retention, velocit
   assert.equal(result.summary.failedReviews, 8);
 });
 
-runTest("analyzeCardFriction correctly detects leeches, treadmills, and slow response latency", () => {
+await runTest("analyzeCardFriction correctly detects leeches, treadmills, and slow response latency", () => {
   const cards = [
     { id: "easy_card", front: "Hola", back: "Hello", fsrs_stats: { lapses: 0, repetitions: 5, stability: 25, difficulty: 2.0 } },
     { id: "leech_card", front: "Complicado", back: "Complicated", fsrs_stats: { lapses: 6, repetitions: 8, stability: 1.1, difficulty: 9.0 } },
@@ -960,7 +956,7 @@ runTest("analyzeCardFriction correctly detects leeches, treadmills, and slow res
   assert.ok(treadmill.flags.includes("memory_treadmill"));
 });
 
-runTest("analyzeErgonomics calculates 24-hour circadian profile and timeliness breakdown", () => {
+await runTest("analyzeErgonomics calculates 24-hour circadian profile and timeliness breakdown", () => {
   const now = new Date(2026, 8, 6, 10, 30, 0).getTime(); // 10:30 AM
   const mockLogs = [
     // 10:00 AM reviews (high pass)
@@ -994,7 +990,7 @@ runTest("analyzeErgonomics calculates 24-hour circadian profile and timeliness b
   assert.equal(ergo.timeliness.overdue_severe.retention, 0.5);
 });
 
-runTest("calculateModelCalibration evaluates Brier score and decile reliability bins", () => {
+await runTest("calculateModelCalibration evaluates Brier score and decile reliability bins", () => {
   const mockLogs = [
     // Card with stability 10 days, elapsed 1 day -> predicted retrievability ~98%
     { grade: 3, elapsed_days: 1.0, stability_before: 10.0 },
@@ -1010,7 +1006,7 @@ runTest("calculateModelCalibration evaluates Brier score and decile reliability 
   assert.equal(cal.bins.length, 5);
 });
 
-runTest("generatePrescriptions provides actionable alerts for failing decks and leeches", () => {
+await runTest("generatePrescriptions provides actionable alerts for failing decks and leeches", () => {
   const mockDeckAnalytics = {
     decks: [
       { key: "Failing Deck", deck: "Failing Deck", totalReviews: 20, empiricalRetention: 0.65, healthStatus: "critical_friction", leechCount: 5 }
@@ -1047,7 +1043,7 @@ runTest("generatePrescriptions provides actionable alerts for failing decks and 
 
 console.log("\n=== 12. COGNITIVE ANALYTICS BOUNDARIES & SERVICE WORKER AUDIT ===");
 
-runTest("wilsonScoreInterval handles extreme boundary conditions (0/0, 0/100, 100/100, large N)", () => {
+await runTest("wilsonScoreInterval handles extreme boundary conditions (0/0, 0/100, 100/100, large N)", () => {
   const empty = wilsonScoreInterval(0, 0);
   assert.equal(empty.center, 0);
   assert.equal(empty.lower, 0);
@@ -1065,7 +1061,7 @@ runTest("wilsonScoreInterval handles extreme boundary conditions (0/0, 0/100, 10
   assert.ok(largeN.margin < 0.01);
 });
 
-runTest("calculateLeechSeverity strictly attenuates for mature stable memories", () => {
+await runTest("calculateLeechSeverity strictly attenuates for mature stable memories", () => {
   // Same lapses (4) and difficulty (8.0), but stability 0.1d vs 60d
   const volatileLeech = calculateLeechSeverity(4, 8.0, 0.1, 4);
   const matureCard = calculateLeechSeverity(4, 8.0, 60.0, 15);
@@ -1073,7 +1069,7 @@ runTest("calculateLeechSeverity strictly attenuates for mature stable memories",
   assert.equal(calculateLeechSeverity(0, 8.0, 0.1, 0), 0, "Zero lapses must always yield 0 LSI");
 });
 
-runTest("calculateModelCalibration handles logs with zero stability without NaN errors", () => {
+await runTest("calculateModelCalibration handles logs with zero stability without NaN errors", () => {
   const blankLogs = [
     { grade: 3, elapsed_days: 0, stability_before: 0 },
     { grade: 1, elapsed_days: 2, stability_before: null }
@@ -1084,9 +1080,8 @@ runTest("calculateModelCalibration handles logs with zero stability without NaN 
   assert.equal(isNaN(cal.brierScore), false);
 });
 
-runTest("Service Worker cache manifest includes all newly integrated modules", async () => {
-  const fs = await import("fs");
-  const swCode = fs.readFileSync(path.resolve("c:/Users/12/Desktop/app/sw.js"), "utf8");
+await runTest("Service Worker cache manifest includes all newly integrated modules", async () => {
+  const swCode = fs.readFileSync(path.join(__dirname, "../precache-manifest.js"), "utf8");
   assert.ok(swCode.includes("./js/analytics.js"), "sw.js must cache js/analytics.js");
   assert.ok(swCode.includes("./js/analytics-ui.js"), "sw.js must cache js/analytics-ui.js");
   assert.ok(swCode.includes("./js/intro.js"), "sw.js must cache js/intro.js");
@@ -1095,7 +1090,7 @@ runTest("Service Worker cache manifest includes all newly integrated modules", a
 
 console.log("\n=== 13. ANALYTICS COLLECTION FILTER & REVIEW EXPLORER TESTS ===");
 
-runTest("matchesDeckSelection correctly scopes cards by folder, deck, and root wildcard", () => {
+await runTest("matchesDeckSelection correctly scopes cards by folder, deck, and root wildcard", () => {
   const c1 = { id: "1", folder: "Japanese", deck: "JLPT N5 Kanji" };
   const c2 = { id: "2", folder: "Japanese", deck: "Grammar" };
   const c3 = { id: "3", folder: "Spanish", deck: "Verbs" };
@@ -1120,7 +1115,7 @@ runTest("matchesDeckSelection correctly scopes cards by folder, deck, and root w
   assert.equal(matchesDeckSelection(c1, "deck:General"), false);
 });
 
-runTest("Analytics dataset scoping isolates deck-specific cards and associated review logs", () => {
+await runTest("Analytics dataset scoping isolates deck-specific cards and associated review logs", () => {
   const cards = [
     { id: "c1", folder: "Japanese", deck: "JLPT N5 Kanji" },
     { id: "c2", folder: "Japanese", deck: "Grammar" },
@@ -1153,7 +1148,7 @@ runTest("Analytics dataset scoping isolates deck-specific cards and associated r
   assert.ok(scopedLogs.some(l => l.card_id === "orphan"));
 });
 
-runTest("Review Explorer state properly initializes and updates directory navigation and search", () => {
+await runTest("Review Explorer state properly initializes and updates directory navigation and search", () => {
   assert.ok(reviewExplorerState !== undefined);
   assert.equal(typeof reviewExplorerState.viewMode, "string");
 
@@ -1171,7 +1166,7 @@ runTest("Review Explorer state properly initializes and updates directory naviga
   assert.equal(reviewExplorerState.searchQuery, "");
 });
 
-runTest("Review Explorer view mode toggles cleanly between grid and list", () => {
+await runTest("Review Explorer view mode toggles cleanly between grid and list", () => {
   reviewExplorerState.viewMode = "grid";
   assert.equal(reviewExplorerState.viewMode, "grid");
 
@@ -1183,7 +1178,7 @@ runTest("Review Explorer view mode toggles cleanly between grid and list", () =>
   assert.equal(reviewExplorerState.viewMode, "grid");
 });
 
-runTest("showModal supports custom button labels, explicit actions, and dismiss handling for completed sessions", () => {
+await runTest("showModal supports custom button labels, explicit actions, and dismiss handling for completed sessions", () => {
   let confirmed = false;
   let cancelled = false;
   let dismissed = false;
@@ -1240,13 +1235,13 @@ runTest("showModal supports custom button labels, explicit actions, and dismiss 
 
 console.log("\n=== 14. LAYOUT HIERARCHY, 2-MODE REVIEW & SEGMENTED TABS TESTS ===");
 
-runTest("Review 2-mode layout and segmented deck tabs exist in index.html", () => {
+await runTest("Review 2-mode layout and segmented deck tabs exist in index.html", () => {
   const htmlContent = fs.readFileSync(path.join(__dirname, "../index.html"), "utf8");
 
   // Verify Mode 1 & Mode 2 elements in Hero Study Hub
   assert.ok(htmlContent.includes('id="btn-start-review"'), "Mode 1 start review button must exist");
   assert.ok(htmlContent.includes('id="btn-force-review"'), "Mode 1 practice mode button must exist");
-  assert.ok(htmlContent.includes('id="btn-dashboard-deck-picker"'), "Mode 2 choose deck explorer button must exist");
+  assert.ok(htmlContent.includes('id="today-deck-select"'), "Mode 2 choose deck explorer button must exist");
   assert.ok(htmlContent.includes('id="btn-dashboard-reset-deck"'), "Mode 2 reset to all decks button must exist");
   assert.ok(htmlContent.includes('id="hero-due-large-num"'), "Hero due large number must exist");
   assert.ok(htmlContent.includes('id="hero-due-status-title"'), "Hero due status title must exist");
@@ -1269,7 +1264,7 @@ runTest("Review 2-mode layout and segmented deck tabs exist in index.html", () =
   });
 });
 
-runTest("Decks segmented tab switching updates active classes and visibility", () => {
+await runTest("Decks segmented tab switching updates active classes and visibility", () => {
   const tabs = [
     { dataset: { deckTab: "tab-collections" }, classList: new Set(["active"]), setAttribute: () => {} },
     { dataset: { deckTab: "tab-browser" }, classList: new Set(), setAttribute: () => {} },
@@ -1311,7 +1306,7 @@ runTest("Decks segmented tab switching updates active classes and visibility", (
   assert.ok(panels[1].classList.has("hidden"), "tab-browser panel must be hidden");
 });
 
-runTest("Deck Practice Mode buttons exist in Explorer, Hero, and Context Menu", () => {
+await runTest("Deck Practice Mode buttons exist in Explorer, Hero, and Context Menu", () => {
   const explorerContent = fs.readFileSync(path.join(__dirname, "../js/explorer.js"), "utf8");
   const actionsContent = fs.readFileSync(path.join(__dirname, "../js/explorer-actions.js"), "utf8");
   const htmlContent = fs.readFileSync(path.join(__dirname, "../index.html"), "utf8");

@@ -1,122 +1,33 @@
-/**
- * Service Worker for anamnesis PWA
- * Implements Network-First caching with offline fallback.
- */
-
-const CACHE_NAME = "anamnesis-v39";
-const FONT_CACHE_NAME = "anamnesis-fonts-v1";
-const ASSETS_TO_CACHE = [
-  "./",
-  "./index.html",
-  "./style.css",
-  "./favicon.svg",
-  "./favicon.ico",
-  "./app.js",
-  "./db.js",
-  "./fsrs.js",
-  "./sync.js",
-  "./anki.js",
-  "./manifest.json",
-  "./icons/favicon-16x16.png",
-  "./icons/favicon-32x32.png",
-  "./icons/apple-touch-icon.png",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png",
-  "./js/state.js",
-  "./js/utils.js",
-  "./js/ui.js",
-  "./js/dashboard.js",
-  "./js/study.js",
-  "./js/import.js",
-  "./js/settings.js",
-  "./js/browser.js",
-  "./js/explorer.js",
-  "./js/explorer-state.js",
-  "./js/explorer-actions.js",
-  "./js/cards.js",
-  "./js/picker.js",
-  "./js/intro.js",
-  "./js/presets.js",
-  "./js/analytics.js",
-  "./js/analytics-ui.js"
-];
-
-self.addEventListener("install", event => {
-  self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      console.log("SW: Pre-caching static assets");
-      return cache.addAll(ASSETS_TO_CACHE);
-    })
-  );
+/** Release-consistent app shell; updates activate after existing tabs close. */
+importScripts('./precache-manifest.js');
+const CACHE_NAME = `anamnesis-${self.APP_RELEASE}`;
+const ASSETS = new Set(self.APP_ASSETS.map(asset => new URL(asset, self.registration.scope).href));
+self.addEventListener('install', event => {
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(self.APP_ASSETS)));
 });
-
-self.addEventListener("activate", event => {
-  event.waitUntil(
-    caches.keys().then(names =>
-      Promise.all(names.map(name => {
-        if (name !== CACHE_NAME && name !== FONT_CACHE_NAME) {
-          console.log("SW: Deleting old cache:", name);
-          return caches.delete(name);
-        }
-      }))
-    ).then(() => self.clients.claim())
-  );
+self.addEventListener('activate', event => {
+  event.waitUntil((async () => {
+    for (const name of await caches.keys()) {
+      if (name.startsWith('anamnesis-') && name !== CACHE_NAME) await caches.delete(name);
+    }
+    await self.clients.claim();
+  })());
 });
-
-self.addEventListener("fetch", event => {
-  if (event.request.method !== "GET") return;
-
-  const url = new URL(event.request.url);
-
-  // Runtime cache for Google Fonts (both stylesheet and webfont files)
-  if (url.origin === "https://fonts.googleapis.com" || url.origin === "https://fonts.gstatic.com") {
-    event.respondWith(
-      caches.open(FONT_CACHE_NAME).then(async cache => {
-        const cached = await cache.match(event.request);
-        if (cached) return cached;
-        try {
-          const res = await fetch(event.request);
-          if (res && res.status === 200) {
-            cache.put(event.request, res.clone());
-          }
-          return res;
-        } catch (e) {
-          return cached || new Response("", { status: 408 });
-        }
-      })
-    );
-    return;
-  }
-
-  // Only handle local same-origin assets from here
+self.addEventListener('fetch', event => {
+  const request = event.request;
+  if (request.method !== 'GET') return;
+  const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-
-  // Stale-While-Revalidate for instant startup + background update
-  event.respondWith(
-    caches.match(event.request).then(cached => {
-      const fetchPromise = fetch(event.request)
-        .then(res => {
-          if (res && res.status === 200) {
-            const clone = res.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-          }
-          return res;
-        })
-        .catch(async () => {
-          if (cached) return cached;
-          if (event.request.mode === "navigate") {
-            const fallback = await caches.match("./index.html") || await caches.match("./");
-            if (fallback) return fallback;
-          }
-          return new Response("Offline", { status: 503, statusText: "Service Unavailable" });
-        });
-
-      return cached || fetchPromise;
-    })
-  );
+  if (request.mode !== 'navigate' && !ASSETS.has(url.href)) return;
+  event.respondWith((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    if (request.mode === 'navigate') {
+      const shell = await cache.match(new URL('./index.html', self.registration.scope));
+      if (shell) return shell;
+    }
+    const cached = await cache.match(request);
+    if (cached) return cached;
+    try { return await fetch(request); }
+    catch { return new Response('Offline. Reconnect once to install this release.', { status: 503, headers: { 'Content-Type': 'text/plain' } }); }
+  })());
 });
-
-
-
-

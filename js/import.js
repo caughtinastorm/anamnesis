@@ -1,3 +1,4 @@
+import { importAnkiPackage } from "./services/anki-import.js";
 /**
  * Universal Importer (10/10 Enterprise Grade)
  * 
@@ -10,10 +11,10 @@
  * 6. Anki package (.apkg) & text import pipeline.
  */
 
-import { state } from "./state.js";
+import { cardState, importState } from "./state.js";
 import { dom, showToast, showPromptModal, scrollToElement, switchView } from "./ui.js";
 import { generateUUID, escapeHTML, sanitizeHTML } from "./utils.js";
-import { parseAnkiApkg, parseAnkiText, normalizeAnkiDeck, expandClozeCards, cleanHtmlTags } from "../anki.js";
+import { parseAnkiText, normalizeAnkiDeck, expandClozeCards, cleanHtmlTags } from "../anki.js";
 import { createDefaultFSRSStats } from "../fsrs.js";
 import * as db from "../db.js";
 import { loadCardsFromDB } from "./cards.js";
@@ -143,7 +144,7 @@ export function populateImportDestinationSuggestions() {
   const folderNames = new Set();
   const deckNames = new Set();
 
-  state.allCards.forEach(c => {
+  cardState.allCards.forEach(c => {
     if (c.deleted) return;
     if (c.folder && c.folder.trim()) folderNames.add(c.folder.trim());
     if (c.deck && c.deck.trim()) deckNames.add(c.deck.trim());
@@ -184,19 +185,20 @@ async function handleFileSelect(e) {
     if (dom.importFileName) dom.importFileName.textContent = "No file chosen";
     return;
   }
+  if (file.size > 100 * 1024 * 1024) { showToast("File exceeds the 100 MB limit", "error"); return; }
   if (dom.importFileName) dom.importFileName.textContent = file.name;
 
   if (file.name.toLowerCase().endsWith(".apkg")) {
     showToast("Reading Anki package...", "info");
     try {
       const buf = await file.arrayBuffer();
-      state.tempParsedCards = await parseAnkiApkg(buf);
-      if (!state.tempParsedCards.length) {
+      importState.tempParsedCards = await importAnkiPackage(buf);
+      if (!importState.tempParsedCards.length) {
         showToast("No cards found in Anki package", "error");
         return;
       }
-      renderImportPreview(state.tempParsedCards);
-      showToast(`Parsed ${state.tempParsedCards.length} cards from Anki deck!`, "success");
+      renderImportPreview(importState.tempParsedCards);
+      showToast(`Parsed ${importState.tempParsedCards.length} cards from Anki deck!`, "success");
     } catch (err) {
       console.error(err);
       showToast(`Anki parse error: ${err.message}`, "error");
@@ -221,18 +223,18 @@ function handleCSVParseClick() {
 
   try {
     if (text.startsWith("#") || text.includes("#separator:") || text.includes("#deck:")) {
-      state.tempParsedCards = parseAnkiText(text);
+      importState.tempParsedCards = parseAnkiText(text);
     } else {
-      state.tempParsedCards = parseCSV(text);
+      importState.tempParsedCards = parseCSV(text);
     }
 
-    if (!state.tempParsedCards || !state.tempParsedCards.length) {
+    if (!importState.tempParsedCards || !importState.tempParsedCards.length) {
       showToast("No valid flashcard rows found in input", "error");
       return;
     }
 
-    renderImportPreview(state.tempParsedCards);
-    showToast(`Found ${state.tempParsedCards.length} cards ready to import!`, "success");
+    renderImportPreview(importState.tempParsedCards);
+    showToast(`Found ${importState.tempParsedCards.length} cards ready to import!`, "success");
   } catch (err) {
     console.error(err);
     showToast(`Error parsing content: ${err.message}`, "error");
@@ -578,7 +580,7 @@ function renderImportPreview(cards) {
 }
 
 function clearImportPreview() {
-  state.tempParsedCards = [];
+  importState.tempParsedCards = [];
   importPreviewCards = [];
   importRenderedCount = 0;
   if (dom.previewTableBody) dom.previewTableBody.innerHTML = "";
@@ -588,20 +590,25 @@ function clearImportPreview() {
   if (dom.importFileName) dom.importFileName.textContent = "No file chosen";
 }
 
+let importBusy = false;
 async function commitImportedCards() {
-  if (!state.tempParsedCards || !state.tempParsedCards.length) return;
+  if (importBusy) return;
+  if (!importState.tempParsedCards || !importState.tempParsedCards.length) return;
+
+  importBusy = true;
+  if (dom.btnConfirmImport) dom.btnConfirmImport.disabled = true;
 
   // Auto-backup current state before importing
-  if (state.allCards && state.allCards.length > 0) {
+  if (cardState.allCards && cardState.allCards.length > 0) {
     try {
-      await db.createLocalBackup(`Pre-Import (${state.tempParsedCards.length} cards)`, state.allCards);
+      await db.createLocalBackup(`Pre-Import (${importState.tempParsedCards.length} cards)`, cardState.allCards);
     } catch (e) {
       console.warn("Failed to create pre-import backup:", e);
     }
   }
 
   const now = Date.now();
-  const prepared = state.tempParsedCards.map(c => ({
+  const prepared = importState.tempParsedCards.map(c => ({
     id: generateUUID(),
     front: c.front,
     sub: c.sub || undefined,
@@ -623,5 +630,5 @@ async function commitImportedCards() {
   } catch (e) {
     console.error(e);
     showToast("Failed to write cards to local database", "error");
-  }
+  } finally { importBusy = false; if (dom.btnConfirmImport) dom.btnConfirmImport.disabled = false; }
 }

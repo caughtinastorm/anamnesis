@@ -1,9 +1,11 @@
-﻿/**
- * Anki Deck Transformer & Importer (10/10 Enterprise Grade)
+import { unzipSync } from './vendor/fflate.js';
+
+/**
+ * Anki text and package importer
  * 
  * Features:
- * 1. Pure client-side ZIP unpacking via native DecompressionStream.
- * 2. SQLite binary scanning with safe UTF-8 decoding and multi-deck preservation.
+ * 1. Client-side ZIP extraction with declared-size limits.
+ * 2. SQLite queries with note, card and deck mapping.
  * 3. Authentic Cloze Expansion: generates individual cards for {{c1::...}}, {{c2::...}}, etc.
  * 4. HTML entity decoding & sanitization (handles &nbsp;, <br>, <div>, [sound:...], hints).
  * 5. Flexible Anki text/TSV parsing (#separator:, #deck:, etc.).
@@ -15,25 +17,26 @@
  * @returns {Promise<Array<Object>>} List of parsed flashcard objects
  */
 export async function parseAnkiApkg(arrayBuffer) {
-  try {
-    const files = await unzipBuffer(arrayBuffer);
-    
-    // Find collection database (Anki 2.0 or Anki 2.1)
-    const dbFile = files['collection.anki2'] || files['collection.anki21'];
-    if (!dbFile) {
-      throw new Error('Invalid .apkg archive: collection database not found.');
+  if (arrayBuffer.byteLength > 100 * 1024 * 1024) throw new Error('Anki package exceeds the 100 MB limit.');
+  const files = unzipSync(new Uint8Array(arrayBuffer), {
+    filter: file => {
+      if (!['collection.anki2', 'collection.anki21', 'collection.anki21b'].includes(file.name)) return false;
+      if (file.originalSize > 100 * 1024 * 1024) throw new Error('Anki database exceeds the 100 MB limit.');
+      return true;
     }
-
-    const cards = parseAnkiDatabase(dbFile);
-    if (!cards || cards.length === 0) {
-      throw new Error('No flashcards found inside the Anki package.');
-    }
-
-    return cards;
-  } catch (err) {
-    console.error('Error parsing Anki .apkg:', err);
-    throw err;
+  });
+  if (files['collection.anki21b']) throw new Error('This newer Anki package format is not supported. Export with “Support older Anki versions”, or use a text export.');
+  const data = files['collection.anki21'] || files['collection.anki2'];
+  if (!data) throw new Error('Anki package has no collection database.');
+  let SQL;
+  if (typeof process !== 'undefined' && process.versions?.node) {
+    const { default: initialize } = await import('sql.js');
+    SQL = await initialize();
+  } else {
+    const { default: initialize } = await import('./vendor/sql-wasm-browser.js');
+    SQL = await initialize({ locateFile: file => new URL(`./vendor/${file}`, import.meta.url).href });
   }
+  return parseAnkiDatabase(data, SQL);
 }
 
 /**
@@ -205,230 +208,49 @@ export function expandClozeCards(card) {
   return generatedCards;
 }
 
-/**
- * Lightweight in-memory ZIP unpacker using native browser DecompressionStream
- */
-async function unzipBuffer(buffer) {
-  const view = new DataView(buffer);
-  const bytes = new Uint8Array(buffer);
-  const files = {};
-
-  // Find End of Central Directory (EOCD) signature 0x06054b50 from end
-  let eocdOffset = -1;
-  for (let i = buffer.byteLength - 22; i >= 0; i--) {
-    if (view.getUint32(i, true) === 0x06054b50) {
-      eocdOffset = i;
-      break;
-    }
-  }
-
-  if (eocdOffset === -1) {
-    throw new Error('Invalid ZIP archive: End of Central Directory record not found.');
-  }
-
-  const cdEntries = view.getUint16(eocdOffset + 10, true);
-  const cdOffset = view.getUint32(eocdOffset + 16, true);
-
-  let curOffset = cdOffset;
-  const decoder = new TextDecoder('utf-8');
-
-  for (let i = 0; i < cdEntries; i++) {
-    if (view.getUint32(curOffset, true) !== 0x02014b50) {
-      break;
-    }
-
-    const compressionMethod = view.getUint16(curOffset + 10, true);
-    const compressedSize = view.getUint32(curOffset + 20, true);
-    const uncompressedSize = view.getUint32(curOffset + 24, true);
-    const fileNameLength = view.getUint16(curOffset + 28, true);
-    const extraLength = view.getUint16(curOffset + 30, true);
-    const commentLength = view.getUint16(curOffset + 32, true);
-    const localHeaderOffset = view.getUint32(curOffset + 42, true);
-
-    const fileNameBytes = bytes.subarray(curOffset + 46, curOffset + 46 + fileNameLength);
-    const fileName = decoder.decode(fileNameBytes);
-
-    curOffset += 46 + fileNameLength + extraLength + commentLength;
-
-    if (view.getUint32(localHeaderOffset, true) !== 0x04034b50) {
-      continue;
-    }
-
-    const localFileNameLength = view.getUint16(localHeaderOffset + 26, true);
-    const localExtraLength = view.getUint16(localHeaderOffset + 28, true);
-    const dataOffset = localHeaderOffset + 30 + localFileNameLength + localExtraLength;
-
-    const rawCompressedData = bytes.subarray(dataOffset, dataOffset + compressedSize);
-
-    if (compressionMethod === 0) {
-      files[fileName] = rawCompressedData.buffer.slice(rawCompressedData.byteOffset, rawCompressedData.byteOffset + compressedSize);
-    } else if (compressionMethod === 8) {
-      try {
-        const decompressed = await decompressDeflateRaw(rawCompressedData);
-        files[fileName] = decompressed;
-      } catch (decErr) {
-        console.warn(`Failed to decompress file ${fileName}:`, decErr);
-      }
-    }
-  }
-
-  return files;
-}
-
-/**
- * Decompresses raw Deflate stream using browser's native DecompressionStream
- */
-async function decompressDeflateRaw(uint8Data) {
-  if (typeof DecompressionStream !== 'undefined') {
-    const ds = new DecompressionStream('deflate-raw');
-    const writer = ds.writable.getWriter();
-    writer.write(uint8Data);
-    writer.close();
-
-    const response = new Response(ds.readable);
-    return await response.arrayBuffer();
-  } else {
-    throw new Error('DecompressionStream API not supported in this browser.');
-  }
-}
-
-/**
- * Extracts decks, notes, and card mappings from an Anki SQLite database buffer.
- */
-function parseAnkiDatabase(dbBuffer) {
-  const bytes = new Uint8Array(dbBuffer);
-  const textDecoder = new TextDecoder('utf-8', { fatal: false, ignoreBOM: true });
-  const fullText = textDecoder.decode(bytes);
-
-  // 1. Extract Deck Definitions (JSON structure inside "col" table)
-  const deckMap = {};
+/** Read real SQLite records. Imported cards begin with fresh FSRS schedules. */
+function parseAnkiDatabase(bytes, SQL) {
+  const database = new SQL.Database(bytes);
   try {
-    const decksMatch = fullText.match(/"decks"\s*:\s*(\{[\s\S]*?\})\s*,\s*"(?:dconf|models|conf)"/);
-    if (decksMatch && decksMatch[1]) {
-      const decksObj = JSON.parse(decksMatch[1]);
-      Object.keys(decksObj).forEach(key => {
-        const d = decksObj[key];
-        if (d && d.id && d.name) {
-          deckMap[d.id] = d.name;
-        }
-      });
-    }
-  } catch (e) {
-    console.warn('Failed to parse decks JSON from Anki DB:', e);
-  }
-
-  // 2. Default Deck Name fallback
-  const deckNames = Object.values(deckMap).filter(n => n && n !== 'Default');
-  const defaultDeckName = deckNames[0] || Object.values(deckMap)[0] || 'Default';
-
-  // 3. Extract Note Records with safe binary parsing
-  const rawNotes = extractAnkiNotesFromBinary(bytes);
-  const rawCards = [];
-
-  rawNotes.forEach(record => {
-    const fields = record.fields;
-    if (fields.length < 2) return;
-
-    const frontRaw = fields[0] || '';
-    const backRaw = fields[1] || '';
-    const subRaw = fields[2] || '';
-    const descRaw = fields[3] || '';
-
-    const front = cleanHtmlTags(frontRaw);
-    const back = cleanHtmlTags(backRaw);
-    if (!front && !back) return;
-
-    const rawDeck = record.deckName || defaultDeckName;
-    const { folder, deck } = normalizeAnkiDeck(rawDeck);
-
-    rawCards.push({
-      front,
-      back,
-      sub: cleanHtmlTags(subRaw) || undefined,
-      description: cleanHtmlTags(descRaw) || undefined,
-      folder: folder || undefined,
-      deck: deck || 'Default'
-    });
-  });
-
-  // 4. Expand Cloze Deletions
-  const finalCards = [];
-  rawCards.forEach(card => {
-    const expanded = expandClozeCards(card);
-    finalCards.push(...expanded);
-  });
-
-  return finalCards;
-}
-
-/**
- * Extracts note fields separated by 0x1f (Unit Separator) from Anki SQLite binary.
- * Uses safe UTF-8 boundaries to prevent non-ASCII character corruption.
- */
-function extractAnkiNotesFromBinary(bytes) {
-  const records = [];
-  const decoder = new TextDecoder('utf-8', { fatal: false });
-  const len = bytes.length;
-  
-  let i = 0;
-  while (i < len) {
-    if (bytes[i] === 0x1f) {
-      // Find start of note fields sequence
-      let start = i;
-      while (start > 0 && bytes[start - 1] !== 0x00 && (i - start) < 8000) {
-        start--;
+    const collection = database.exec('SELECT decks, models FROM col LIMIT 1')[0];
+    if (!collection?.values.length) throw new Error('Anki database is missing collection metadata.');
+    const [decksJSON, modelsJSON] = collection.values[0];
+    const decks = JSON.parse(decksJSON), models = JSON.parse(modelsJSON);
+    const records = database.exec('SELECT notes.id, notes.mid, notes.flds, cards.did, cards.ord FROM notes JOIN cards ON cards.nid = notes.id ORDER BY cards.id')[0];
+    if (!records?.values.length) throw new Error('No cards found in the Anki package.');
+    const result = [];
+    for (const [, modelId, rawFields, deckId, ordinal] of records.values) {
+      const model = models[String(modelId)];
+      const rawDeck = decks[String(deckId)]?.name;
+      if (!model || !rawDeck) throw new Error('Unsupported Anki metadata. Export with older-version compatibility or use text export.');
+      const fields = String(rawFields).split('\x1f');
+      const { folder, deck } = normalizeAnkiDeck(rawDeck);
+      if (model.type === 1) {
+        const source = { front: cleanHtmlTags(fields[0] || ''), back: cleanHtmlTags(fields[1] || ''), folder, deck };
+        const expanded = expandClozeCards(source);
+        const indices = [...new Set([...source.front.matchAll(/\{\{c(\d+)::/gi)].map(match => Number(match[1])))].sort((a,b) => a-b);
+        const selected = expanded[indices.indexOf(Number(ordinal) + 1)];
+        if (selected) result.push(selected);
+      } else {
+        const template = model.tmpls?.find(item => Number(item.ord) === Number(ordinal));
+        if (!template) throw new Error('Anki card template is missing.');
+        const values = Object.fromEntries((model.flds || []).map((field, index) => [field.name, fields[index] || '']));
+        const render = (text, frontSide = '') => {
+          let output = String(text || '').replace(/\{\{([#^])([^}]+)\}\}([\s\S]*?)\{\{\/\2\}\}/g,
+            (_all, kind, name, content) => ((kind === '#') === Boolean(values[name]?.trim())) ? content : '');
+          output = output.replace(/\{\{FrontSide\}\}/g, frontSide)
+            .replace(/\{\{(?:[^}:]+:)*([^}]+)\}\}/g, (_match, name) => values[name] || '');
+          return cleanHtmlTags(output);
+        };
+        const front = render(template.qfmt);
+        const back = render(template.afmt, front);
+        if (!front && !back) continue;
+        result.push({ front, back, folder, deck });
       }
-
-      // Find end of note fields sequence
-      let end = i;
-      while (end < len && bytes[end] !== 0x00 && (end - i) < 8000) {
-        end++;
-      }
-
-      const segment = bytes.subarray(start, end);
-      const str = decoder.decode(segment);
-
-      if (str.includes('\x1f')) {
-        const fields = str.split('\x1f').map(s => s.trim());
-        if (fields.length >= 2 && (fields[0].length > 0 || fields[1].length > 0)) {
-          // Verify fields look like valid card content (not binary garbage)
-          const validRatio0 = getPrintableRatio(fields[0]);
-          const validRatio1 = getPrintableRatio(fields[1]);
-          if (validRatio0 > 0.8 && validRatio1 > 0.8) {
-            records.push({ fields });
-          }
-        }
-      }
-
-      i = end;
-    } else {
-      i++;
     }
-  }
-
-  // Deduplicate records by front+back
-  const uniqueMap = new Map();
-  records.forEach(r => {
-    const key = `${r.fields[0]}:::${r.fields[1]}`;
-    if (!uniqueMap.has(key)) {
-      uniqueMap.set(key, r);
-    }
-  });
-
-  return Array.from(uniqueMap.values());
-}
-
-function getPrintableRatio(str) {
-  if (!str) return 1.0;
-  let printable = 0;
-  for (let i = 0; i < str.length; i++) {
-    const code = str.charCodeAt(i);
-    // Allow standard printable ASCII, newlines, tabs, and all Unicode characters > 127
-    if (code >= 32 || code === 10 || code === 13 || code === 9 || code > 127) {
-      printable++;
-    }
-  }
-  return printable / str.length;
+    if (!result.length) throw new Error('No supported cards found in this package.');
+    return result;
+  } finally { database.close(); }
 }
 
 /**

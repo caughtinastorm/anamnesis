@@ -1,4 +1,6 @@
-import { state } from "./state.js";
+import { validateCards } from "./domain/data.js";
+import { createSyncCoordinator } from "./services/sync-coordinator.js";
+import { cardState, settingsState } from "./state.js";
 import { dom, showToast, showModal } from "./ui.js";
 import { getCardFolder, getCardDeck, escapeCSVField, escapeHTML } from "./utils.js";
 import { sortCardsLogically } from "./explorer-actions.js";
@@ -12,6 +14,29 @@ let onSyncRequest = () => {};
 export function onSyncNeeded(cb) { onSyncRequest = cb; }
 
 export function initSettingsEventListeners() {
+  const backupInput = document.getElementById("restore-backup-file");
+  document.getElementById("btn-restore-backup-file")?.addEventListener("click", () => backupInput?.click());
+  backupInput?.addEventListener("change", async () => {
+    const file = backupInput.files[0];
+    if (!file) return;
+    try {
+      if (file.size > 20 * 1024 * 1024) throw new Error("Backup exceeds the 20 MB limit.");
+      const data = JSON.parse(await file.text());
+      const backup = Array.isArray(data) ? { cards: data, label: file.name } : data;
+      validateCards(backup.cards);
+      showModal("Restore JSON Backup?", `Replace current cards with ${backup.cards.length} cards from this file? A snapshot of your current data will be saved first.`, async () => {
+        try {
+          await db.restoreBackupData(backup);
+          await loadCardsFromDB();
+          await renderBackupsList();
+          onSyncRequest();
+          showToast("Backup restored", "success");
+        } catch (error) { showToast(error.message, "error"); }
+      });
+    } catch (error) { showToast("Invalid backup: " + error.message, "error"); }
+    finally { backupInput.value = ""; }
+  });
+
   if (dom.btnValidateToken) dom.btnValidateToken.addEventListener("click", validateGitHubToken);
   if (dom.btnCreateGist) dom.btnCreateGist.addEventListener("click", createSyncGist);
   if (dom.btnSaveCredentials) dom.btnSaveCredentials.addEventListener("click", saveSyncConfig);
@@ -22,7 +47,7 @@ export function initSettingsEventListeners() {
   if (dom.btnCreateBackupNow) {
     dom.btnCreateBackupNow.addEventListener("click", async () => {
       try {
-        await db.createLocalBackup(`Manual Snapshot (${state.allCards.filter(c => !c.deleted).length} cards)`, state.allCards);
+        await db.createLocalBackup(`Manual Snapshot (${cardState.allCards.filter(c => !c.deleted).length} cards)`, cardState.allCards);
         showToast("Created local database backup snapshot!", "success");
         renderBackupsList();
       } catch (e) {
@@ -34,8 +59,8 @@ export function initSettingsEventListeners() {
 }
 
 export function initSettingsForm() {
-  dom.settingsPat.value = state.syncCredentials.pat || "";
-  dom.settingsGistId.value = state.syncCredentials.gistId || "";
+  dom.settingsPat.value = settingsState.syncCredentials.pat || "";
+  dom.settingsGistId.value = settingsState.syncCredentials.gistId || "";
 
   if (dom.settingsVoiceLang) {
     dom.settingsVoiceLang.value = localStorage.getItem("app-speech-lang") || "auto";
@@ -65,7 +90,7 @@ export function initSettingsForm() {
   }
 
   if (dom.settingsReviewCap) {
-    dom.settingsReviewCap.value = localStorage.getItem("app-review-cap") || "0";
+    dom.settingsReviewCap.value = localStorage.getItem("app-review-cap") ?? "10";
     dom.settingsReviewCap.addEventListener("change", () => {
       localStorage.setItem("app-review-cap", dom.settingsReviewCap.value);
       showToast("Daily review cap updated", "success");
@@ -114,7 +139,7 @@ export async function renderBackupsList() {
       const btnRestore = document.createElement("button");
       btnRestore.className = "btn btn-secondary btn-sm";
       btnRestore.textContent = "Restore";
-      btnRestore.title = "Restore flashcards from this snapshot";
+      btnRestore.title = "Restore cards and review history from this snapshot";
       btnRestore.addEventListener("click", () => {
         showModal(
           "Restore Local Backup?",
@@ -141,7 +166,7 @@ export async function renderBackupsList() {
       btnExport.title = "Download snapshot as JSON";
       btnExport.addEventListener("click", () => {
         try {
-          const json = JSON.stringify(backup.cards || [], null, 2);
+          const json = JSON.stringify(backup, null, 2);
           const blob = new Blob([json], { type: "application/json" });
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
@@ -246,7 +271,7 @@ async function saveSyncConfig() {
   let gistId = sync.sanitizeGistId(dom.settingsGistId.value);
   if (!pat) {
     sync.clearSyncCredentials();
-    state.syncCredentials = { pat: "", gistId: "" };
+    settingsState.syncCredentials = { pat: "", gistId: "" };
     updateSyncUIState();
     showToast("Sync credentials removed.", "info");
     return;
@@ -266,122 +291,44 @@ async function saveSyncConfig() {
     dom.settingsGistId.value = gistId;
   }
   sync.saveSyncCredentials(pat, gistId);
-  state.syncCredentials = { pat, gistId };
+  settingsState.syncCredentials = { pat, gistId };
   updateSyncUIState();
   showToast("Credentials saved & synchronized!", "success");
   triggerManualSync();
 }
 
-let isSyncInProgress = false;
-let syncQueued = false;
-let syncDebounceTimer = null;
+const syncCoordinator = createSyncCoordinator({
+  getCards: db.getCards,
+  syncCards: sync.syncCards,
+  applyCards: db.applySyncCards,
+  acknowledge: sync.acknowledgeSync,
+  backup: () => db.createLocalBackup("Before synchronization"),
+  refresh: loadCardsFromDB,
+  onState: (status, error) => {
+    setSyncStateIndicator(status);
+    if (dom.btnForceSync) dom.btnForceSync.disabled = status === "syncing";
+    if (error) { console.warn("Synchronization failed:", error); logToConsole(error.message, true); }
+  }
+});
 
-/**
- * Debounces rapid sync requests (e.g. grading multiple cards in succession)
- */
-export function requestDebouncedSync(delayMs = 1200) {
-  if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
-  syncDebounceTimer = setTimeout(() => {
-    performBackgroundSync();
-  }, delayMs);
-}
+export function requestDebouncedSync(delayMs = 1200) { syncCoordinator.request(delayMs); }
 
 export async function triggerManualSync() {
-  if (!state.syncCredentials.pat || !state.syncCredentials.gistId) {
+  if (!settingsState.syncCredentials.pat || !settingsState.syncCredentials.gistId) {
     showToast("Sync not configured", "error");
     return;
   }
-
-  if (isSyncInProgress) {
-    showToast("Sync already in progress...", "info");
-    return;
-  }
-
-  isSyncInProgress = true;
-  setSyncStateIndicator("syncing");
-  logToConsole("Starting database synchronization...");
-  if (dom.btnForceSync) dom.btnForceSync.disabled = true;
-
   try {
-    const localCards = await db.getCards();
-    const result = await sync.syncCards(localCards);
-
-    // Safeguard: Refuse to wipe non-empty local cards if remote returns an empty array
-    if (localCards.length > 0 && (!result.cards || result.cards.length === 0)) {
-      logToConsole("Warning: Remote returned 0 cards while local database has cards. Preserving local cards.", true);
-      showToast("Sync warning: Remote returned 0 cards; local database preserved.", "warning");
-      setSyncStateIndicator("synced");
-      return;
-    }
-
-    if (result.changed || result.status === "pulled_from_remote" || result.status === "merged_with_remote") {
-      await db.replaceCards(result.cards);
-      await loadCardsFromDB();
-      logToConsole(`Downloaded updates from cloud and merged successfully (${result.cards.filter(c => !c.deleted).length} active cards).`);
-    } else if (result.status === "pushed_to_remote") {
-      logToConsole("Pushed local database updates to cloud.");
-    } else if (result.status === "no_change") {
-      logToConsole("Database is already up to date with cloud.");
-    }
-
-    logToConsole(`Sync complete. Active cards: ${state.allCards.filter(c => !c.deleted).length}`);
+    await syncCoordinator.run();
     showToast("Synchronization complete!", "success");
-    setSyncStateIndicator("synced");
-  } catch (err) {
-    logToConsole(`Sync failed: ${err.message}`, true);
-    showToast("Sync failed: " + err.message, "error");
-    setSyncStateIndicator("failed");
-  } finally {
-    isSyncInProgress = false;
-    if (dom.btnForceSync) dom.btnForceSync.disabled = false;
-    updateSyncUIState();
-  }
+  } catch (error) {
+    showToast("Sync failed: " + error.message, "error");
+  } finally { updateSyncUIState(); }
 }
 
 export async function performBackgroundSync(silent = true) {
-  if (!state.syncCredentials.pat || !state.syncCredentials.gistId) {
-    setSyncStateIndicator("unconfigured");
-    return;
-  }
-
-  if (isSyncInProgress) {
-    syncQueued = true;
-    return;
-  }
-
-  isSyncInProgress = true;
-  setSyncStateIndicator("syncing");
-
-  try {
-    const localCards = await db.getCards();
-    const result = await sync.syncCards(localCards);
-
-    // Safeguard: Refuse to wipe non-empty local cards if remote returns an empty array
-    if (localCards.length > 0 && (!result.cards || result.cards.length === 0)) {
-      console.warn("Background sync warning: Remote returned 0 cards while local has cards; skipping overwrite.");
-      setSyncStateIndicator("synced");
-      return;
-    }
-
-    if (result.changed || result.status === "pulled_from_remote" || result.status === "merged_with_remote") {
-      await db.replaceCards(result.cards);
-      await loadCardsFromDB();
-      if (!silent) showToast("Synced card updates from cloud", "success");
-    }
-
-    setSyncStateIndicator("synced");
-  } catch (err) {
-    console.warn("Background sync warning:", err);
-    setSyncStateIndicator("failed");
-  } finally {
-    isSyncInProgress = false;
-    updateSyncUIState();
-
-    if (syncQueued) {
-      syncQueued = false;
-      setTimeout(() => performBackgroundSync(silent), 500);
-    }
-  }
+  try { return await syncCoordinator.run(); }
+  catch (error) { if (!silent) showToast("Sync failed: " + error.message, "error"); }
 }
 
 export function setSyncStateIndicator(state_) {
@@ -393,12 +340,12 @@ export function setSyncStateIndicator(state_) {
   }
   if (dom.syncLabelText) {
     const labels = { synced: "Synced", syncing: "Syncing...", failed: "Sync Failed" };
-    dom.syncLabelText.textContent = labels[state_] || "Offline";
+    dom.syncLabelText.textContent = labels[state_] || "On this device";
   }
 }
 
 function updateSyncUIState() {
-  const { pat, gistId } = state.syncCredentials;
+  const { pat, gistId } = settingsState.syncCredentials;
   if (pat && gistId) {
     dom.manualSyncContainer?.classList.remove("hidden");
     const lastSync = sync.getLastSyncTime();
@@ -416,7 +363,7 @@ function updateSyncUIState() {
 }
 
 async function exportDatabaseToCSV() {
-  const active = state.allCards.filter(c => !c.deleted);
+  const active = cardState.allCards.filter(c => !c.deleted);
   if (!active.length) { showToast("No cards to export", "error"); return; }
   const sorted = sortCardsLogically(active);
   let csv = "Folder,Deck,Front,Back,Sub-text,Description,Stability,Difficulty,State,Lapses,Interval,Reps,NextReview\n";

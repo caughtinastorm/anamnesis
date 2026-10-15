@@ -17,7 +17,7 @@
  *   app.js       → cards.js             (registers all subscribers)
  */
 
-import { state } from "./state.js";
+import { cardState } from "./state.js";
 import * as db from "../db.js";
 import { showToast } from "./ui.js";
 
@@ -31,73 +31,25 @@ const refreshSubscribers = [];
  */
 export function onCardsRefreshed(fn) {
   refreshSubscribers.push(fn);
+  return () => { const index = refreshSubscribers.indexOf(fn); if (index >= 0) refreshSubscribers.splice(index, 1); };
 }
 
 /**
- * Load all cards from IndexedDB into state.allCards, then call every
+ * Load all cards from IndexedDB into cardState.allCards, then call every
  * registered refresh subscriber in order.
  */
-export async function loadCardsFromDB() {
+let refreshQueue = Promise.resolve();
+export function loadCardsFromDB() {
+  const result = refreshQueue.then(refreshCards);
+  refreshQueue = result.catch(() => {});
+  return result;
+}
+
+async function refreshCards() {
   try {
-    try {
-      await db.purgeOldDeletedCards(30);
-    } catch (purgeErr) {}
+    const cards = await db.getCards();
 
-    let cards = await db.getCards();
-    const modifiedCards = [];
-    const now = Date.now();
-
-    for (let i = 0; i < cards.length; i++) {
-      const c = cards[i];
-      let changed = false;
-
-      // 1. Purge legacy SuperMemo cache / sm2_stats
-      if (c.sm2_stats !== undefined) {
-        if (!c.fsrs_stats || c.fsrs_stats.stability === undefined) {
-          const ivl = c.sm2_stats.interval || 0;
-          const reps = c.sm2_stats.repetitions || 0;
-          c.fsrs_stats = {
-            stability: ivl > 0 ? ivl : 0,
-            difficulty: 5.0,
-            repetitions: reps,
-            lapses: 0,
-            state: reps === 0 ? 0 : 2,
-            last_review: c.sm2_stats.last_reviewed || 0,
-            next_review: c.sm2_stats.next_review || 0,
-            interval: ivl
-          };
-        }
-        delete c.sm2_stats;
-        changed = true;
-      }
-
-      // 2. Repair corrupted "Social" collection cards where deck is "I." and sub holds the actual collection name
-      if (
-        (c.folder || "").trim().toLowerCase() === "social" &&
-        (c.deck || "").trim() === "I." &&
-        c.sub && c.sub.trim()
-      ) {
-        c.deck = c.sub.trim();
-        c.sub = "";
-        changed = true;
-      }
-
-      if (changed) {
-        c.last_modified = now;
-        modifiedCards.push(c);
-      }
-    }
-
-    if (modifiedCards.length > 0) {
-      try {
-        await db.saveCards(modifiedCards);
-        console.log(`Auto-cleaned and repaired ${modifiedCards.length} cards (removed legacy SM2 stats & fixed deck hierarchy)`);
-      } catch (saveErr) {
-        console.error("Failed to persist card repairs:", saveErr);
-      }
-    }
-
-    state.allCards = cards;
+    cardState.allCards = cards;
     for (const fn of refreshSubscribers) {
       try {
         await fn();
@@ -108,5 +60,6 @@ export async function loadCardsFromDB() {
   } catch (e) {
     console.error("Error loading cards from DB:", e);
     showToast("Failed to load local database", "error");
+    throw e;
   }
 }

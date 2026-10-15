@@ -1,4 +1,4 @@
-import { state } from "./state.js";
+import { dialogState } from "./state.js";
 
 const $ = (id) => (typeof document !== "undefined" ? document.getElementById(id) : null);
 const $$ = (sel) => (typeof document !== "undefined" ? document.querySelectorAll(sel) : []);
@@ -100,19 +100,22 @@ export const dom = {
 
 
 export function switchView(viewId) {
-  if (!viewId) return;
+  if (!viewId || !document.getElementById(viewId)?.classList.contains("app-view")) return;
   document.querySelectorAll(".app-view").forEach(v =>
     v.classList.toggle("active", v.id === viewId)
   );
   document.querySelectorAll(".nav-item").forEach(item =>
-    item.classList.toggle("active", item.getAttribute("data-view") === viewId)
+    item.classList.toggle("active", item.getAttribute("data-view") === (["view-import", "view-analytics"].includes(viewId) ? "view-settings" : viewId))
   );
+  document.dispatchEvent(new CustomEvent("app:view-changed", { detail: { viewId } }));
 }
 
 if (typeof window !== "undefined") window.switchView = switchView;
 
 export function scrollToElement(el) {
   if (!el) return;
+  let parent = el.parentElement;
+  while (parent) { if (parent.tagName === "DETAILS") parent.open = true; parent = parent.parentElement; }
   setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
 }
 
@@ -133,9 +136,9 @@ export function showModal(title, body, onConfirm, onCancel = null, options = {})
     }
   }
 
-  state.modalConfirmCallback = onConfirm;
-  state.modalCancelCallback = onCancel;
-  state.modalDismissCallback = options.onDismiss || null;
+  dialogState.modalConfirmCallback = onConfirm;
+  dialogState.modalCancelCallback = onCancel;
+  dialogState.modalDismissCallback = options.onDismiss || null;
 
   if (btnCancel) {
     btnCancel.textContent = options.cancelText || "Cancel";
@@ -163,8 +166,8 @@ export function showPromptModal(title, message, defaultValue = "", onConfirm, on
   if (msgEl) msgEl.textContent = message;
   if (inputEl) inputEl.value = defaultValue;
 
-  state.promptModalConfirmCallback = onConfirm;
-  state.promptModalCancelCallback = onCancel;
+  dialogState.promptModalConfirmCallback = onConfirm;
+  dialogState.promptModalCancelCallback = onCancel;
   container.classList.remove("hidden");
 
   setTimeout(() => {
@@ -245,12 +248,12 @@ export function initModalListeners() {
   const closeModal = (action) => {
     if (!container) return;
     container.classList.add("hidden");
-    const confirmCb = state.modalConfirmCallback;
-    const cancelCb = state.modalCancelCallback;
-    const dismissCb = state.modalDismissCallback;
-    state.modalConfirmCallback = null;
-    state.modalCancelCallback = null;
-    state.modalDismissCallback = null;
+    const confirmCb = dialogState.modalConfirmCallback;
+    const cancelCb = dialogState.modalCancelCallback;
+    const dismissCb = dialogState.modalDismissCallback;
+    dialogState.modalConfirmCallback = null;
+    dialogState.modalCancelCallback = null;
+    dialogState.modalDismissCallback = null;
 
     if (action === "confirm") {
       if (confirmCb) confirmCb();
@@ -294,14 +297,14 @@ export function initModalListeners() {
     promptModal.classList.add("hidden");
     const val = promptInput ? promptInput.value.trim() : "";
     if (confirmed) {
-      const cb = state.promptModalConfirmCallback;
-      state.promptModalConfirmCallback = null;
-      state.promptModalCancelCallback = null;
+      const cb = dialogState.promptModalConfirmCallback;
+      dialogState.promptModalConfirmCallback = null;
+      dialogState.promptModalCancelCallback = null;
       if (cb) cb(val);
     } else {
-      const cb = state.promptModalCancelCallback;
-      state.promptModalConfirmCallback = null;
-      state.promptModalCancelCallback = null;
+      const cb = dialogState.promptModalCancelCallback;
+      dialogState.promptModalConfirmCallback = null;
+      dialogState.promptModalCancelCallback = null;
       if (cb) cb();
     }
   };
@@ -350,7 +353,7 @@ export function showToast(message, type = "info") {
 }
 
 export function initTheme() {
-  const saved = localStorage.getItem("app-theme") || "system";
+  const saved = localStorage.getItem("app-theme") || "light";
   applyTheme(saved);
 
   dom.themeButtons.forEach(btn => {
@@ -372,7 +375,7 @@ function applyTheme(theme) {
     : theme;
   document.documentElement.setAttribute("data-theme", effective);
   const meta = document.querySelector("meta[name='theme-color']");
-  if (meta) meta.setAttribute("content", effective === "dark" ? "#121214" : "#ffffff");
+  if (meta) meta.setAttribute("content", effective === "dark" ? "#17201b" : "#f6f7f3");
 }
 
 

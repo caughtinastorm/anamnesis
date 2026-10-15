@@ -11,7 +11,7 @@
  * breadcrumb navigation, and on-the-fly folder/deck creation.
  */
 
-import { state } from "./state.js";
+import { cardState } from "./state.js";
 import { getCardFolder, getCardDeck, getCardFullHierarchy, escapeHTML } from "./utils.js";
 import { isCardDue } from "../fsrs.js";
 import { showToast, showPromptModal } from "./ui.js";
@@ -255,7 +255,7 @@ function getPickerData() {
   const folderMap = new Map();
   const standaloneMap = new Map();
 
-  state.allCards.forEach(card => {
+  cardState.allCards.forEach(card => {
     if (card.deleted) return;
     const folder = getCardFolder(card);
     const deck = getCardDeck(card);
@@ -540,7 +540,7 @@ function renderPickerCanvas() {
   } else {
     // Root level -> show All Collections tile (if allowed) + all folders + standalone decks
     if (pickerState.allowRoot) {
-      const totalAll = state.allCards.filter(c => !c.deleted).length;
+      const totalAll = cardState.allCards.filter(c => !c.deleted).length;
       items.push({
         type: "root",
         folder: undefined,

@@ -10,7 +10,7 @@
  *   to explorer-actions.js (zero circular imports)
  */
 
-import { state } from "./state.js";
+import { cardState } from "./state.js";
 import { dom, showToast, switchView } from "./ui.js";
 import { getCardFolder, getCardDeck, escapeHTML, sanitizeHTML } from "./utils.js";
 import { isCardDue, isCardNew, getCardNextReview } from "../fsrs.js";
@@ -215,7 +215,7 @@ function updateNavButtonStates() {
 // -----------------------------------------------------------------------
 
 /**
- * Build folder/deck stats from state.allCards.
+ * Build folder/deck stats from cardState.allCards.
  * @returns {{ folderMap: Map, standaloneMap: Map }}
  */
 export function getExplorerData() {
@@ -223,7 +223,7 @@ export function getExplorerData() {
   const folderMap    = new Map(); // folderName → Map(deckName → { total, due, newCount, cards[] })
   const standaloneMap = new Map(); // deckName → { total, due, newCount, cards[] }
 
-  state.allCards.forEach(card => {
+  cardState.allCards.forEach(card => {
     if (card.deleted) return;
     const folder = getCardFolder(card);
     const deck   = getCardDeck(card);

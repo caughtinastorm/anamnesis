@@ -1,3 +1,6 @@
+import { initMinimalUI, renderSimpleDecks } from "./js/minimal-ui.js";
+import { initAccessibility } from "./js/accessibility.js";
+import { runMigrations, onDatabaseChanged } from "./db.js";
 /**
  * anamnesis — Main Application Orchestrator
  *
@@ -9,13 +12,13 @@ import { dom, switchView, initTheme, initModalListeners, showModal, showToast, s
 import { loadCardsFromDB, onCardsRefreshed } from "./js/cards.js";
 import { calculateStats, updateUIStats, setActiveDeckSelection, handleQuickAddCard, initDashboardPickerButton, onSyncNeeded as dashOnSync, refreshDashboard } from "./js/dashboard.js";
 
-import { initStudyEventListeners, initTouchGestures, initKeyboardShortcuts, exitStudySession, onSyncNeeded as studyOnSync } from "./js/study.js";
+import { isStudyBusy, initStudyEventListeners, initTouchGestures, initKeyboardShortcuts, exitStudySession, onSyncNeeded as studyOnSync } from "./js/study.js";
 import { initImportEventListeners, onSyncNeeded as importOnSync, refreshImport } from "./js/import.js";
 import { initSettingsForm, initSettingsEventListeners, performBackgroundSync, requestDebouncedSync, onSyncNeeded as settingsOnSync } from "./js/settings.js";
 import { initCardBrowser, onSyncNeeded as browserOnSync, refreshBrowser } from "./js/browser.js";
 import { initExplorer, onSyncNeeded as explorerOnSync, renderExplorer } from "./js/explorer.js";
 import { initCollectionPicker } from "./js/picker.js";
-import { initIntroTour, checkAutoStartIntro } from "./js/intro.js";
+import { initIntroTour } from "./js/intro.js";
 import { checkAndSeedStarterDecks } from "./js/presets.js";
 import { initAnalyticsUI, renderAnalyticsView } from "./js/analytics-ui.js";
 
@@ -29,7 +32,8 @@ browserOnSync(requestSync);
 explorerOnSync(requestSync);
 
 // Register card refresh subscribers — called in order after every loadCardsFromDB()
-onCardsRefreshed(refreshDashboard);  // populateDeckDropdown, calculateStats, renderFoldersTree, renderHeatmap
+onCardsRefreshed(refreshDashboard);
+onCardsRefreshed(renderSimpleDecks);
 onCardsRefreshed(refreshImport);     // populateImportDestinationSuggestions
 onCardsRefreshed(renderExplorer);    // Explorer sidebar tree + canvas
 onCardsRefreshed(refreshBrowser);    // Browser deck filter + card table
@@ -46,47 +50,17 @@ function initRouting() {
     if (!targetView) return;
     e.preventDefault();
 
+    if (isStudyBusy()) { showToast("Finishing your review save. Please try again in a moment.", "info"); return; }
     const studyActive = dom.subviewStudy?.classList.contains("active");
-    if (studyActive && targetView !== "view-review") {
-      showModal(
-        "Exit Study Session?",
-        "Your session progress will be saved. Would you like to leave this session?",
-        () => {
-          exitStudySession();
-          switchView(targetView);
-        },
-        null,
-        {
-          confirmText: "Exit Session",
-          confirmClass: "btn btn-primary",
-          cancelText: "Stay in Session"
-        }
-      );
-    } else {
-      switchView(targetView);
-    }
+    if (studyActive && targetView !== "view-review" && exitStudySession() === false) return;
+    switchView(targetView);
   });
 
   const handleLogoClick = () => {
+    if (isStudyBusy()) { showToast("Finishing your review save. Please try again in a moment.", "info"); return; }
     const studyActive = dom.subviewStudy?.classList.contains("active");
-    if (studyActive) {
-      showModal(
-        "Exit Study Session?",
-        "Your progress will be preserved. Return to dashboard?",
-        () => {
-          exitStudySession();
-          switchView("view-review");
-        },
-        null,
-        {
-          confirmText: "Return to Dashboard",
-          confirmClass: "btn btn-primary",
-          cancelText: "Stay in Session"
-        }
-      );
-    } else {
-      switchView("view-review");
-    }
+    if (studyActive && exitStudySession() === false) return;
+    switchView("view-review");
   };
 
   document.getElementById("header-logo-home")?.addEventListener("click", handleLogoClick);
@@ -111,8 +85,17 @@ function initRouting() {
 function registerServiceWorker() {
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./sw.js")
-        .then(reg => console.log("SW registered:", reg.scope))
+      navigator.serviceWorker.register(new URL("./sw.js", document.baseURI))
+        .then(reg => {
+          const notifyUpdate = () => showToast("Update ready. Close all app tabs and reopen to install it.", "info");
+          if (reg.waiting) notifyUpdate();
+          reg.addEventListener("updatefound", () => {
+            const worker = reg.installing;
+            worker?.addEventListener("statechange", () => {
+              if (worker.state === "installed" && navigator.serviceWorker.controller) notifyUpdate();
+            });
+          });
+        })
         .catch(err => console.warn("SW registration failed:", err));
     });
   }
@@ -124,6 +107,8 @@ function registerServiceWorker() {
 async function initApp() {
   try {
     initModalListeners();
+    initMinimalUI();
+    initAccessibility();
     initTheme();
     initRouting();
     initStudyEventListeners();
@@ -141,12 +126,17 @@ async function initApp() {
 
     registerServiceWorker();
 
+    onDatabaseChanged(() => {
+      loadCardsFromDB().catch(error => console.warn("Cross-tab refresh failed:", error));
+    });
+    await runMigrations();
     await loadCardsFromDB();
     await checkAndSeedStarterDecks();
     performBackgroundSync();
-    checkAutoStartIntro();
+    // Guidance is available on demand in Settings; never interrupt first launch.
   } catch (err) {
     console.error("initApp fatal error:", err);
+    showToast("Unable to start. Your local data is preserved. Close other tabs and reload to retry.", "error");
   }
 }
 

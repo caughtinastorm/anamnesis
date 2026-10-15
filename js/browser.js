@@ -8,7 +8,7 @@
  * 4. Inline Edit Modal with Per-Card Audio Speech Language Configuration.
  */
 
-import { state } from "./state.js";
+import { cardState } from "./state.js";
 import { showToast, showModal, scrollToElement } from "./ui.js";
 import { getCardFolder, getCardDeck, getCardFullHierarchy, matchesDeckSelection, formatDeckSelectionLabel, limitText, escapeHTML, sanitizeHTML } from "./utils.js";
 import { isCardDue, isCardNew, getCardNextReview, createDefaultFSRSStats } from "../fsrs.js";
@@ -219,7 +219,7 @@ export function populateBrowserDeckFilter() {
   const folderMap = new Map();
   const standaloneDecks = new Set();
 
-  state.allCards.forEach(card => {
+  cardState.allCards.forEach(card => {
     if (card.deleted) return;
     const folder = getCardFolder(card);
     const deck = getCardDeck(card);
@@ -328,7 +328,7 @@ export function renderCardBrowser() {
   const selectedDeck = browserDeckFilter ? (browserDeckFilter.value || "all") : "all";
   const now = Date.now();
 
-  const activeCards = state.allCards.filter(card => !card.deleted);
+  const activeCards = cardState.allCards.filter(card => !card.deleted);
 
   // Filter cards by collection & query
   currentFilteredCards = activeCards.filter(card => {
@@ -548,7 +548,7 @@ async function handleBulkPractice() {
   const count = selectedCardIds.size;
   if (count === 0) return;
 
-  const cards = state.allCards.filter(c => selectedCardIds.has(c.id) && !c.deleted);
+  const cards = cardState.allCards.filter(c => selectedCardIds.has(c.id) && !c.deleted);
   if (cards.length === 0) {
     showToast("No active flashcards selected", "error");
     return;
@@ -571,7 +571,7 @@ async function handleBulkDelete() {
       const now = Date.now();
       const updatedCards = [];
 
-      state.allCards.forEach(card => {
+      cardState.allCards.forEach(card => {
         if (selectedCardIds.has(card.id)) {
           updatedCards.push({
             ...card,
@@ -606,7 +606,7 @@ async function handleBulkResetFSRS() {
       const now = Date.now();
       const updatedCards = [];
 
-      state.allCards.forEach(card => {
+      cardState.allCards.forEach(card => {
         if (selectedCardIds.has(card.id)) {
           const copy = {
             ...card,
@@ -619,8 +619,7 @@ async function handleBulkResetFSRS() {
       });
 
       try {
-        await db.saveCards(updatedCards);
-        await db.deleteReviewLogsForCards(updatedCards.map(c => c.id));
+        await db.resetCardProgress(updatedCards);
         showToast(`Reset progress on ${count} flashcards`, "success");
         clearSelection();
         await loadCardsFromDB();
@@ -644,7 +643,7 @@ function handleBulkMove() {
       const now = Date.now();
       const updatedCards = [];
 
-      state.allCards.forEach(card => {
+      cardState.allCards.forEach(card => {
         if (selectedCardIds.has(card.id)) {
           updatedCards.push({
             ...card,
@@ -674,7 +673,7 @@ function handleBulkMove() {
 // ==========================================================================
 
 export function openEditCardModal(cardId) {
-  const card = state.allCards.find(c => c.id === cardId);
+  const card = cardState.allCards.find(c => c.id === cardId);
   if (!card) {
     showToast("Card not found", "error");
     return;
@@ -698,7 +697,7 @@ export function closeEditModal() {
 
 export async function saveCardEdits() {
   const cardId = editCardId?.value;
-  const card = state.allCards.find(c => c.id === cardId);
+  const card = cardState.allCards.find(c => c.id === cardId);
   if (!card) return;
 
   const front = editCardFront?.value.trim();
@@ -739,7 +738,7 @@ export async function saveCardEdits() {
 }
 
 export function deleteCard(cardId) {
-  const card = state.allCards.find(c => c.id === cardId);
+  const card = cardState.allCards.find(c => c.id === cardId);
   if (!card) return;
 
   showModal(

@@ -7,7 +7,7 @@
  *
  * Imports:
  *   explorer-state.js  — read/write explorerState
- *   state.js           — state.allCards
+ *   state.js           — cardState.allCards
  *   ui.js              — dom, showToast, showModal, switchView, scrollToElement
  *   utils.js           — getCardFolder, getCardDeck, escapeHTML, escapeCSVField
  *   db.js              — saveCards
@@ -16,7 +16,7 @@
  */
 
 import { explorerState } from "./explorer-state.js";
-import { state } from "./state.js";
+import { cardState } from "./state.js";
 import { dom, showToast, showModal, showPromptModal, switchView, scrollToElement } from "./ui.js";
 import { getCardFolder, getCardDeck, escapeHTML, escapeCSVField } from "./utils.js";
 import { createDefaultFSRSStats } from "../fsrs.js";
@@ -348,7 +348,7 @@ export function promptRenameFolder(oldFolder) {
         `This will update the parent folder name on all flashcards in "${oldFolder}" to "${cleanNew}".`,
         async () => {
           const now = Date.now();
-          const toUpdate = state.allCards
+          const toUpdate = cardState.allCards
             .filter(c => !c.deleted && getCardFolder(c).toLowerCase() === oldFolder.toLowerCase())
             .map(c => ({ ...c, folder: cleanNew, last_modified: now }));
 
@@ -388,7 +388,7 @@ export function promptRenameDeck(folder, oldDeck) {
         `This will update the collection name to "${cleanNew}".`,
         async () => {
           const now = Date.now();
-          const toUpdate = state.allCards
+          const toUpdate = cardState.allCards
             .filter(c => {
               if (c.deleted) return false;
               if (folder) {
@@ -432,7 +432,7 @@ export function promptDeleteFolder(folderName, totalCards) {
     `Are you sure you want to permanently delete folder "${folderName}" and ALL of its collections (${totalCards} total cards)?`,
     async () => {
       const now = Date.now();
-      const toDelete = state.allCards
+      const toDelete = cardState.allCards
         .filter(c => !c.deleted && getCardFolder(c).toLowerCase() === folderName.toLowerCase())
         .map(c => ({ ...c, deleted: true, last_modified: now }));
 
@@ -459,7 +459,7 @@ export function promptDeleteDeck(folderName, deckName, count) {
     `Are you sure you want to delete this collection (${count} cards)?`,
     async () => {
       const now = Date.now();
-      const toDelete = state.allCards
+      const toDelete = cardState.allCards
         .filter(c => {
           if (c.deleted) return false;
           if (folderName) {
@@ -489,7 +489,7 @@ export function promptDeleteDeck(folderName, deckName, count) {
 
 export function promptResetDeckFSRS(folderName, deckName, count) {
   const label = folderName ? `${folderName} / ${deckName}` : deckName;
-  const targetCards = state.allCards.filter(c => {
+  const targetCards = cardState.allCards.filter(c => {
     if (c.deleted) return false;
     if (folderName) {
       return getCardFolder(c).toLowerCase() === folderName.toLowerCase() &&
@@ -513,8 +513,7 @@ export function promptResetDeckFSRS(folderName, deckName, count) {
       });
 
       try {
-        await db.saveCards(updatedCards);
-        await db.deleteReviewLogsForCards(updatedCards.map(c => c.id));
+        await db.resetCardProgress(updatedCards);
         showToast(`Reset FSRS data for ${updatedCards.length} cards in "${label}"`, "success");
         await _loadCardsFromDB();
         _onSyncRequest();
@@ -527,7 +526,7 @@ export function promptResetDeckFSRS(folderName, deckName, count) {
 }
 
 export function promptResetFolderFSRS(folderName, count) {
-  const targetCards = state.allCards.filter(c => {
+  const targetCards = cardState.allCards.filter(c => {
     if (c.deleted) return false;
     return getCardFolder(c).toLowerCase() === folderName.toLowerCase();
   });
@@ -546,8 +545,7 @@ export function promptResetFolderFSRS(folderName, count) {
       });
 
       try {
-        await db.saveCards(updatedCards);
-        await db.deleteReviewLogsForCards(updatedCards.map(c => c.id));
+        await db.resetCardProgress(updatedCards);
         showToast(`Reset FSRS data for ${updatedCards.length} cards in folder "${folderName}"`, "success");
         await _loadCardsFromDB();
         _onSyncRequest();
@@ -721,7 +719,7 @@ function updateExportModalPreview() {
 }
 
 function getCardsForScope(scope) {
-  const active = state.allCards.filter(c => !c.deleted);
+  const active = cardState.allCards.filter(c => !c.deleted);
   if (!scope || scope === "all") {
     return active;
   }

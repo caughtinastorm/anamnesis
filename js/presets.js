@@ -12,7 +12,7 @@ import * as db from "../db.js";
 import { loadCardsFromDB } from "./cards.js";
 import { showToast } from "./ui.js";
 import { setActiveDeckSelection } from "./dashboard.js";
-import { state } from "./state.js";
+import { cardState } from "./state.js";
 
 /**
  * Full Canonical JLPT N5 Kanji Dataset (104 characters)
@@ -589,7 +589,7 @@ export async function loadN5KanjiDeck({ notify = true } = {}) {
     for (const item of JLPT_N5_KANJI_DECK) {
       if (!existingKanjiFronts.has(item.front.trim())) {
         newCards.push({
-          id: generateUUID(),
+          id: `preset-jlpt-n5-${item.front.codePointAt(0).toString(16)}`,
           front: item.front,
           sub: undefined,
           back: item.back,
@@ -629,16 +629,16 @@ export async function loadN5KanjiDeck({ notify = true } = {}) {
  * Check on startup if database is completely empty; if so, seed N5 Kanji deck automatically.
  */
 export async function checkAndSeedStarterDecks() {
-  try {
-    const activeCards = (state.allCards || []).filter(c => !c.deleted);
-    if (activeCards.length === 0) {
-      const seeded = await loadN5KanjiDeck({ notify: false });
-      if (seeded > 0) {
-        console.log(`Auto-seeded ${seeded} cards for ${STARTER_DECK}`);
-        showToast(`Welcome! Preloaded ${seeded} JLPT N5 Kanji cards`, "success");
-      }
-    }
-  } catch (err) {
-    console.warn("Could not check/seed starter decks:", err);
+  const now = Date.now();
+  const cards = JLPT_N5_KANJI_DECK.map(item => ({ ...item,
+    id: `preset-jlpt-n5-${item.front.codePointAt(0).toString(16)}`,
+    folder: STARTER_FOLDER, deck: STARTER_DECK,
+    fsrs_stats: createDefaultFSRSStats(), last_modified: now
+  }));
+  const seeded = await db.seedStarterOnce(cards);
+  if (seeded) {
+    await loadCardsFromDB();
+    setActiveDeckSelection(`deck:${STARTER_FOLDER} / ${STARTER_DECK}`);
+    showToast(`Welcome! Preloaded ${seeded} JLPT N5 Kanji cards`, "success");
   }
 }

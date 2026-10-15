@@ -18,34 +18,9 @@ export const DEFAULT_FSRS_WEIGHTS = [
 
 export const DEFAULT_TARGET_RETENTION = 0.90; // 90% Standard Default
 
-/**
- * Get active user configured target retention rate (0.70 - 0.98)
- */
-export function getTargetRetention() {
-  try {
-    const stored = localStorage.getItem("app-target-retention");
-    if (stored) {
-      const val = parseFloat(stored);
-      if (!isNaN(val) && val >= 0.70 && val <= 0.98) return val;
-    }
-  } catch (e) {}
-  return DEFAULT_TARGET_RETENTION;
-}
-
-/**
- * Update user configured target retention rate
- */
-export function setTargetRetention(rate) {
-  const val = Math.min(0.98, Math.max(0.70, parseFloat(rate) || DEFAULT_TARGET_RETENTION));
-  try {
-    if (typeof localStorage !== "undefined") {
-      localStorage.setItem("app-target-retention", val.toFixed(2));
-    }
-  } catch (e) {}
-  return val;
-}
-
-export const DESIRED_RETENTION = getTargetRetention();
+// Compatibility exports; persistence belongs to the preferences adapter.
+export { getTargetRetention, setTargetRetention } from './js/services/preferences.js';
+export const DESIRED_RETENTION = DEFAULT_TARGET_RETENTION;
 
 // Rating Enum
 export const Rating = {
@@ -79,10 +54,11 @@ export function calculateRetrievability(daysElapsed, stability) {
 /**
  * Calculates optimal interval given target stability and desired retention
  * @param {number} stability Memory stability in days
- * @param {number} requestRetention Target retention probability (default getTargetRetention())
+ * @param {number} requestRetention Target retention probability (default 0.90)
  * @returns {number} Interval in days
  */
-export function calculateInterval(stability, requestRetention = getTargetRetention()) {
+export function calculateInterval(stability, requestRetention = DEFAULT_TARGET_RETENTION) {
+  if (!Number.isFinite(stability) || !Number.isFinite(requestRetention) || requestRetention <= 0 || requestRetention >= 1) throw new Error("Invalid scheduler retention or stability.");
   if (stability <= 0) return 1;
   const factor = 19 / 81;
   // Formula: I = S / factor * (R^(-2) - 1)
@@ -184,7 +160,8 @@ export function calculateNextReviewTimestamp(nextInterval, now = Date.now(), rol
  * @param {number} now Current timestamp in milliseconds (defaults to Date.now())
  * @returns {Object} Updated card object with FSRS-5 statistics
  */
-export function calculateFSRS5(card, grade, now = Date.now(), requestRetention = getTargetRetention()) {
+export function calculateFSRS5(card, grade, now = Date.now(), requestRetention = DEFAULT_TARGET_RETENTION) {
+  if (!card || !Object.values(Rating).includes(grade) || !Number.isFinite(now)) throw new Error("Invalid scheduler input.");
   const w = DEFAULT_FSRS_WEIGHTS;
   
   // Extract or initialize FSRS metadata with SM-2 backwards-compatibility fallback
@@ -323,7 +300,7 @@ export function formatIntervalLabel(days) {
 /**
  * Calculates projected intervals for all 4 ratings (Again, Hard, Good, Easy) for UI display.
  */
-export function calculateProjectedIntervals(card, now = Date.now(), requestRetention = getTargetRetention()) {
+export function calculateProjectedIntervals(card, now = Date.now(), requestRetention = DEFAULT_TARGET_RETENTION) {
   const previewForGrade = (grade) => {
     const res = calculateFSRS5(card, grade, now, requestRetention);
     return res.fsrs_stats.interval;

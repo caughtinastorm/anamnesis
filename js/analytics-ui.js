@@ -11,7 +11,7 @@
  * - Prescriptive Reflection & Diagnostic Action Cards
  */
 
-import { state } from "./state.js";
+import { cardState } from "./state.js";
 import { showToast, showModal, switchView } from "./ui.js";
 import { getCardFolder, getCardDeck, escapeHTML, limitText, formatDeckSelectionLabel, matchesDeckSelection } from "./utils.js";
 import { getTargetRetention } from "../fsrs.js";
@@ -33,6 +33,7 @@ let activeDeckFilter = "all";
 let deckSortColumn = "totalReviews";
 let deckSortAsc = false;
 let isRendering = false;
+let renderQueued = false;
 
 // Cached analyzed data for quick UI re-filtering
 let lastAnalyzedDecks = null;
@@ -59,7 +60,7 @@ function updateAnalyticsDeckPickerUI() {
   const clearBtn = document.getElementById("btn-analytics-clear-filter");
   const selectEl = document.getElementById("analytics-deck-filter");
 
-  const allValidCards = state.allCards ? state.allCards.filter(c => !c.deleted) : [];
+  const allValidCards = cardState.allCards ? cardState.allCards.filter(c => !c.deleted) : [];
   const count = (activeDeckFilter === "all")
     ? allValidCards.length
     : allValidCards.filter(c => matchesDeckSelection(c, activeDeckFilter)).length;
@@ -86,6 +87,9 @@ function updateAnalyticsDeckPickerUI() {
  * Initialize Analytics view event listeners and time horizon toggles
  */
 export function initAnalyticsUI() {
+  document.addEventListener("app:view-changed", event => {
+    if (event.detail.viewId === "view-analytics") renderAnalyticsView();
+  });
   // Time horizon filter buttons
   document.querySelectorAll(".analytics-horizon-btn").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -187,14 +191,15 @@ export function initAnalyticsUI() {
  * @param {boolean} forceRefresh If true, forces fresh DB read
  */
 export async function renderAnalyticsView(forceRefresh = false) {
-  if (isRendering) return;
+  if (!forceRefresh && !document.getElementById("view-analytics")?.classList.contains("active")) return;
+  if (isRendering) { renderQueued = true; return; }
   isRendering = true;
 
   try {
     const targetRetention = getTargetRetention();
 
     // Fetch cards and historical review logs from IndexedDB
-    const allValidCards = state.allCards ? state.allCards.filter(c => !c.deleted) : [];
+    const allValidCards = cardState.allCards ? cardState.allCards.filter(c => !c.deleted) : [];
     const allReviewLogs = await db.getAllReviewLogs();
 
     // Scope cards and review logs according to the selected collection
@@ -253,6 +258,7 @@ export async function renderAnalyticsView(forceRefresh = false) {
     console.error("Failed to render analytics view:", err);
   } finally {
     isRendering = false;
+    if (renderQueued) { renderQueued = false; queueMicrotask(() => renderAnalyticsView()); }
   }
 }
 
@@ -665,7 +671,7 @@ function renderLeechRadar(frictionCards = []) {
           `Reset FSRS for "${limitText(card.front, 24)}"?`,
           `Are you sure you want to reset spaced repetition progress for this single card? It will return to New state so you can relearn it cleanly.`,
           async () => {
-            const rawCard = state.allCards.find(c => (c.id || c._id) === card.id);
+            const rawCard = cardState.allCards.find(c => (c.id || c._id) === card.id);
             if (rawCard) {
               await executeResetCardsFSRS([rawCard], rawCard.front);
               renderAnalyticsView();

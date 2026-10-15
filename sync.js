@@ -1,17 +1,21 @@
+import { canonicalJSON, cardsFingerprint, parseSyncPayload, validateCards } from './js/domain/data.js';
+
 /**
- * High-Performance GitHub Gist Sync Manager (Enterprise Grade)
+ * High-Performance GitHub Gist Sync Manager ()
  * 
  * Features:
- * 1. HTTP 304 Not Modified & ETag conditional caching (instant sync <50ms when unchanged).
+ * 1. HTTP 304 Not Modified & ETag conditional caching (conditional requests when unchanged).
  * 2. Smart Skip-Patch optimization: avoids redundant PATCH requests if remote is already up to date.
  * 3. Offline-First, Bidirectional Last-Write-Wins merge with Tombstones.
- * 4. Microsecond timestamp fallback resolution for maximum consistency across devices.
+ * 4. Deterministic timestamp and content conflict resolution.
  * 5. Automatic Gist discovery and zero-setup initialization.
  */
 
 const CREDENTIALS_KEY = 'flashcard_sync_credentials';
 const LAST_SYNC_KEY = 'flashcard_last_sync_time';
 const LAST_ETAG_KEY = 'flashcard_sync_etag';
+const DEVICE_ID_KEY = 'anamnesis_sync_device_id';
+const LAST_FINGERPRINT_KEY = 'flashcard_sync_fingerprint';
 const LAST_FILENAME_KEY = 'flashcard_sync_filename';
 
 export function sanitizeGistId(raw) {
@@ -46,6 +50,8 @@ export function saveSyncCredentials(pat, gistId) {
   if (typeof localStorage !== 'undefined') {
     const cleanPat = (pat || '').trim();
     const cleanGistId = sanitizeGistId(gistId);
+    const previous = getSyncCredentials();
+    if (previous.gistId !== cleanGistId || previous.pat !== cleanPat) clearSyncCredentials();
     localStorage.setItem(CREDENTIALS_KEY, JSON.stringify({ pat: cleanPat, gistId: cleanGistId }));
   }
 }
@@ -56,6 +62,7 @@ export function clearSyncCredentials() {
     localStorage.removeItem(LAST_SYNC_KEY);
     localStorage.removeItem(LAST_ETAG_KEY);
     localStorage.removeItem(LAST_FILENAME_KEY);
+    localStorage.removeItem(LAST_FINGERPRINT_KEY);
   }
 }
 
@@ -265,7 +272,7 @@ async function fetchGist(pat, gistId, etag = '') {
 /**
  * Update the gist file with new content
  */
-async function updateGist(pat, gistId, cards, targetFilename = 'flashcards.json') {
+async function updateGist(pat, gistId, cards, targetFilename = 'flashcards.json', deviceFilename = '') {
   const cleanGistId = sanitizeGistId(gistId);
   const fileName = targetFilename || 'flashcards.json';
   const body = {
@@ -275,6 +282,8 @@ async function updateGist(pat, gistId, cards, targetFilename = 'flashcards.json'
       }
     }
   };
+
+  if (deviceFilename) body.files[deviceFilename] = { content: JSON.stringify({ schemaVersion: 1, cards }) };
 
   const res = await fetchWithTimeout(`https://api.github.com/gists/${cleanGistId}`, {
     method: 'PATCH',
@@ -297,55 +306,20 @@ async function updateGist(pat, gistId, cards, targetFilename = 'flashcards.json'
 export function getCardTimestamp(card) {
   if (!card) return 0;
   const ts = Number(card.last_modified || card.updated_at || card.fsrs_stats?.last_review || card.created_at || 0);
-  return isNaN(ts) ? 0 : ts;
+  return Number.isFinite(ts) ? ts : 0;
 }
 
 /**
  * Check if two cards lists have structural, content, or scheduling differences
  */
 export function cardsDiffer(a = [], b = []) {
-  if (!Array.isArray(a) || !Array.isArray(b)) return true;
-  if (a.length !== b.length) return true;
-  const bMap = new Map();
-  for (const c of b) {
-    if (!c || !c.id) return true;
-    bMap.set(c.id, c);
-  }
-  if (bMap.size !== b.length) return true; // duplicate IDs in b
-
-  for (const cardA of a) {
-    if (!cardA || !cardA.id) return true;
-    const cardB = bMap.get(cardA.id);
-    if (!cardB) return true;
-    if (Boolean(cardA.deleted) !== Boolean(cardB.deleted)) return true;
-    if (getCardTimestamp(cardA) !== getCardTimestamp(cardB)) return true;
-    if (
-      (cardA.front || "") !== (cardB.front || "") ||
-      (cardA.back || "") !== (cardB.back || "") ||
-      (cardA.deck || "") !== (cardB.deck || "") ||
-      (cardA.folder || "") !== (cardB.folder || "") ||
-      (cardA.sub || "") !== (cardB.sub || "") ||
-      (cardA.description || "") !== (cardB.description || "") ||
-      (cardA.lang || "") !== (cardB.lang || "")
-    ) {
-      return true;
-    }
-
-    const fa = cardA.fsrs_stats;
-    const fb = cardB.fsrs_stats;
-    if (Boolean(fa) !== Boolean(fb)) return true;
-    if (fa && fb) {
-      if (
-        fa.repetitions !== fb.repetitions ||
-        fa.next_review !== fb.next_review ||
-        fa.stability !== fb.stability ||
-        fa.difficulty !== fb.difficulty ||
-        fa.state !== fb.state ||
-        fa.lapses !== fb.lapses
-      ) {
-        return true;
-      }
-    }
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return true;
+  const byId = new Map(b.map(card => [card?.id, card]));
+  if (byId.size !== b.length || byId.has(undefined)) return true;
+  const seen = new Set();
+  for (const card of a) {
+    if (!card?.id || seen.has(card.id) || canonicalJSON(card) !== canonicalJSON(byId.get(card.id))) return true;
+    seen.add(card.id);
   }
   return false;
 }
@@ -354,14 +328,13 @@ export function cardsDiffer(a = [], b = []) {
  * Merge local and remote cards array using Last-Write-Wins with tombstone support.
  * Retains soft-deleted cards during merge so deletions propagate across devices.
  */
-export function mergeCards(localCards = [], remoteCards = [], maxTombstoneAgeDays = 30) {
+export function mergeCards(localCards = [], remoteCards = []) {
   const cardMap = new Map();
-  const tombstoneCutoff = Date.now() - (maxTombstoneAgeDays * 24 * 60 * 60 * 1000);
 
   // Populate with remote cards first
   (remoteCards || []).forEach(card => {
     if (card && card.id) {
-      if (card.deleted && getCardTimestamp(card) < tombstoneCutoff) return;
+
       cardMap.set(card.id, card);
     }
   });
@@ -369,7 +342,7 @@ export function mergeCards(localCards = [], remoteCards = [], maxTombstoneAgeDay
   // Merge local cards
   (localCards || []).forEach(localCard => {
     if (!localCard || !localCard.id) return;
-    if (localCard.deleted && getCardTimestamp(localCard) < tombstoneCutoff) return;
+
 
     if (cardMap.has(localCard.id)) {
       const remoteCard = cardMap.get(localCard.id);
@@ -379,11 +352,11 @@ export function mergeCards(localCards = [], remoteCards = [], maxTombstoneAgeDay
       if (localMod > remoteMod) {
         cardMap.set(localCard.id, localCard);
       } else if (localMod === remoteMod) {
-        // Equal timestamps: prefer deletion tombstone if present, else local
+        // Equal timestamps: prefer deletion tombstone if present, else canonical content order
         if (localCard.deleted || remoteCard.deleted) {
           cardMap.set(localCard.id, localCard.deleted ? localCard : remoteCard);
         } else {
-          cardMap.set(localCard.id, localCard);
+          cardMap.set(localCard.id, canonicalJSON(localCard) > canonicalJSON(remoteCard) ? localCard : remoteCard);
         }
       }
     } else {
@@ -398,134 +371,89 @@ export function mergeCards(localCards = [], remoteCards = [], maxTombstoneAgeDay
  * Main Sync function: High-Performance, Bidirectional Last-Write-Wins Sync strategy
  * 
  * Optimized for speed:
- * - Uses conditional HTTP 304 to complete unchanged syncs in ~30ms.
+ * - Uses conditional HTTP 304 to avoid downloading unchanged data.
  * - Skips redundant PATCH requests when remote is already up to date.
  * 
  * @param {Array} localCards Array of card objects currently in local DB
  * @returns {Promise<{cards: Array, status: string, changed: boolean}>}
  */
-export async function syncCards(localCards = []) {
+export function getDeviceId() {
+  let id = localStorage.getItem(DEVICE_ID_KEY);
+  if (!/^[a-f0-9-]{36}$/i.test(id || '')) {
+    id = crypto.randomUUID();
+    localStorage.setItem(DEVICE_ID_KEY, id);
+  }
+  return id;
+}
+
+export async function syncCards(localCards = [], { deviceId = getDeviceId() } = {}) {
+  validateCards(localCards);
   const { pat, gistId } = getSyncCredentials();
-  const cleanGistId = sanitizeGistId(gistId);
-  
-  if (!pat || !cleanGistId) {
-    return { cards: localCards, status: 'unconfigured', changed: false };
+  if (!pat || !gistId) return { cards: localCards, status: 'unconfigured', changed: false };
+  const fingerprint = await cardsFingerprint(localCards);
+  const savedFingerprint = localStorage.getItem(LAST_FINGERPRINT_KEY) || '';
+  // ETag is usable only when this exact local snapshot was acknowledged.
+  const effectiveEtag = localCards.length && fingerprint === savedFingerprint ? getLastSyncEtag() : '';
+  let fetched = await fetchGist(pat, gistId, effectiveEtag);
+  if (fetched.notModified) {
+    if (effectiveEtag) return { cards: localCards, status: 'no_change', changed: false };
+    fetched = await fetchGist(pat, gistId, '');
+    if (fetched.notModified) throw new Error('Remote returned no data for an unconditional request.');
   }
-
-  try {
-    const hasLocalCards = Array.isArray(localCards) && localCards.length > 0;
-    const lastEtag = getLastSyncEtag();
-    const lastSyncTime = getLastSyncTime();
-
-    // 1. Fetch remote gist conditionally ONLY if local database has cards.
-    // If local DB is empty (initial sync, cleared browser data, new device), do NOT send ETag!
-    // We MUST download remote cards.
-    const effectiveEtag = hasLocalCards ? lastEtag : '';
-    let fetchResult = await fetchGist(pat, cleanGistId, effectiveEtag);
-
-    // Safeguard: If remote returns 304 but local DB is empty, force full unconditional fetch
-    if (fetchResult.notModified && !hasLocalCards) {
-      fetchResult = await fetchGist(pat, cleanGistId, '');
-    }
-
-    // If 304 Not Modified (and we have local cards):
-    if (fetchResult.notModified) {
-      // Check if local cards have any modifications since last sync
-      const hasLocalEdits = localCards.some(c => getCardTimestamp(c) > lastSyncTime);
-
-      if (!hasLocalEdits) {
-        // Zero changes anywhere! Instant return (<50ms)
-        return { cards: localCards, status: 'no_change', changed: false };
-      }
-
-      // Local has changes that remote lacks: push to remote
-      const targetFilename = getLastSyncFilename();
-      const { data: updatedGist, etag: newEtag } = await updateGist(pat, cleanGistId, localCards, targetFilename);
-      const remoteTime = updatedGist?.updated_at ? new Date(updatedGist.updated_at).getTime() : 0;
-      const newSyncTime = Math.max(Date.now(), isNaN(remoteTime) ? 0 : remoteTime);
-      saveLastSyncTime(newSyncTime);
-      saveLastSyncEtag(newEtag);
-      return { cards: localCards, status: 'pushed_to_remote', changed: false };
-    }
-
-    const { gist, etag } = fetchResult;
-    const files = gist.files || {};
-
-    // Resilient file discovery: check standard names, then any JSON file, then first file
-    let targetFilename = 'flashcards.json';
-    let file = files['flashcards.json'] || files['cards.json'] || files['flashcards.JSON'];
-    if (!file) {
-      const jsonKey = Object.keys(files).find(k => k.toLowerCase().endsWith('.json'));
-      if (jsonKey) {
-        file = files[jsonKey];
-        targetFilename = jsonKey;
-      } else {
-        const firstKey = Object.keys(files)[0];
-        if (firstKey) {
-          file = files[firstKey];
-          targetFilename = firstKey;
-        }
-      }
-    } else {
-      targetFilename = file.filename || targetFilename;
-    }
-    saveLastSyncFilename(targetFilename);
-
-    let remoteData = [];
-    if (file) {
-      if (file.truncated && file.raw_url) {
-        // Truncated raw file (>300KB) requires Authorization header for private gists!
-        const rawRes = await fetchWithTimeout(file.raw_url, {
-          headers: getRawHeaders(pat),
-          cache: 'no-store'
-        });
-        if (!rawRes.ok) throw new Error(`Failed to fetch raw gist data (${rawRes.status})`);
-        remoteData = await rawRes.json();
-      } else if (file.content) {
-        try {
-          remoteData = JSON.parse(file.content);
-        } catch (e) {
-          console.warn('Malformed JSON in Gist, resetting to []');
-          remoteData = [];
-        }
-      }
-    }
-
-    // Support both direct array format and wrapped object format { cards: [...] }
-    let remoteCards = [];
-    if (Array.isArray(remoteData)) {
-      remoteCards = remoteData;
-    } else if (remoteData && Array.isArray(remoteData.cards)) {
-      remoteCards = remoteData.cards;
-    } else {
-      remoteCards = [];
-    }
-
-    // 2. Perform bidirectional merge with Last-Write-Wins and Tombstones
-    const merged = mergeCards(localCards, remoteCards);
-
-    // 3. Smart Diff Analysis
-    const localNeedsUpdate = cardsDiffer(localCards, merged);
-    const remoteNeedsUpdate = cardsDiffer(remoteCards, merged);
-
-    if (remoteNeedsUpdate) {
-      // Push merged cards to Gist using the detected filename
-      const { data: updatedGist, etag: updatedEtag } = await updateGist(pat, cleanGistId, merged, targetFilename);
-      const remoteTime = updatedGist?.updated_at ? new Date(updatedGist.updated_at).getTime() : 0;
-      const newSyncTime = Math.max(Date.now(), isNaN(remoteTime) ? 0 : remoteTime);
-      saveLastSyncTime(newSyncTime);
-      saveLastSyncEtag(updatedEtag);
-      return { cards: merged, status: 'merged_with_remote', changed: localNeedsUpdate };
-    } else {
-      // Remote already had everything; save current ETag & timestamp
-      const remoteTime = gist?.updated_at ? new Date(gist.updated_at).getTime() : 0;
-      const newSyncTime = Math.max(Date.now(), isNaN(remoteTime) ? 0 : remoteTime);
-      saveLastSyncTime(newSyncTime);
-      saveLastSyncEtag(etag);
-      return { cards: merged, status: localNeedsUpdate ? 'pulled_from_remote' : 'no_change', changed: localNeedsUpdate };
-    }
-  } catch (error) {
-    console.error('Synchronization failed:', error);
-    throw error;
+  const files = fetched.gist?.files;
+  if (!files || typeof files !== 'object') throw new Error('Invalid Gist response.');
+  const filename = ['flashcards.json', 'cards.json', 'flashcards.JSON'].find(name => files[name]);
+  if (!filename) throw new Error('Gist has no recognized flashcard file. Select a flashcard Gist.');
+  if (!/^[a-f0-9-]{36}$/i.test(deviceId)) throw new Error('Invalid device identity.');
+  const deviceFilename = `anamnesis-device-${deviceId}.json`;
+  const deviceFiles = Object.keys(files).filter(name => /^anamnesis-device-[a-f0-9-]{36}\.json$/i.test(name)).sort();
+  if (deviceFiles.length > 40) throw new Error('Too many device snapshots in this Gist.');
+  const readDataset = async name => {
+    const file = files[name];
+    let payload;
+    if (file.truncated) {
+      const rawURL = new URL(file.raw_url);
+      if (rawURL.protocol !== 'https:' || rawURL.hostname !== 'gist.githubusercontent.com') throw new Error('Untrusted remote download URL.');
+      const response = await fetchWithTimeout(rawURL.href, { headers: getRawHeaders(pat), cache: 'no-store' });
+      if (!response.ok) throw new Error(`Remote download failed (${response.status}).`);
+      payload = await response.text();
+    } else payload = file.content;
+    if (typeof payload !== 'string' || payload.length > 20 * 1024 * 1024) throw new Error('Remote dataset is missing or too large.');
+    try { return parseSyncPayload(JSON.parse(payload)); }
+    catch (error) { throw new Error(`Invalid remote data; synchronization stopped: ${error.message}`); }
+  };
+  let remote = await readDataset(filename);
+  let ownSnapshot;
+  for (const name of deviceFiles) {
+    const dataset = await readDataset(name);
+    remote = mergeCards(remote, dataset);
+    if (name === deviceFilename) ownSnapshot = dataset;
   }
+  const merged = mergeCards(localCards, remote);
+  let etag = fetched.etag;
+  // Each installation writes a separate file. Simultaneous clients cannot erase
+  // each other's unique records by replacing the compatibility snapshot.
+  const needsPush = cardsDiffer(remote, merged) || !ownSnapshot || cardsDiffer(ownSnapshot, merged);
+  if (needsPush) {
+    const pushed = await updateGist(pat, gistId, merged, filename, deviceFilename);
+    // A concurrent device file may be included in the PATCH ETag but absent
+    // from our GET snapshot. Force a fresh GET before using conditional caching.
+    etag = '';
+  }
+  return {
+    cards: merged, changed: cardsDiffer(localCards, merged),
+    status: needsPush ? 'merged_with_remote' : cardsDiffer(localCards, merged) ? 'pulled_from_remote' : 'no_change',
+    checkpoint: { gistId, credential: await cardsFingerprint([{ id: gistId, pat }]), fingerprint: await cardsFingerprint(merged), etag, filename, time: Date.now() }
+  };
+}
+
+export async function acknowledgeSync(result) {
+  const checkpoint = result.checkpoint;
+  const credentials = getSyncCredentials();
+  if (!checkpoint || checkpoint.gistId !== credentials.gistId) return;
+  if (checkpoint.credential && checkpoint.credential !== await cardsFingerprint([{ id: credentials.gistId, pat: credentials.pat }])) return;
+  saveLastSyncEtag(checkpoint.etag);
+  saveLastSyncFilename(checkpoint.filename);
+  saveLastSyncTime(checkpoint.time);
+  localStorage.setItem(LAST_FINGERPRINT_KEY, checkpoint.fingerprint);
 }
