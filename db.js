@@ -510,13 +510,14 @@ export async function revertReview(expected, restored, logId) {
 }
 
 /** Preserve every edit made after the sync snapshot, regardless of clock skew. */
-export async function applySyncCards(snapshot, merged) {
+export async function applySyncCards(snapshot, merged, { canApply = () => true } = {}) {
   validateCards(merged);
   const baseline = new Map(snapshot.map(card => [card.id, canonicalJSON(card)]));
-  return writeTransaction([STORE_CARDS], (tx, done) => {
+  return writeTransaction([STORE_CARDS], (tx, done, fail) => {
     const store = tx.objectStore(STORE_CARDS);
     const request = store.getAll();
     request.onsuccess = () => {
+      if (!canApply()) { fail(new Error('Sync settings changed. Please sync again.')); return; }
       const current = new Map(request.result.map(card => [card.id, card]));
       for (const card of merged) {
         const local = current.get(card.id);

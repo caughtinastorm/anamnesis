@@ -24,9 +24,9 @@ async function stored(page) {
   });
 }
 async function navigate(page, id) {
-  if (['view-analytics','view-import'].includes(id)) {
-    await page.locator('.app-nav [data-view="view-settings"]').click();
-    await page.locator(`.settings-tools [data-view="${id}"]`).click();
+  if (id === 'view-import') {
+    await page.locator('.app-nav [data-view="view-decks"]').click();
+    await page.locator('#view-decks .view-header [data-view="view-import"]').click();
   } else await page.locator(`.app-nav [data-view="${id}"]`).click();
 }
 
@@ -60,7 +60,7 @@ test('grading and undo through real controls preserve persisted state', async ({
 test('backup export contains review history and modal focus stays contained', async ({ page }) => {
   await seed(page);
   await navigate(page, 'view-settings');
-  await page.locator('.settings-section > summary').filter({ hasText: /^Backups$/ }).click();
+  await page.getByRole('tab', { name: 'Data', exact: true }).click();
   await page.locator('#btn-create-backup-now').click();
   await expect(page.locator('.backup-item-card')).toHaveCount(1);
   const download = page.waitForEvent('download');
@@ -89,4 +89,59 @@ test('installed release starts offline with its persisted cards', async ({ page,
   await expect(page.locator('#stat-total-count')).toHaveText('2');
   await page.locator('#btn-start-review').click();
   await expect(page.locator('#subview-study')).toHaveClass(/active/);
+});
+
+test('Settings offers keyboard-operated secondary tabs and remembered credentials by default', async ({ page }) => {
+  await navigate(page, 'view-settings');
+  const general = page.getByRole('tab', { name: 'Preferences', exact: true });
+  await expect(general).toHaveAttribute('aria-selected', 'true');
+  await general.focus(); await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('tab', { name: 'Data', exact: true })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#settings-data')).toBeVisible();
+  await expect(page.locator('#settings-general')).toBeHidden();
+  await page.getByRole('tab', { name: 'Sync', exact: true }).click();
+  await expect(page.locator('#settings-remember-token')).toBeChecked();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+});
+
+test('deck search preserves direct study and gives a useful empty result', async ({ page }) => {
+  await seed(page);
+  await navigate(page, 'view-decks');
+  await expect(page.locator('.simple-deck-row')).toHaveCount(1);
+  await page.getByLabel('Find a deck').fill('Missing');
+  await expect(page.locator('#simple-deck-list')).toContainText('No matching decks.');
+  await page.getByLabel('Find a deck').fill('Tests');
+  await expect(page.locator('.simple-deck-row')).toHaveCount(1);
+  await page.locator('.deck-study').click();
+  await expect(page.locator('#subview-study')).toHaveClass(/active/);
+});
+
+test('focused add flow and organization have distinct destinations', async ({ page }) => {
+  await navigate(page, 'view-decks');
+  await page.getByRole('tab', { name: 'Organize', exact: true }).click();
+  await expect(page.locator('#win-explorer')).toBeVisible();
+  await page.getByRole('tab', { name: 'Decks', exact: true }).click();
+  await expect(page.locator('#win-explorer')).toBeHidden();
+  await page.locator('#view-decks .view-header [data-open-add]').click();
+  await expect(page.locator('#quick-front')).toBeFocused();
+  await expect(page.locator('#decks-tab-bar')).toBeHidden();
+  await page.locator('[data-return-decks]').click();
+  await expect(page.getByRole('tab', { name: 'Decks', exact: true })).toBeFocused();
+});
+
+test('Progress and Import expose one detail panel at a time', async ({ page }) => {
+  await navigate(page, 'view-analytics');
+  await expect(page.locator('#progress-overview')).toBeVisible();
+  await expect(page.locator('#progress-model')).toBeHidden();
+  await page.getByRole('tab', { name: 'Model', exact: true }).click();
+  await expect(page.locator('#progress-model')).toBeVisible();
+  await expect(page.locator('#progress-overview')).toBeHidden();
+  await navigate(page, 'view-import');
+  await page.getByRole('tab', { name: 'Paste text', exact: true }).click();
+  await page.locator('#import-text').fill('Front,Back\nHello,Hola');
+  await page.locator('#btn-parse-csv').click();
+  await expect(page.locator('#preview-count')).toHaveText('1');
+  await page.getByRole('tab', { name: 'Starter deck', exact: true }).click();
+  await expect(page.locator('#import-preview-section')).toBeHidden();
 });

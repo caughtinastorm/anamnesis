@@ -40,6 +40,13 @@ export function initSettingsEventListeners() {
   if (dom.btnValidateToken) dom.btnValidateToken.addEventListener("click", validateGitHubToken);
   if (dom.btnCreateGist) dom.btnCreateGist.addEventListener("click", createSyncGist);
   if (dom.btnSaveCredentials) dom.btnSaveCredentials.addEventListener("click", saveSyncConfig);
+  document.getElementById('btn-disconnect-sync')?.addEventListener('click', () => {
+    sync.clearSyncCredentials();
+    settingsState.syncCredentials = { pat: '', gistId: '' };
+    dom.settingsPat.value = ''; dom.settingsGistId.value = '';
+    document.getElementById('settings-remember-token').checked = true;
+    updateSyncUIState(); showToast('Sync disconnected. Your local cards are saved.', 'info');
+  });
   if (dom.btnForceSync) dom.btnForceSync.addEventListener("click", triggerManualSync);
   if (dom.btnExportCsv) dom.btnExportCsv.addEventListener("click", exportDatabaseToCSV);
   if (dom.btnClearDb) dom.btnClearDb.addEventListener("click", resetLocalDatabase);
@@ -61,6 +68,8 @@ export function initSettingsEventListeners() {
 export function initSettingsForm() {
   dom.settingsPat.value = settingsState.syncCredentials.pat || "";
   dom.settingsGistId.value = settingsState.syncCredentials.gistId || "";
+  document.getElementById('settings-remember-token').checked = !settingsState.syncCredentials.pat || sync.credentialsAreRemembered();
+  document.getElementById('sync-configuration').open = !settingsState.syncCredentials.pat;
 
   if (dom.settingsVoiceLang) {
     dom.settingsVoiceLang.value = localStorage.getItem("app-speech-lang") || "auto";
@@ -269,6 +278,9 @@ async function createSyncGist() {
 async function saveSyncConfig() {
   const pat = dom.settingsPat.value.trim();
   let gistId = sync.sanitizeGistId(dom.settingsGistId.value);
+  if (dom.settingsGistId.value.trim() && !gistId) {
+    showToast('Enter a valid Gist ID or GitHub Gist URL.', 'error'); return;
+  }
   if (!pat) {
     sync.clearSyncCredentials();
     settingsState.syncCredentials = { pat: "", gistId: "" };
@@ -290,18 +302,21 @@ async function saveSyncConfig() {
   } else {
     dom.settingsGistId.value = gistId;
   }
-  sync.saveSyncCredentials(pat, gistId);
+  try { sync.saveSyncCredentials(pat, gistId, { remember: document.getElementById('settings-remember-token').checked }); }
+  catch (error) { showToast(error.message, 'error'); return; }
   settingsState.syncCredentials = { pat, gistId };
   updateSyncUIState();
-  showToast("Credentials saved & synchronized!", "success");
+  showToast("Sync settings saved. Connecting…", "success");
   triggerManualSync();
 }
 
 const syncCoordinator = createSyncCoordinator({
+  getScope: () => JSON.stringify(sync.getSyncCredentials()),
   getCards: db.getCards,
   syncCards: sync.syncCards,
-  applyCards: db.applySyncCards,
+  applyCards: (snapshot, cards, result) => db.applySyncCards(snapshot, cards, { canApply: result.isCurrent }),
   acknowledge: sync.acknowledgeSync,
+  isCurrent: sync.isSyncResultCurrent,
   backup: () => db.createLocalBackup("Before synchronization"),
   refresh: loadCardsFromDB,
   onState: (status, error) => {
@@ -312,6 +327,7 @@ const syncCoordinator = createSyncCoordinator({
 });
 
 export function requestDebouncedSync(delayMs = 1200) { syncCoordinator.request(delayMs); }
+export function invalidateSyncCache() { syncCoordinator.invalidate(); }
 
 export async function triggerManualSync() {
   if (!settingsState.syncCredentials.pat || !settingsState.syncCredentials.gistId) {
@@ -327,11 +343,19 @@ export async function triggerManualSync() {
 }
 
 export async function performBackgroundSync(silent = true) {
-  try { return await syncCoordinator.run(); }
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    setSyncStateIndicator('offline');
+    return { status: 'offline' };
+  }
+  try { return await syncCoordinator.run({ background: true }); }
   catch (error) { if (!silent) showToast("Sync failed: " + error.message, "error"); }
 }
 
 export function setSyncStateIndicator(state_) {
+  if (state_ === 'synced' && dom.syncLastTimeLabel) {
+    const lastCheck = sync.getLastSyncTime();
+    if (lastCheck > 0) dom.syncLastTimeLabel.textContent = `Last synced: ${new Date(lastCheck).toLocaleString()}`;
+  }
   if (dom.headerSyncStatus) {
     dom.headerSyncStatus.className = "header-sync";
     if (state_ === "synced") dom.headerSyncStatus.classList.add("synced");
@@ -339,13 +363,15 @@ export function setSyncStateIndicator(state_) {
     else if (state_ === "failed") dom.headerSyncStatus.classList.add("failed");
   }
   if (dom.syncLabelText) {
-    const labels = { synced: "Synced", syncing: "Syncing...", failed: "Sync Failed" };
+    const labels = { synced: "Synced", syncing: "Syncing...", failed: "Sync Failed", offline: "Offline · saved here" };
     dom.syncLabelText.textContent = labels[state_] || "On this device";
   }
 }
 
 function updateSyncUIState() {
   const { pat, gistId } = settingsState.syncCredentials;
+  const summary = document.getElementById('sync-connection-summary');
+  if (summary) summary.textContent = pat && gistId ? 'Connected. Your changes sync in the background.' : 'Connect GitHub to sync cards across devices.';
   if (pat && gistId) {
     dom.manualSyncContainer?.classList.remove("hidden");
     const lastSync = sync.getLastSyncTime();

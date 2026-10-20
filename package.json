@@ -1,6 +1,6 @@
 {
   "name": "anamnesis",
-  "version": "1.2.0",
+  "version": "1.4.0",
   "description": "Offline-First Spaced Repetition System with FSRS-5 & GitHub Gist Sync",
   "type": "module",
   "scripts": {

@@ -1,3 +1,4 @@
+import { initTabKeyboard } from './tabs.js';
 /**
  * Windows-Style File Explorer Deck Manager Module
  *
@@ -131,6 +132,7 @@ export function initDecksTabs() {
   const tabBar = document.getElementById("decks-tab-bar");
   if (!tabBar) return;
 
+  initTabKeyboard(tabBar);
   const tabs = tabBar.querySelectorAll(".btn-deck-tab");
   tabs.forEach(tab => {
     tab.addEventListener("click", () => {
@@ -142,11 +144,12 @@ export function initDecksTabs() {
 
 export function switchDecksTab(targetId) {
   const tabBar = document.getElementById("decks-tab-bar");
-  if (!tabBar) return;
+  if (!tabBar || ![...document.querySelectorAll('.deck-tab-panel')].some(panel => panel.id === targetId)) return;
 
   const tabs = tabBar.querySelectorAll(".btn-deck-tab");
   tabs.forEach(tab => {
     const isTarget = tab.dataset.deckTab === targetId;
+    tab.tabIndex = isTarget ? 0 : -1;
     tab.classList.toggle("active", isTarget);
     tab.setAttribute("aria-selected", isTarget ? "true" : "false");
   });
@@ -154,9 +157,11 @@ export function switchDecksTab(targetId) {
   const panels = document.querySelectorAll(".deck-tab-panel");
   panels.forEach(panel => {
     const isTarget = panel.id === targetId;
+    panel.inert = !isTarget;
     panel.classList.toggle("hidden", !isTarget);
     panel.classList.toggle("active", isTarget);
   });
+  document.dispatchEvent(new CustomEvent("app:deck-tab-changed", { detail: { targetId } }));
 }
 
 export function setViewMode(mode) {

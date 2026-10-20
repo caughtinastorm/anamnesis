@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from './js/services/http.js';
+export { fetchWithTimeout } from './js/services/http.js';
 import { canonicalJSON, cardsFingerprint, parseSyncPayload, validateCards } from './js/domain/data.js';
 
 /**
@@ -23,22 +25,23 @@ export function sanitizeGistId(raw) {
   let trimmed = String(raw).trim();
   trimmed = trimmed.split('#')[0].split('?')[0].replace(/\/+$/, '');
   if (trimmed.includes('/')) {
-    const parts = trimmed.split('/').filter(Boolean);
-    trimmed = parts[parts.length - 1] || '';
+    try {
+      const url = new URL(trimmed);
+      if (url.protocol !== 'https:' || url.hostname !== 'gist.github.com' || url.port || url.username || url.password) return '';
+      trimmed = url.pathname.split('/').filter(Boolean).at(-1) || '';
+    } catch { return ''; }
   }
-  const match = trimmed.match(/([a-f0-9]{20,32})/i);
-  if (match) return match[1];
-  return trimmed;
+  return /^[a-f0-9]{20,32}$/i.test(trimmed) ? trimmed : '';
 }
 
 export function getSyncCredentials() {
   try {
     if (typeof localStorage === 'undefined') return { pat: '', gistId: '' };
-    const raw = localStorage.getItem(CREDENTIALS_KEY);
+    const raw = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(CREDENTIALS_KEY)) || localStorage.getItem(CREDENTIALS_KEY);
     if (!raw) return { pat: '', gistId: '' };
     const parsed = JSON.parse(raw);
     return {
-      pat: (parsed.pat || '').trim(),
+      pat: typeof parsed.pat === 'string' ? parsed.pat.trim() : '',
       gistId: sanitizeGistId(parsed.gistId)
     };
   } catch (e) {
@@ -46,17 +49,28 @@ export function getSyncCredentials() {
   }
 }
 
-export function saveSyncCredentials(pat, gistId) {
-  if (typeof localStorage !== 'undefined') {
-    const cleanPat = (pat || '').trim();
-    const cleanGistId = sanitizeGistId(gistId);
-    const previous = getSyncCredentials();
-    if (previous.gistId !== cleanGistId || previous.pat !== cleanPat) clearSyncCredentials();
-    localStorage.setItem(CREDENTIALS_KEY, JSON.stringify({ pat: cleanPat, gistId: cleanGistId }));
+export function credentialsAreRemembered() {
+  return typeof localStorage !== 'undefined' && !!localStorage.getItem(CREDENTIALS_KEY);
+}
+
+export function saveSyncCredentials(pat, gistId, { remember = true } = {}) {
+  const cleanPat = String(pat || '').trim();
+  const cleanGistId = sanitizeGistId(gistId);
+  if (!cleanPat || !cleanGistId) throw new Error('Enter a token and a valid Gist ID or GitHub Gist URL.');
+  const storage = remember ? localStorage : (typeof sessionStorage !== 'undefined' ? sessionStorage : null);
+  if (!storage) throw new Error('Session storage is unavailable. Enable browser storage or choose Remember on this device.');
+  const previous = getSyncCredentials();
+  // Write the chosen store first, so a storage failure leaves the previous config intact.
+  storage.setItem(CREDENTIALS_KEY, JSON.stringify({ pat: cleanPat, gistId: cleanGistId }));
+  if (remember && typeof sessionStorage !== 'undefined') sessionStorage.removeItem(CREDENTIALS_KEY);
+  if (!remember) localStorage.removeItem(CREDENTIALS_KEY);
+  if (previous.gistId !== cleanGistId || previous.pat !== cleanPat) {
+    for (const key of [LAST_SYNC_KEY, LAST_ETAG_KEY, LAST_FILENAME_KEY, LAST_FINGERPRINT_KEY]) localStorage.removeItem(key);
   }
 }
 
 export function clearSyncCredentials() {
+  if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(CREDENTIALS_KEY);
   if (typeof localStorage !== 'undefined') {
     localStorage.removeItem(CREDENTIALS_KEY);
     localStorage.removeItem(LAST_SYNC_KEY);
@@ -100,28 +114,6 @@ export function getLastSyncFilename() {
 export function saveLastSyncFilename(filename) {
   if (typeof localStorage === 'undefined' || !filename) return;
   localStorage.setItem(LAST_FILENAME_KEY, filename);
-}
-
-/**
- * Fetch with automatic AbortController timeout to prevent hanging syncs
- */
-export async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(url, {
-      ...options,
-      signal: controller.signal
-    });
-    return res;
-  } catch (err) {
-    if (err.name === 'AbortError') {
-      throw new Error(`Sync request timed out after ${timeoutMs / 1000}s`);
-    }
-    throw err;
-  } finally {
-    clearTimeout(timer);
-  }
 }
 
 /**
@@ -247,6 +239,7 @@ export async function createFlashcardGist(pat) {
  */
 async function fetchGist(pat, gistId, etag = '') {
   const cleanGistId = sanitizeGistId(gistId);
+  if (!cleanGistId) throw new Error('Invalid Gist ID.');
   const res = await fetchWithTimeout(`https://api.github.com/gists/${cleanGistId}`, {
     headers: getHeaders(pat, etag),
     cache: 'no-store'
@@ -285,6 +278,7 @@ async function updateGist(pat, gistId, cards, targetFilename = 'flashcards.json'
 
   if (deviceFilename) body.files[deviceFilename] = { content: JSON.stringify({ schemaVersion: 1, cards }) };
 
+  if (!cleanGistId) throw new Error('Invalid Gist ID.');
   const res = await fetchWithTimeout(`https://api.github.com/gists/${cleanGistId}`, {
     method: 'PATCH',
     headers: getHeaders(pat),
@@ -390,13 +384,22 @@ export async function syncCards(localCards = [], { deviceId = getDeviceId() } = 
   validateCards(localCards);
   const { pat, gistId } = getSyncCredentials();
   if (!pat || !gistId) return { cards: localCards, status: 'unconfigured', changed: false };
+  const assertCurrent = () => {
+    const current = getSyncCredentials();
+    if (current.pat !== pat || current.gistId !== gistId) throw new Error('Sync settings changed. Please sync again.');
+  };
   const fingerprint = await cardsFingerprint(localCards);
   const savedFingerprint = localStorage.getItem(LAST_FINGERPRINT_KEY) || '';
   // ETag is usable only when this exact local snapshot was acknowledged.
-  const effectiveEtag = localCards.length && fingerprint === savedFingerprint ? getLastSyncEtag() : '';
+  const effectiveEtag = fingerprint === savedFingerprint ? getLastSyncEtag() : '';
   let fetched = await fetchGist(pat, gistId, effectiveEtag);
+  assertCurrent();
   if (fetched.notModified) {
-    if (effectiveEtag) return { cards: localCards, status: 'no_change', changed: false };
+    if (effectiveEtag) return {
+      cards: localCards, status: 'no_change', changed: false,
+      isCurrent: () => { const current = getSyncCredentials(); return current.pat === pat && current.gistId === gistId; },
+      checkpoint: { gistId, credential: await cardsFingerprint([{ id: gistId, pat }]), fingerprint, etag: effectiveEtag, filename: getLastSyncFilename(), time: Date.now() }
+    };
     fetched = await fetchGist(pat, gistId, '');
     if (fetched.notModified) throw new Error('Remote returned no data for an unconditional request.');
   }
@@ -408,17 +411,20 @@ export async function syncCards(localCards = [], { deviceId = getDeviceId() } = 
   const deviceFilename = `anamnesis-device-${deviceId}.json`;
   const deviceFiles = Object.keys(files).filter(name => /^anamnesis-device-[a-f0-9-]{36}\.json$/i.test(name)).sort();
   if (deviceFiles.length > 40) throw new Error('Too many device snapshots in this Gist.');
+  let downloadedBytes = 0;
   const readDataset = async name => {
     const file = files[name];
     let payload;
     if (file.truncated) {
       const rawURL = new URL(file.raw_url);
-      if (rawURL.protocol !== 'https:' || rawURL.hostname !== 'gist.githubusercontent.com') throw new Error('Untrusted remote download URL.');
-      const response = await fetchWithTimeout(rawURL.href, { headers: getRawHeaders(pat), cache: 'no-store' });
+      if (rawURL.protocol !== 'https:' || rawURL.hostname !== 'gist.githubusercontent.com' || rawURL.username || rawURL.password || rawURL.port) throw new Error('Untrusted remote download URL.');
+      const response = await fetchWithTimeout(rawURL.href, { headers: getRawHeaders(pat), cache: 'no-store' }, 12000, 20 * 1024 * 1024);
       if (!response.ok) throw new Error(`Remote download failed (${response.status}).`);
       payload = await response.text();
     } else payload = file.content;
     if (typeof payload !== 'string' || payload.length > 20 * 1024 * 1024) throw new Error('Remote dataset is missing or too large.');
+    downloadedBytes += new TextEncoder().encode(payload).byteLength;
+    if (downloadedBytes > 32 * 1024 * 1024) throw new Error('Combined remote datasets exceed the 32 MB limit.');
     try { return parseSyncPayload(JSON.parse(payload)); }
     catch (error) { throw new Error(`Invalid remote data; synchronization stopped: ${error.message}`); }
   };
@@ -433,6 +439,7 @@ export async function syncCards(localCards = [], { deviceId = getDeviceId() } = 
   let etag = fetched.etag;
   // Each installation writes a separate file. Simultaneous clients cannot erase
   // each other's unique records by replacing the compatibility snapshot.
+  assertCurrent();
   const needsPush = cardsDiffer(remote, merged) || !ownSnapshot || cardsDiffer(ownSnapshot, merged);
   if (needsPush) {
     const pushed = await updateGist(pat, gistId, merged, filename, deviceFilename);
@@ -440,11 +447,22 @@ export async function syncCards(localCards = [], { deviceId = getDeviceId() } = 
     // from our GET snapshot. Force a fresh GET before using conditional caching.
     etag = '';
   }
+  assertCurrent();
   return {
     cards: merged, changed: cardsDiffer(localCards, merged),
+    isCurrent: () => { const current = getSyncCredentials(); return current.pat === pat && current.gistId === gistId; },
     status: needsPush ? 'merged_with_remote' : cardsDiffer(localCards, merged) ? 'pulled_from_remote' : 'no_change',
     checkpoint: { gistId, credential: await cardsFingerprint([{ id: gistId, pat }]), fingerprint: await cardsFingerprint(merged), etag, filename, time: Date.now() }
   };
+}
+
+export async function isSyncResultCurrent(result) {
+  if (result.isCurrent && !result.isCurrent()) return false;
+  const checkpoint = result.checkpoint;
+  const credentials = getSyncCredentials();
+  if (!checkpoint) return result.status === 'no_change';
+  if (!credentials.pat || checkpoint.gistId !== credentials.gistId) return false;
+  return !checkpoint.credential || checkpoint.credential === await cardsFingerprint([{ id: credentials.gistId, pat: credentials.pat }]);
 }
 
 export async function acknowledgeSync(result) {

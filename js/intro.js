@@ -17,8 +17,8 @@ export const INTRO_STEPS = [
     subtitle: "A short session is a good session.", iconHtml: "", bodyHtml: "<p>Choose a deck and tap <strong>Start reviewing</strong>. Your session starts with 10 cards. You can skip this guide anytime.</p>", nextText: "How reviewing works →" },
   { id: "study-practice", tag: "Review", view: "view-review", title: "Question. Answer. Remember.",
     subtitle: "Two simple choices.", iconHtml: "", bodyHtml: "<p>Think of the answer, then tap <strong>Show answer</strong>. Choose <strong>Again</strong> to revisit it, or <strong>Got it</strong> to move on. Your progress saves after every card.</p>", nextText: "Where everything lives →" },
-  { id: "cards-settings", tag: "Your space", view: "view-settings", title: "Three places. Nothing to learn.",
-    subtitle: "Everything has a home.", iconHtml: "", bodyHtml: "<p><strong>Today</strong> is for reviewing. <strong>Cards</strong> is for adding and browsing your decks. <strong>Settings</strong> holds progress, imports, backups, and study preferences.</p>", nextText: "Ready to start" }
+  { id: "cards-settings", tag: "Your space", view: "view-settings", title: "A place for everything.",
+    subtitle: "Everything has a home.", iconHtml: "", bodyHtml: "<p><strong>Today</strong> is for reviewing. <strong>Cards</strong> is for adding and browsing your decks. <strong>Progress</strong> shows your activity and learning insights. <strong>Settings</strong> holds preferences, backups, and sync. Import decks from <strong>Cards</strong>.</p>", nextText: "Ready to start" }
 ];
 
 let currentStepIndex = 0;

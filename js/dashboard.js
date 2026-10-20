@@ -181,9 +181,9 @@ export function updateUIStats() {
   const due = cardState.dueCards.length;
   const newCount = cardState.newCards.length;
 
-  if (dom.statDueCount) dom.statDueCount.textContent = due;
-  if (dom.statNewCount) dom.statNewCount.textContent = newCount;
-  if (dom.statTotalCount) dom.statTotalCount.textContent = filteredTotal;
+  if (dom.statDueCount) dom.statDueCount.textContent = String(due);
+  if (dom.statNewCount) dom.statNewCount.textContent = String(newCount);
+  if (dom.statTotalCount) dom.statTotalCount.textContent = String(filteredTotal);
 
   const overallDue = cardState.allCards.filter(c => isCardDue(c, now)).length;
   if (dom.navDueBadge) {

@@ -38,11 +38,16 @@ export function onCardsRefreshed(fn) {
  * Load all cards from IndexedDB into cardState.allCards, then call every
  * registered refresh subscriber in order.
  */
-let refreshQueue = Promise.resolve();
+let activeRefresh = null;
+let refreshRequested = false;
 export function loadCardsFromDB() {
-  const result = refreshQueue.then(refreshCards);
-  refreshQueue = result.catch(() => {});
-  return result;
+  refreshRequested = true;
+  if (activeRefresh) return activeRefresh;
+  activeRefresh = (async () => {
+    // A request made during a read schedules one final read, rather than N queued reads.
+    while (refreshRequested) { refreshRequested = false; await refreshCards(); }
+  })().finally(() => { activeRefresh = null; });
+  return activeRefresh;
 }
 
 async function refreshCards() {

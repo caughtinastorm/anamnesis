@@ -1,6 +1,8 @@
-import { parseAnkiApkg } from '../../anki.js';
 export async function importAnkiPackage(buffer) {
-  if (typeof Worker === 'undefined') return parseAnkiApkg(buffer);
+  if (typeof Worker === 'undefined') {
+    const { parseAnkiApkg } = await import('../../anki.js');
+    return parseAnkiApkg(buffer);
+  }
   return new Promise((resolve, reject) => {
     const worker = new Worker(new URL('../workers/anki-import.js', import.meta.url), { type: 'module' });
     const timeout = setTimeout(() => finish(new Error('Anki import timed out. Try a smaller package or text export.')), 60000);

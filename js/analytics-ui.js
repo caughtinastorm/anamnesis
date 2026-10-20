@@ -40,6 +40,7 @@ let lastAnalyzedDecks = null;
 let lastAnalyzedFriction = null;
 let lastAnalyzedErgo = null;
 let lastAnalyzedCal = null;
+let lastPrescriptions = null;
 
 /**
  * Set active collection filter for the Analytics view and update GUI controls.
@@ -87,8 +88,8 @@ function updateAnalyticsDeckPickerUI() {
  * Initialize Analytics view event listeners and time horizon toggles
  */
 export function initAnalyticsUI() {
-  document.addEventListener("app:view-changed", event => {
-    if (event.detail.viewId === "view-analytics") renderAnalyticsView();
+  document.addEventListener('app:section-tab', event => {
+    if (event.detail.barId === 'progress-tabs' && lastAnalyzedDecks) renderActiveAnalytics();
   });
   // Time horizon filter buttons
   document.querySelectorAll(".analytics-horizon-btn").forEach(btn => {
@@ -177,13 +178,7 @@ export function initAnalyticsUI() {
     });
   }
 
-  // Hook into tab changes to auto-refresh analytics when switching to view-analytics
-  document.addEventListener("click", (e) => {
-    const navBtn = e.target.closest(".nav-item") || e.target.closest("[data-view]");
-    if (navBtn && navBtn.getAttribute("data-view") === "view-analytics") {
-      setTimeout(() => renderAnalyticsView(), 50);
-    }
-  });
+
 }
 
 /**
@@ -245,21 +240,30 @@ export async function renderAnalyticsView(forceRefresh = false) {
     lastAnalyzedFriction = cardFriction;
     lastAnalyzedErgo = ergonomics;
     lastAnalyzedCal = calibration;
+    lastPrescriptions = prescriptions;
 
     // Render Sub-Components
     renderKPICards(deckAnalysis.summary, targetRetention, cardFriction.length);
-    renderPrescriptions(prescriptions);
-    renderDeckHealthTable(deckAnalysis.decks);
-    renderLeechRadar(cardFriction);
-    renderCircadianChart(ergonomics.circadian);
-    renderCalibrationChart(calibration);
-    renderTimelinessChart(ergonomics.timeliness);
+    renderActiveAnalytics();
   } catch (err) {
     console.error("Failed to render analytics view:", err);
   } finally {
     isRendering = false;
     if (renderQueued) { renderQueued = false; queueMicrotask(() => renderAnalyticsView()); }
   }
+}
+
+/** Detail tabs reuse analyzed data; only visible charts/tables are built. */
+function renderActiveAnalytics() {
+  const active = document.querySelector('#progress-tabs [aria-selected="true"]')?.getAttribute('aria-controls');
+  if (!lastAnalyzedDecks) return;
+  if (active === 'progress-decks') {
+    renderDeckHealthTable(lastAnalyzedDecks.decks); renderLeechRadar(lastAnalyzedFriction);
+  } else if (active === 'progress-patterns') {
+    renderCircadianChart(lastAnalyzedErgo.circadian); renderTimelinessChart(lastAnalyzedErgo.timeliness);
+  } else if (active === 'progress-model') {
+    renderCalibrationChart(lastAnalyzedCal);
+  } else renderPrescriptions(lastPrescriptions);
 }
 
 /**
@@ -733,7 +737,7 @@ function renderCircadianChart(circadian) {
     const y = padTop + (plotHeight - barH);
 
     // Highlight peak and fatigue hours
-    let barFill = "rgba(255, 255, 255, 0.12)";
+    let barFill = "var(--panel-border)";
     if (i === circadian.peakHour) barFill = "rgba(16, 185, 129, 0.45)"; // green
     else if (i === circadian.fatigueHour) barFill = "rgba(239, 68, 68, 0.45)"; // red
 
@@ -749,7 +753,7 @@ function renderCircadianChart(circadian) {
       const lineY = padTop + (1 - h.retention) * plotHeight;
       linePoints.push(`${lineX},${lineY}`);
       dotsSvg += `
-        <circle cx="${lineX}" cy="${lineY}" r="3.5" fill="#ffffff" stroke="#000000" stroke-width="1.5">
+        <circle cx="${lineX}" cy="${lineY}" r="3.5" fill="var(--text-primary)" stroke="var(--panel-bg)" stroke-width="1.5">
           <title>${h.label}: ${(h.retention * 100).toFixed(1)}% retention (${h.reviews} reviews)</title>
         </circle>
       `;
@@ -757,7 +761,7 @@ function renderCircadianChart(circadian) {
   });
 
   const polylineSvg = linePoints.length > 1
-    ? `<polyline fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="${linePoints.join(' ')}" />`
+    ? `<polyline fill="none" stroke="var(--text-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="${linePoints.join(' ')}" />`
     : "";
 
   // Hour tick marks (every 3 hours)
@@ -770,9 +774,9 @@ function renderCircadianChart(circadian) {
   container.innerHTML = `
     <svg viewBox="0 0 ${svgWidth} ${svgHeight}" class="analytics-svg-chart">
       <!-- Grid lines -->
-      <line x1="${padLeft}" y1="${padTop}" x2="${svgWidth - padRight}" y2="${padTop}" stroke="rgba(255,255,255,0.06)" stroke-dasharray="3,3" />
-      <line x1="${padLeft}" y1="${padTop + plotHeight * 0.5}" x2="${svgWidth - padRight}" y2="${padTop + plotHeight * 0.5}" stroke="rgba(255,255,255,0.06)" stroke-dasharray="3,3" />
-      <line x1="${padLeft}" y1="${padTop + plotHeight}" x2="${svgWidth - padRight}" y2="${padTop + plotHeight}" stroke="rgba(255,255,255,0.15)" />
+      <line x1="${padLeft}" y1="${padTop}" x2="${svgWidth - padRight}" y2="${padTop}" stroke="var(--panel-border)" stroke-dasharray="3,3" />
+      <line x1="${padLeft}" y1="${padTop + plotHeight * 0.5}" x2="${svgWidth - padRight}" y2="${padTop + plotHeight * 0.5}" stroke="var(--panel-border)" stroke-dasharray="3,3" />
+      <line x1="${padLeft}" y1="${padTop + plotHeight}" x2="${svgWidth - padRight}" y2="${padTop + plotHeight}" stroke="var(--panel-border)" />
 
       <!-- Y-Axis Labels -->
       <text x="${padLeft - 8}" y="${padTop + 4}" text-anchor="end" font-size="10" fill="#888888">100%</text>
@@ -813,7 +817,7 @@ function renderCalibrationChart(calibration) {
   // 45 degree perfect line: from (pad, pad + plotSize) to (pad + plotSize, pad)
   const perfectLine = `
     <line x1="${pad}" y1="${pad + plotSize}" x2="${pad + plotSize}" y2="${pad}"
-          stroke="rgba(255, 255, 255, 0.25)" stroke-width="1.5" stroke-dasharray="4,4" />
+          stroke="var(--panel-border)" stroke-width="1.5" stroke-dasharray="4,4" />
   `;
 
   // Plot observed bins
@@ -830,7 +834,7 @@ function renderCalibrationChart(calibration) {
 
       observedPoints.push(`${cx},${cy}`);
       dotsSvg += `
-        <circle cx="${cx}" cy="${cy}" r="5" fill="#10b981" stroke="#ffffff" stroke-width="1.5">
+        <circle cx="${cx}" cy="${cy}" r="5" fill="#10b981" stroke="var(--text-primary)" stroke-width="1.5">
           <title>${b.label}: Predicted ${(pred * 100).toFixed(1)}% vs Observed ${(obs * 100).toFixed(1)}% (${b.count} revs)</title>
         </circle>
       `;
@@ -844,8 +848,8 @@ function renderCalibrationChart(calibration) {
   container.innerHTML = `
     <svg viewBox="0 0 ${svgWidth} ${svgHeight}" class="analytics-svg-calibration">
       <!-- Axes -->
-      <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${pad + plotSize}" stroke="rgba(255,255,255,0.2)" />
-      <line x1="${pad}" y1="${pad + plotSize}" x2="${pad + plotSize}" y2="${pad + plotSize}" stroke="rgba(255,255,255,0.2)" />
+      <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${pad + plotSize}" stroke="var(--panel-border)" />
+      <line x1="${pad}" y1="${pad + plotSize}" x2="${pad + plotSize}" y2="${pad + plotSize}" stroke="var(--panel-border)" />
 
       <!-- Labels -->
       <text x="${pad + plotSize / 2}" y="${svgHeight - 10}" text-anchor="middle" font-size="11" fill="#888888">Predicted Retrievability (R)</text>

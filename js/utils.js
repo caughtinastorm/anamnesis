@@ -77,10 +77,10 @@ export function limitText(str, maxLength = 26) {
  * @returns {string}
  */
 export function formatDeckSelectionLabel(selection = "all", maxLength = null) {
-  if (!selection || selection === "all") return "📁 All Collections";
+  if (!selection || selection === "all") return "All decks";
   let label = selection;
-  if (selection.startsWith("folder:")) label = `📁 ${selection.substring(7)} (All)`;
-  else if (selection.startsWith("deck:")) label = `🗂️ ${selection.substring(5)}`;
+  if (selection.startsWith("folder:")) label = `${selection.substring(7)} / All decks`;
+  else if (selection.startsWith("deck:")) label = `${selection.substring(5)}`;
   if (maxLength && label.length > maxLength) {
     return limitText(label, maxLength);
   }
@@ -157,5 +157,8 @@ export function plainText(str) {
 }
 
 export function escapeCSVField(field) {
-  return `"${String(field || "").replace(/"/g, '""')}"`;
+  let value = String(field ?? "");
+  // Quoting alone does not stop spreadsheets interpreting imported formulas.
+  if (/^[\s\u0000-\u001f]*[=+@-]/.test(value) || /^[\t\r\n]/.test(value)) value = "'" + value;
+  return `"${value.replace(/"/g, '""')}"`;
 }

@@ -1,3 +1,4 @@
+import { createViewRefresh } from './js/services/view-refresh.js';
 import { initMinimalUI, renderSimpleDecks } from "./js/minimal-ui.js";
 import { initAccessibility } from "./js/accessibility.js";
 import { runMigrations, onDatabaseChanged } from "./db.js";
@@ -14,7 +15,7 @@ import { calculateStats, updateUIStats, setActiveDeckSelection, handleQuickAddCa
 
 import { isStudyBusy, initStudyEventListeners, initTouchGestures, initKeyboardShortcuts, exitStudySession, onSyncNeeded as studyOnSync } from "./js/study.js";
 import { initImportEventListeners, onSyncNeeded as importOnSync, refreshImport } from "./js/import.js";
-import { initSettingsForm, initSettingsEventListeners, performBackgroundSync, requestDebouncedSync, onSyncNeeded as settingsOnSync } from "./js/settings.js";
+import { initSettingsForm, initSettingsEventListeners, performBackgroundSync, requestDebouncedSync, invalidateSyncCache, onSyncNeeded as settingsOnSync } from "./js/settings.js";
 import { initCardBrowser, onSyncNeeded as browserOnSync, refreshBrowser } from "./js/browser.js";
 import { initExplorer, onSyncNeeded as explorerOnSync, renderExplorer } from "./js/explorer.js";
 import { initCollectionPicker } from "./js/picker.js";
@@ -31,18 +32,36 @@ settingsOnSync(requestSync);
 browserOnSync(requestSync);
 explorerOnSync(requestSync);
 
-// Register card refresh subscribers — called in order after every loadCardsFromDB()
+// Cheap daily counters stay current; collection tools render when opened.
 onCardsRefreshed(refreshDashboard);
-onCardsRefreshed(renderSimpleDecks);
-onCardsRefreshed(refreshImport);     // populateImportDestinationSuggestions
-onCardsRefreshed(renderExplorer);    // Explorer sidebar tree + canvas
-onCardsRefreshed(refreshBrowser);    // Browser deck filter + card table
-onCardsRefreshed(renderAnalyticsView); // Recompute data-science analytics
+const visibleView = id => document.getElementById(id)?.classList.contains('active');
+const visibleDeckTab = id => visibleView('view-decks') && document.getElementById(id)?.classList.contains('active');
+const refreshers = [
+  [() => visibleDeckTab('tab-collections'), renderSimpleDecks],
+  [() => visibleView('view-import'), refreshImport],
+  [() => visibleDeckTab('tab-organize'), renderExplorer],
+  [() => visibleDeckTab('tab-browser'), refreshBrowser],
+  [() => visibleView('view-analytics'), renderAnalyticsView]
+].map(([isVisible, render]) => createViewRefresh({ isVisible, render }));
+for (const refresher of refreshers) onCardsRefreshed(refresher.invalidate);
+const flushVisible = () => {
+  // Due status also changes with wall-clock time, even without a card edit.
+  calculateStats(); updateUIStats();
+  for (const refresher of refreshers) refresher.invalidate();
+};
+document.addEventListener('app:view-changed', flushVisible);
+document.addEventListener('app:deck-tab-changed', flushVisible);
 
 // ==========================================================================
 // Routing
 // ==========================================================================
 function initRouting() {
+  const navigate = targetView => {
+    if (isStudyBusy()) { showToast("Finishing your review save. Please try again in a moment.", "info"); return false; }
+    const studyActive = dom.subviewStudy?.classList.contains("active");
+    if (studyActive && (targetView !== "view-review" || !document.getElementById('view-review')?.classList.contains('active')) && exitStudySession() === false) return false;
+    switchView(targetView); return true;
+  };
   document.addEventListener("click", e => {
     const navBtn = e.target.closest(".nav-item") || e.target.closest("[data-view]");
     if (!navBtn) return;
@@ -50,16 +69,12 @@ function initRouting() {
     if (!targetView) return;
     e.preventDefault();
 
-    if (isStudyBusy()) { showToast("Finishing your review save. Please try again in a moment.", "info"); return; }
-    const studyActive = dom.subviewStudy?.classList.contains("active");
-    if (studyActive && targetView !== "view-review" && exitStudySession() === false) return;
-    switchView(targetView);
+    navigate(targetView);
   });
 
   const handleLogoClick = () => {
     if (isStudyBusy()) { showToast("Finishing your review save. Please try again in a moment.", "info"); return; }
-    const studyActive = dom.subviewStudy?.classList.contains("active");
-    if (studyActive && exitStudySession() === false) return;
+    if (dom.subviewStudy?.classList.contains("active") && exitStudySession() === false) return;
     switchView("view-review");
   };
 
@@ -67,7 +82,8 @@ function initRouting() {
   document.getElementById("sidebar-logo-home")?.addEventListener("click", handleLogoClick);
 
   dom.headerSyncStatus?.addEventListener("click", () => {
-    switchView("view-settings");
+    if (!navigate("view-settings")) return;
+    document.dispatchEvent(new CustomEvent('app:settings-tab', { detail: { id: 'settings-sync' } }));
     if (dom.manualSyncContainer) scrollToElement(dom.manualSyncContainer);
   });
 
@@ -111,6 +127,7 @@ async function initApp() {
     initAccessibility();
     initTheme();
     initRouting();
+    switchView("view-review");
     initStudyEventListeners();
     initTouchGestures();
     initKeyboardShortcuts();
@@ -127,6 +144,7 @@ async function initApp() {
     registerServiceWorker();
 
     onDatabaseChanged(() => {
+      invalidateSyncCache();
       loadCardsFromDB().catch(error => console.warn("Cross-tab refresh failed:", error));
     });
     await runMigrations();
@@ -148,5 +166,7 @@ if (document.readyState === "loading") {
 
 // Re-sync when tab becomes visible
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") performBackgroundSync();
+  if (document.visibilityState === "visible") { flushVisible(); performBackgroundSync(); }
 });
+window.addEventListener('online', () => performBackgroundSync());
+window.addEventListener('offline', () => performBackgroundSync());

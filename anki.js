@@ -1,4 +1,3 @@
-import { unzipSync } from './vendor/fflate.js';
 
 /**
  * Anki text and package importer
@@ -18,6 +17,7 @@ import { unzipSync } from './vendor/fflate.js';
  */
 export async function parseAnkiApkg(arrayBuffer) {
   if (arrayBuffer.byteLength > 100 * 1024 * 1024) throw new Error('Anki package exceeds the 100 MB limit.');
+  const { unzipSync } = await import('./vendor/fflate.js');
   const files = unzipSync(new Uint8Array(arrayBuffer), {
     filter: file => {
       if (!['collection.anki2', 'collection.anki21', 'collection.anki21b'].includes(file.name)) return false;

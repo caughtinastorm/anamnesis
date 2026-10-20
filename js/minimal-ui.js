@@ -2,6 +2,10 @@ import { cardState, selectionState } from './state.js';
 import { getCardDeck, getCardFolder, escapeHTML, matchesDeckSelection } from './utils.js';
 import { isCardDue } from '../fsrs.js';
 import { switchView } from './ui.js';
+import { initSettingsTabs, initSectionTabs } from './tabs.js';
+
+const DECK_PAGE_SIZE = 40;
+let deckLimit = DECK_PAGE_SIZE;
 
 export function updateMinimalHome() {
   const root = document.getElementById('subview-dashboard');
@@ -56,10 +60,16 @@ export function renderSimpleDecks() {
     grouped.get(key).cards.push(card);
   }
   list.replaceChildren();
-  const decks = [...grouped.values()].sort((a, b) => a.deck.localeCompare(b.deck));
+  const query = document.getElementById('simple-deck-search')?.value.trim().toLocaleLowerCase() || '';
+  const decks = [...grouped.values()].filter(group => `${group.folder} ${group.deck}`.toLocaleLowerCase().includes(query))
+    .sort((a, b) => a.deck.localeCompare(b.deck) || a.folder.localeCompare(b.folder));
   const count = document.getElementById('simple-deck-count');
-  if (count) count.textContent = `${decks.length} ${decks.length === 1 ? 'deck' : 'decks'}`;
-  for (const group of decks) {
+  if (count) count.textContent = `${decks.length} ${decks.length === 1 ? 'deck' : 'decks'}${query ? ' found' : ''}`;
+  const more = document.getElementById('simple-deck-more');
+  more?.classList.toggle('hidden', decks.length <= deckLimit);
+  const status = document.getElementById('simple-deck-page-status');
+  if (status) status.textContent = decks.length > DECK_PAGE_SIZE ? `Showing ${Math.min(deckLimit, decks.length)} of ${decks.length} decks` : '';
+  for (const group of decks.slice(0, deckLimit)) {
     const due = group.cards.filter(card => isCardDue(card));
     const row = document.createElement('article');
     row.className = 'simple-deck-row';
@@ -78,11 +88,27 @@ export function renderSimpleDecks() {
     list.append(row);
   }
   if (!decks.length) {
-    list.innerHTML = '<div class="simple-list-empty"><h3>A home for your ideas.</h3><p>Add your first card to start a deck.</p><button type="button" class="btn btn-primary" data-open-add>Add a card</button></div>';
+    list.innerHTML = query
+      ? '<div class="simple-list-empty"><h3>No matching decks.</h3><p>Try another deck or folder name.</p></div>'
+      : '<div class="simple-list-empty"><h3>A home for your ideas.</h3><p>Add your first card to start a deck.</p><button type="button" class="btn btn-primary" data-open-add>Add a card</button></div>';
   }
 }
 
 export function initMinimalUI() {
+  initSettingsTabs();
+  initSectionTabs();
+  document.querySelector('[data-return-decks]')?.addEventListener('click', async () => {
+    const { switchDecksTab } = await import('./explorer.js'); switchDecksTab('tab-collections');
+    document.getElementById('deck-tab-collections')?.focus();
+  });
+  let searchTimer;
+  document.getElementById('simple-deck-search')?.addEventListener('input', () => {
+    clearTimeout(searchTimer); deckLimit = DECK_PAGE_SIZE;
+    searchTimer = setTimeout(renderSimpleDecks, 120);
+  });
+  document.getElementById('simple-deck-more')?.addEventListener('click', () => {
+    deckLimit += DECK_PAGE_SIZE; renderSimpleDecks();
+  });
   document.getElementById('today-deck-select')?.addEventListener('change', async event => {
     const value = event.target.value;
     const { setActiveDeckSelection } = await import('./dashboard.js');
@@ -93,7 +119,7 @@ export function initMinimalUI() {
     if (!add) return;
     const { isStudyBusy, exitStudySession } = await import('./study.js');
     if (isStudyBusy()) return;
-    exitStudySession();
+    if (exitStudySession() === false) return;
     const { switchDecksTab } = await import('./explorer.js');
     switchView('view-decks');
     switchDecksTab('tab-add');

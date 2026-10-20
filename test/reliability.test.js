@@ -14,8 +14,10 @@ globalThis.localStorage = {
   setItem: (key, value) => values.set(key, String(value)),
   removeItem: key => values.delete(key)
 };
+const sessionValues = new Map();
+globalThis.sessionStorage = { getItem: key => sessionValues.get(key) ?? null, setItem: (key, value) => sessionValues.set(key, String(value)), removeItem: key => sessionValues.delete(key) };
 const card = (id = 'c1', extra = {}) => ({ id, front: 'Question', back: 'Answer', last_modified: 100, ...extra });
-beforeEach(async () => { await db.clearDatabase(); values.clear(); });
+beforeEach(async () => { await db.clearDatabase(); values.clear(); sessionValues.clear(); });
 
 await test('grading commits scheduling and its log, undo removes the log with a fresh revision', async () => {
   const original = card();
@@ -218,4 +220,11 @@ await test('two simultaneous first-run seeds create one dataset, and clearing do
   assert.equal((await db.getCards()).length, 1);
   await db.clearDatabase();
   assert.equal(await db.seedStarterOnce([card('preset')]), 0);
+});
+
+await test('sync checks configuration again inside the write transaction before changing any cards', async () => {
+  const original = card();
+  await db.saveCard(original);
+  await assert.rejects(db.applySyncCards([original], [{ ...original, front: 'remote', last_modified: 200 }], { canApply: () => false }), /settings changed/);
+  assert.deepEqual(await db.getCards(), [original]);
 });

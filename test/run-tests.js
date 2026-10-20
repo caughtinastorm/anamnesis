@@ -216,10 +216,10 @@ await runTest("limitText limits text length and appends ellipsis without exceedi
 });
 
 await runTest("formatDeckSelectionLabel formats and limits long collection names", () => {
-  assert.equal(formatDeckSelectionLabel("all"), "📁 All Collections");
-  assert.equal(formatDeckSelectionLabel("deck:Grammar"), "🗂️ Grammar");
-  assert.equal(formatDeckSelectionLabel("deck:Super Long Deck Name Exceeding Twenty Characters", 20), "🗂️ Super Long Deck…");
-  assert.equal(formatDeckSelectionLabel("folder:Advanced Japanese Kanji & Grammar", 20), "📁 Advanced Japanes…");
+  assert.equal(formatDeckSelectionLabel("all"), "All decks");
+  assert.equal(formatDeckSelectionLabel("deck:Grammar"), "Grammar");
+  assert.equal(formatDeckSelectionLabel("deck:Super Long Deck Name Exceeding Twenty Characters", 20), "Super Long Deck Nam…");
+  assert.equal(formatDeckSelectionLabel("folder:Advanced Japanese Kanji & Grammar", 20), "Advanced Japanese K…");
 });
 
 console.log("\n=== 3. LOCAL TIME & STREAK TESTS ===");

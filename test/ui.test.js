@@ -108,15 +108,16 @@ await test('real segmented tab listener changes visibility and accessible select
   assert.ok(document.getElementById('tab-collections').classList.contains('hidden'));
 });
 
-await test('minimal navigation has exactly three destinations and Today has no administration controls', async () => {
+await test('minimal navigation has four task destinations and Today has no administration controls', async () => {
   await seed();
-  assert.deepEqual([...document.querySelectorAll('.app-nav .nav-label')].map(el => el.textContent), ['Today', 'Cards', 'Settings']);
+  assert.deepEqual([...document.querySelectorAll('.app-nav .nav-label')].map(el => el.textContent), ['Today', 'Cards', 'Progress', 'Settings']);
   assert.ok(!document.querySelector('#subview-dashboard .stats-grid'));
   assert.ok(!document.querySelector('#subview-dashboard [id*="export"]'));
   assert.ok(!document.querySelector('#subview-dashboard [id*="fsrs"]'));
-  assert.equal(document.querySelector('.organize-tools').open, false);
+  assert.equal(document.querySelector('#tab-collections #win-explorer'), null);
+  assert.ok(document.querySelector('#tab-organize #win-explorer'));
   assert.equal(document.querySelector('.card-extra-fields').open, false);
-  assert.equal(document.querySelectorAll('.simple-add-fields input').length, 3);
+  assert.equal(document.querySelectorAll('.simple-add-fields textarea').length, 2);
   const ids = [...document.querySelectorAll('[id]')].map(node => node.id);
   assert.equal(new Set(ids).size, ids.length, 'Every control has a unique ID');
 });
@@ -166,6 +167,99 @@ await test('deck rows open review directly, and practice is one click after catc
   document.getElementById('btn-force-review').click();
   assert.ok(document.getElementById('practice-modal-container').classList.contains('hidden'));
   assert.equal(state.studySessionInfo.recordFSRS, false);
+});
+
+
+await test('Settings tabs hide deeper options and support arrow-key navigation with one tab stop', async () => {
+  ui.switchView('view-settings');
+  const tabs = [...document.querySelectorAll('#settings-tabs [role="tab"]')];
+  assert.deepEqual(tabs.map(tab => tab.textContent), ['Preferences', 'Data', 'Sync']);
+  tabs[0].focus();
+  tabs[0].dispatchEvent(new window.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+  assert.equal(document.activeElement, tabs[1]);
+  assert.equal(tabs[0].getAttribute('aria-selected'), 'true');
+  tabs[1].click();
+  assert.equal(document.getElementById('settings-general').hidden, true);
+  assert.equal(document.getElementById('settings-data').hidden, false);
+  assert.equal(tabs.filter(tab => tab.tabIndex === 0).length, 1);
+  assert.equal(document.querySelector('.app-nav [data-view="view-settings"]').getAttribute('aria-current'), 'page');
+  assert.equal(document.getElementById('view-review').inert, true);
+});
+
+await test('deck search and pagination bound DOM size for a large collection', async () => {
+  study.exitStudySession();
+  ui.switchView('view-decks');
+  await sleep(30);
+  await db.clearDatabase();
+  await db.saveCards(Array.from({ length: 2000 }, (_, index) => ({ ...original(`large-${index}`), deck: `Deck ${String(index).padStart(4, '0')}`, folder: 'Languages' })));
+  await cards.loadCardsFromDB();
+  minimal.renderSimpleDecks();
+  assert.equal(document.querySelectorAll('.simple-deck-row').length, 40);
+  document.getElementById('simple-deck-more').click();
+  assert.equal(document.querySelectorAll('.simple-deck-row').length, 80);
+  const search = document.getElementById('simple-deck-search'); search.value = 'Deck 1999';
+  search.dispatchEvent(new window.Event('input')); await sleep(160);
+  assert.equal(document.querySelectorAll('.simple-deck-row').length, 1);
+  assert.ok(document.getElementById('simple-deck-list').textContent.includes('Deck 1999'));
+  search.value = '<img src=x onerror=alert(1)>';
+  search.dispatchEvent(new window.Event('input')); await sleep(160);
+  assert.equal(document.querySelectorAll('#simple-deck-list img').length, 0);
+  assert.ok(document.getElementById('simple-deck-list').textContent.includes('No matching decks'));
+});
+
+
+await test('organization has its own tab and leaves the default deck screen focused', async () => {
+  ui.switchView('view-decks');
+  document.querySelector('[data-deck-tab="tab-organize"]').click();
+  assert.ok(document.getElementById('tab-organize').classList.contains('active'));
+  assert.ok(document.getElementById('tab-collections').classList.contains('hidden'));
+  assert.equal(document.querySelector('#tab-collections #win-explorer'), null);
+  document.querySelector('[data-deck-tab="tab-collections"]').click();
+});
+
+await test('Add card opens a focused form with a clear way back to decks', async () => {
+  ui.switchView('view-decks');
+  document.querySelector('#view-decks .view-header [data-open-add]').click();
+  await sleep(30);
+  assert.ok(document.getElementById('tab-add').classList.contains('active'));
+  assert.equal(document.activeElement.id, 'quick-front');
+  assert.equal(document.getElementById('quick-front').tagName, 'TEXTAREA');
+  document.querySelector('[data-return-decks]').click(); await sleep(30);
+  assert.ok(document.getElementById('tab-collections').classList.contains('active'));
+  assert.equal(document.activeElement.id, 'deck-tab-collections');
+});
+
+await test('Progress defaults to an overview and builds specialist charts only when requested', async () => {
+  const analytics = await import('../js/analytics-ui.js');
+  analytics.initAnalyticsUI();
+  state.allCards = [original('overview')];
+  ui.switchView('view-analytics');
+  await analytics.renderAnalyticsView();
+  assert.equal(document.getElementById('progress-overview').hidden, false);
+  assert.equal(document.getElementById('progress-model').hidden, true);
+  assert.equal(document.getElementById('analytics-calibration-chart-wrap').children.length, 0);
+  document.querySelector('#progress-tabs [aria-controls="progress-model"]').click();
+  assert.equal(document.getElementById('progress-overview').hidden, true);
+  assert.equal(document.getElementById('progress-model').hidden, false);
+  assert.ok(document.getElementById('analytics-calibration-chart-wrap').children.length > 0);
+  assert.equal(document.querySelector('.app-nav .active').getAttribute('data-view'), 'view-analytics');
+});
+
+await test('Import exposes one method at a time and paste has an explicit preview action', async () => {
+  const importer = await import('../js/import.js'); importer.initImportEventListeners();
+  ui.switchView('view-import');
+  assert.equal(document.getElementById('import-file-panel').hidden, false);
+  assert.equal(document.getElementById('import-text-panel').hidden, true);
+  document.querySelector('#import-tabs [aria-controls="import-text-panel"]').click();
+  document.getElementById('import-text').value = 'Front,Back\nHello,Hola\nGoodbye,Adiós';
+  document.getElementById('btn-parse-csv').click();
+  assert.equal(String(document.getElementById('preview-count').textContent), '2');
+  assert.equal(document.getElementById('import-preview-section').classList.contains('hidden'), false);
+  document.querySelector('#import-tabs [aria-controls="import-starter-panel"]').click();
+  assert.equal(document.querySelector('#view-import .import-container').hidden, true);
+  assert.equal(document.getElementById('import-starter-panel').hidden, false);
+  assert.ok(document.getElementById('import-preview-section').closest('.import-container'));
+  assert.equal(document.querySelector('.app-nav .active').getAttribute('data-view'), 'view-decks');
 });
 
 await window.happyDOM.abort();

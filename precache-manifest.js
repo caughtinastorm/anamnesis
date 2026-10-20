@@ -1,4 +1,4 @@
-self.APP_RELEASE = "dev-0ffd15c45c27aa4b";
+self.APP_RELEASE = "dev-43c72e08475a22f7";
 self.APP_ASSETS = [
   "./",
   "./index.html",
@@ -47,12 +47,15 @@ self.APP_ASSETS = [
   "./js/picker.js",
   "./js/presets.js",
   "./js/services/anki-import.js",
+  "./js/services/http.js",
   "./js/services/preferences.js",
   "./js/services/reviews.js",
   "./js/services/sync-coordinator.js",
+  "./js/services/view-refresh.js",
   "./js/settings.js",
   "./js/state.js",
   "./js/study.js",
+  "./js/tabs.js",
   "./js/ui.js",
   "./js/utils.js",
   "./js/workers/anki-import.js",

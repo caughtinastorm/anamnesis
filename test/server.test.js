@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { request } from 'node:http';
 import { createStaticServer } from '../server.js';
+import { SECURITY_HEADERS } from '../security-policy.js';
+import { readFile } from 'node:fs/promises';
 const server = createStaticServer();
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const origin = `http://127.0.0.1:${server.address().port}`;
@@ -11,6 +13,7 @@ try {
     assert.equal(response.status, 200);
     assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
     assert.ok(response.headers.get('content-security-policy').includes("object-src 'none'"));
+    assert.equal(response.headers.get('content-security-policy'), SECURITY_HEADERS['Content-Security-Policy']);
     assert.ok((await response.text()).includes('anamnesis'));
     const head = await fetch(origin, { method: 'HEAD' });
     assert.equal(await head.text(), '');
@@ -30,5 +33,15 @@ try {
     });
     assert.equal(status, 400);
     assert.equal((await fetch(origin)).status, 200);
+  });
+  await test('built static-host policy includes embedding/form restrictions and stylesheet has no import waterfall', async () => {
+    const headers = await readFile(new URL('../dist/_headers', import.meta.url), 'utf8');
+    for (const [name, value] of Object.entries(SECURITY_HEADERS)) assert.ok(headers.includes(`${name}: ${value}`));
+    const html = await readFile(new URL('../dist/index.html', import.meta.url), 'utf8');
+    const stylesheet = html.match(/href="(assets\/[^"]+\/style.css)"/)[1];
+    const css = await readFile(new URL('../dist/' + stylesheet, import.meta.url), 'utf8');
+    assert.equal(css.includes('@import'), false);
+    assert.ok(css.includes('.secondary-tabs'));
+    assert.ok(html.includes("form-action 'none'"));
   });
 } finally { await new Promise(resolve => server.close(resolve)); }

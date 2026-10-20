@@ -100,14 +100,26 @@ export const dom = {
 
 
 export function switchView(viewId) {
-  if (!viewId || !document.getElementById(viewId)?.classList.contains("app-view")) return;
-  document.querySelectorAll(".app-view").forEach(v =>
-    v.classList.toggle("active", v.id === viewId)
-  );
-  document.querySelectorAll(".nav-item").forEach(item =>
-    item.classList.toggle("active", item.getAttribute("data-view") === (["view-import", "view-analytics"].includes(viewId) ? "view-settings" : viewId))
-  );
-  document.dispatchEvent(new CustomEvent("app:view-changed", { detail: { viewId } }));
+  const view = document.getElementById(viewId);
+  if (!view?.classList.contains('app-view')) return;
+  const changed = !view.classList.contains('active');
+  document.querySelectorAll('.app-view').forEach(element => {
+    const active = element === view;
+    element.classList.toggle('active', active);
+    element.inert = !active;
+    element.setAttribute('aria-hidden', String(!active));
+  });
+  const navId = viewId === 'view-import' ? 'view-decks' : viewId;
+  document.querySelectorAll('.nav-item').forEach(item => {
+    const active = item.getAttribute('data-view') === navId;
+    item.classList.toggle('active', active);
+    if (active) item.setAttribute('aria-current', 'page'); else item.removeAttribute('aria-current');
+  });
+  if (changed) {
+    const heading = view.querySelector('h2');
+    if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); }
+  }
+  document.dispatchEvent(new CustomEvent('app:view-changed', { detail: { viewId } }));
 }
 
 if (typeof window !== "undefined") window.switchView = switchView;

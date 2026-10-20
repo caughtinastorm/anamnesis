@@ -3,6 +3,7 @@ import { stat, realpath, readFile } from 'node:fs/promises';
 import { createReadStream, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { SECURITY_HEADERS } from './security-policy.js';
 const appRoot = path.dirname(fileURLToPath(import.meta.url));
 const MIME_TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8', '.json': 'application/json', '.png': 'image/png',
@@ -12,6 +13,7 @@ const publicDirectories = new Set(['js', 'css', 'icons', 'vendor', 'assets']);
 export function createStaticServer({ rootDir = appRoot } = {}) {
   const baseDir = path.resolve(rootDir);
   return http.createServer(async (req, res) => {
+    for (const [name, value] of Object.entries(SECURITY_HEADERS)) res.setHeader(name, value);
     const reply = (status, text) => { res.writeHead(status, { 'Content-Type': 'text/plain; charset=utf-8' }); res.end(text); };
     try {
       if (!['GET', 'HEAD'].includes(req.method)) { res.setHeader('Allow', 'GET, HEAD'); reply(405, 'Method not allowed'); return; }
@@ -33,11 +35,8 @@ export function createStaticServer({ rootDir = appRoot } = {}) {
       const info = await stat(actualPath);
       if (!info.isFile()) { reply(404, 'Not found'); return; }
       const etag = `"${info.size}-${Math.trunc(info.mtimeMs)}"`;
-      const headers = { 'Content-Type': MIME_TYPES[ext], 'X-Content-Type-Options': 'nosniff',
-        'X-Frame-Options': 'DENY', 'Referrer-Policy': 'strict-origin-when-cross-origin',
-        'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+      const headers = { 'Content-Type': MIME_TYPES[ext],
         'Cache-Control': name.startsWith('assets/') ? 'public, max-age=31536000, immutable' : 'no-cache', ETag: etag };
-      if (name === 'index.html') headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://api.github.com https://gist.githubusercontent.com https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'";
       if (req.headers['if-none-match'] === etag) { res.writeHead(304, headers); res.end(); return; }
       res.writeHead(200, { ...headers, 'Content-Length': info.size });
       if (req.method === 'HEAD') { res.end(); return; }

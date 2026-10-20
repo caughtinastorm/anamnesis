@@ -103,9 +103,9 @@ export function updateDestinationPill() {
   const deck = destDeckInput ? (destDeckInput.value.trim() || "Default") : "Default";
 
   if (folder) {
-    importTargetLabel.innerHTML = `📁 <strong>${escapeHTML(folder)}</strong> / 🗂️ <strong>${escapeHTML(deck)}</strong>`;
+    importTargetLabel.innerHTML = `<strong>${escapeHTML(folder)}</strong> / <strong>${escapeHTML(deck)}</strong>`;
   } else {
-    importTargetLabel.innerHTML = `🗂️ <strong>${escapeHTML(deck)}</strong> <span style="opacity:0.6">(Root)</span>`;
+    importTargetLabel.innerHTML = `<strong>${escapeHTML(deck)}</strong>`;
   }
 }
 
@@ -207,7 +207,8 @@ async function handleFileSelect(e) {
     const reader = new FileReader();
     reader.onload = evt => {
       if (dom.importText) dom.importText.value = evt.target.result;
-      showToast("File loaded. Click Preview Import.", "info");
+      document.dispatchEvent(new CustomEvent('app:select-section', { detail: { barId: 'import-tabs', panelId: 'import-text-panel' } }));
+      showToast("File loaded. Check the text, then preview your cards.", "info");
     };
     reader.onerror = () => showToast("Failed to read file", "error");
     reader.readAsText(file);
